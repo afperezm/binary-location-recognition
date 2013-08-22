@@ -1,7 +1,0 @@
-http://www.total-knowledge.com/progs/cppserv/ - cppserv
-sourceforge.net/projects/aclcpp/ - acl_cpp
-libmicrohttp - http://www.gnu.org/software/libmicrohttpd/
-
-cpp-netlib - https://github.com/cpp-netlib/cpp-netlib
-mongoose - https://code.google.com/p/mongoose/
-http-parser - https://github.com/joyent/http-parser
