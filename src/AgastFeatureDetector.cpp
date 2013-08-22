@@ -28,9 +28,7 @@ KeyPoint cvPointToKeyPoint(struct CvPoint p) {
 }
 
 void AGAST(const Mat& _img, std::vector<KeyPoint>& keypoints,
-		const int& threshold, const int& type) {
-
-	printf("AGAST\n");
+		const int& threshold, const bool& nonmaxsuppression, const int& type) {
 
 	// Obtain detector instance
 	AstDetector* detector;
@@ -60,38 +58,37 @@ void AGAST(const Mat& _img, std::vector<KeyPoint>& keypoints,
 
 	// Detect keypoints
 	detector->processImage(grayImage.data);
-	vector<CvPoint> corners_all = detector->get_corners_all();
+	vector<CvPoint> corners;
+	if (nonmaxsuppression == true) {
+		corners = detector->get_corners_nms();
+	} else {
+		corners = detector->get_corners_all();
+	}
 	vector<int> scores = detector->get_scores();
-
-	printf("corners_all=[%d] scores=[%d]\n", (int) corners_all.size(),
-			(int) detector->get_scores().size());
 
 	// Transform vector of CvPoint into vector of cv::KeyPoint
 	// NB: only position information is added because AGAST is not rotation neither scale invariant
-//	std::transform(corners_all.begin(), corners_all.end(), keypoints.begin(),
-//			cvPointToKeyPoint);
 
-	for (int i = 0; i < (int) corners_all.size(); i++) {
-		CvPoint corner = corners_all[i];
+	//	std::transform(corners_all.begin(), corners_all.end(), keypoints.begin(), cvPointToKeyPoint);
+
+	for (int i = 0; i < (int) corners.size(); i++) {
+		CvPoint corner = corners[i];
 		KeyPoint k = cvPointToKeyPoint(corner);
 		k.response = scores[i];
 		k.size = 7.f;
 		keypoints.push_back(k);
 	}
 
-	// TODO Add support for non max suppression
-//	vector<CvPoint> corners_nms = detector->get_corners_nms();
 }
 
 void AgastFeatureDetector::operator ()(const Mat& image,
 		std::vector<KeyPoint>& keypoints) const {
-	printf("AgastFeatureDetector::operator\n");
-	AGAST(image, keypoints, this->threshold, this->type);
+	AGAST(image, keypoints, this->threshold, this->nonmaxsuppression,
+			this->type);
 }
 
 void AgastFeatureDetector::detectImpl(const Mat& image,
 		std::vector<KeyPoint>& keypoints, const Mat& mask) const {
-	printf("AgastFeatureDetector::detectImpl\n");
 	(*this)(image, keypoints);
 }
 

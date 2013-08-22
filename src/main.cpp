@@ -25,7 +25,7 @@ double mytime;
 
 namespace cv {
 CV_INIT_ALGORITHM(AgastFeatureDetector, "Feature2D.AGAST",
-		obj.info()->addParam(obj, "threshold", obj.threshold); obj.info()->addParam(obj, "type", obj.type))
+		obj.info()->addParam(obj, "threshold", obj.threshold); obj.info()->addParam(obj, "nonmaxsuppression", obj.nonmaxsuppression); obj.info()->addParam(obj, "type", obj.type))
 ;
 }
 

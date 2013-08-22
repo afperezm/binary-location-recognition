@@ -25,11 +25,12 @@ public:
 
 	//! the full constructor
 	AgastFeatureDetector() :
-			threshold(10), type(TYPE_OAST9_16) {
+			threshold(10), type(TYPE_OAST9_16), nonmaxsuppression(true) {
 		;
 	}
-	AgastFeatureDetector(int _threshold, int _type) :
-			threshold(_threshold), type(_type) {
+	AgastFeatureDetector(int _threshold, int _type, bool _nonmaxsuppression) :
+			threshold(_threshold), type(_type), nonmaxsuppression(
+					_nonmaxsuppression) {
 		;
 	}
 	~AgastFeatureDetector() {
@@ -51,6 +52,7 @@ protected:
 
 	int threshold;
 	int type;
+	bool nonmaxsuppression;
 
 };
 
