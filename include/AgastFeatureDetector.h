@@ -56,6 +56,6 @@ protected:
 
 };
 
-}
+} /* namespace cv */
 
 #endif /* AGASTFEATUREDETECTOR_H_ */

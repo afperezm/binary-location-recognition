@@ -11,10 +11,11 @@
 #include <vector>
 
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/internal.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include <AgastFeatureDetector.h>
-#include <opencv2/core/internal.hpp>
+#include <DBriefDescriptorExtractor.h>
 
 using cv::Mat;
 using std::vector;
@@ -74,6 +75,7 @@ int main(int argc, char **argv) {
 // Step 2/4: extract descriptors using BRIEF or DBRIEF
 	cv::Ptr<cv::DescriptorExtractor> extractor =
 			cv::DescriptorExtractor::create("BRIEF");
+	cv::Ptr<cv::DescriptorExtractor> dbriefextractor = new cv::DBriefDescriptorExtractor();
 
 	Mat descriptors_1;
 
