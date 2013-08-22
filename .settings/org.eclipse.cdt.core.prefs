@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.toolchain.gnu.base.982339134/PKG_CONFIG_PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.base.982339134/PKG_CONFIG_PATH/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.base.982339134/PKG_CONFIG_PATH/value=/opt/ros/groovy/lib/pkgconfig
+environment/project/cdt.managedbuild.toolchain.gnu.base.982339134/append=true
+environment/project/cdt.managedbuild.toolchain.gnu.base.982339134/appendContributed=true
