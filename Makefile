@@ -1,15 +1,41 @@
-CXXFLAGS =	-O2 -g -Wall -fmessage-length=0
+CXX = g++
 
-OBJS =		MediaEval-PlacingTask.o
+CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -I./include/
+LDFLAGS =
 
-LIBS =
+# DBrief
+CXXFLAGS += -I../dbrief
+LDFLAGS += -L../dbrief/lib -ldbrief
 
-TARGET =	MediaEval-PlacingTask
+# Agast
+CXXFLAGS += -I../agast_lib
+LDFLAGS += -L../agast_lib/lib -lagast
 
-$(TARGET):	$(OBJS)
-	$(CXX) -o $(TARGET) $(OBJS) $(LIBS)
+# OpenCV (this goes last: beware of the linking order)
+CXXFLAGS += `pkg-config opencv --cflags`
+LDFLAGS += `pkg-config opencv --libs`
 
-all:	$(TARGET)
+LDFLAGS += -Wl,-rpath=/opt/ros/groovy/lib
+LDFLAGS += -Wl,-rpath=../agast_lib/lib
+LDFLAGS += -Wl,-rpath=../dbrief/lib
+
+SOURCES=$(wildcard src/*.cpp)
+
+OBJS += $(SOURCES:.cpp=.o)
+
+TARGET = main
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) -o $(TARGET) $(OBJS) $(LDFLAGS)
+
+.cpp.o:
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf $(OBJS) $(TARGET) *~
+
+cleanObjs:
+#	find ./ -name "*.o" | xargs -I {} rm -f {}
+	rm $(OBJS)
