@@ -1,5 +1,6 @@
 *~
 main
+.settings/*
 
 # Compiled Object files
 *.slo
