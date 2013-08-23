@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <iostream>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/internal.hpp>
@@ -20,14 +21,23 @@
 using cv::Mat;
 using std::vector;
 
+void printKeypoints(std::vector<cv::KeyPoint>& keypoints);
+
+void printDescriptors(const Mat& descriptors);
+
 void printParams(cv::Ptr<cv::Algorithm> algorithm);
 
 double mytime;
 
 namespace cv {
+
 CV_INIT_ALGORITHM(AgastFeatureDetector, "Feature2D.AGAST",
 		obj.info()->addParam(obj, "threshold", obj.threshold); obj.info()->addParam(obj, "nonmaxsuppression", obj.nonmaxsuppression); obj.info()->addParam(obj, "type", obj.type))
 ;
+
+CV_INIT_ALGORITHM(DBriefDescriptorExtractor, "Feature2D.DBRIEF", obj.info())
+;
+
 }
 
 int main(int argc, char **argv) {
@@ -67,15 +77,9 @@ int main(int argc, char **argv) {
 	printf("-- Detected [%zu] keypoints in [%lf] ms\n", keypoints_1.size(),
 			mytime);
 
-//	for (cv::KeyPoint k : keypoints_1) {
-//		printf("angle=[%f] octave=[%d] response=[%f] size=[%f] x=[%f] y=[%f] class_id=[%d]\n",
-//				k.angle, k.octave, k.response, k.size, k.pt.x, k.pt.y, k.class_id);
-//	}
-
-// Step 2/4: extract descriptors using BRIEF or DBRIEF
+	// Step 2/4: extract descriptors using BRIEF or DBRIEF
 	cv::Ptr<cv::DescriptorExtractor> extractor =
 			cv::DescriptorExtractor::create("BRIEF");
-	cv::Ptr<cv::DescriptorExtractor> dbriefextractor = new cv::DBriefDescriptorExtractor();
 
 	Mat descriptors_1;
 
@@ -90,7 +94,7 @@ int main(int argc, char **argv) {
 			descriptors_1.rows, descriptors_1.cols,
 			descriptors_1.type() == CV_8U ? "binary" : "real-valued", mytime);
 
-// Step 3/4: show keypoints
+	// Step 3/4: show keypoints
 
 	cv::drawKeypoints(img_1, keypoints_1, img_1, cv::Scalar::all(-1));
 	cv::namedWindow("Image keypoints", CV_WINDOW_NORMAL);
@@ -138,5 +142,27 @@ void printParams(cv::Ptr<cv::Algorithm> algorithm) {
 		}
 		std::cout << "Parameter '" << param << "' type=" << typeText << " help="
 				<< helpText << std::endl;
+	}
+}
+
+void printKeypoints(std::vector<cv::KeyPoint>& keypoints) {
+	for (cv::KeyPoint k : keypoints) {
+		printf(
+				"angle=[%f] octave=[%d] response=[%f] size=[%f] x=[%f] y=[%f] class_id=[%d]\n",
+				k.angle, k.octave, k.response, k.size, k.pt.x, k.pt.y,
+				k.class_id);
+	}
+}
+
+void printDescriptors(const Mat& descriptors) {
+	for (int i = 0; i < descriptors.rows; i++) {
+		for (int j = 0; j < descriptors.cols; j++) {
+			if (descriptors.type() == CV_8U) {
+				printf("%d", (bool) descriptors.at<uchar>(i, j));
+			} else {
+				printf("%f", (float) descriptors.at<float>(i, j));
+			}
+		}
+		printf("\n");
 	}
 }
