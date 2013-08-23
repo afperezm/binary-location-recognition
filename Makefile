@@ -4,8 +4,8 @@ CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -I./include/
 LDFLAGS =
 
 # DBrief
-CXXFLAGS += -I../dbrief
-LDFLAGS += -L../dbrief/lib -ldbrief
+CXXFLAGS += -I../dbrief_lib
+LDFLAGS += -L../dbrief_lib/lib -ldbrief
 
 # Agast
 CXXFLAGS += -I../agast_lib
@@ -17,7 +17,7 @@ LDFLAGS += `pkg-config opencv --libs`
 
 LDFLAGS += -Wl,-rpath=/opt/ros/groovy/lib
 LDFLAGS += -Wl,-rpath=../agast_lib/lib
-LDFLAGS += -Wl,-rpath=../dbrief/lib
+LDFLAGS += -Wl,-rpath=../dbrief_lib/lib
 
 SOURCES=$(wildcard src/*.cpp)
 
