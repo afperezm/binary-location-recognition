@@ -14,9 +14,9 @@
 class KMajority {
 public:
 
-	KMajority(int _k, int _max_iterations) :
-			k(_k), dim(-1), n(-1), belongs_to(new int[0]), distance_to(
-					new int[0]), max_iterations(_max_iterations) {
+	KMajority(unsigned int _k, unsigned int _max_iterations) :
+			k(_k), max_iterations(_max_iterations), dim(-1), n(-1), belongs_to(
+					new unsigned int[0]), distance_to(new unsigned int[0]) {
 		;
 	}
 
@@ -52,17 +52,17 @@ public:
 
 private:
 	// Number of clusters
-	int k;
+	unsigned int k;
 	// Maximum number of iterations
-	int max_iterations;
+	unsigned int max_iterations;
 	// Dimensionality
-	int dim;
+	unsigned int dim;
 	// Number of data instances
-	int n;
+	unsigned int n;
 	// List of the cluster each transaction belongs to
-	int* belongs_to;
+	unsigned int* belongs_to;
 	// List of distance from each transaction to the cluster it belongs to
-	int* distance_to;
+	unsigned int* distance_to;
 	// Matrix of centroids
 	cv::Mat centroids;
 

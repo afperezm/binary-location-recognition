@@ -29,9 +29,9 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 	}
 
 	this->n = descriptors.rows;
-	this->belongs_to = new int[this->n];
+	this->belongs_to = new unsigned int[this->n];
 	std::fill_n(this->belongs_to, this->n, -1);
-	this->distance_to = new int[this->n];
+	this->distance_to = new unsigned int[this->n];
 	std::fill_n(this->distance_to, this->n, -1);
 
 	this->dim = descriptors.cols;
@@ -57,7 +57,32 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 		// Reassign data to clusters
 		converged = this->quantize(keypoints, descriptors);
 
-		// TODO think about empty clusters
+		// Compute number of assigned transaction to each cluster
+//		unsigned int* cluster_counts = new unsigned int[k];
+//		std::fill_n(cluster_counts, k, 0);
+//		for (unsigned int i = 0; i < n; i++) {
+//			cluster_counts[belongs_to[n]]++;
+//		}
+		// Find empty clusters
+//		for (unsigned int j = 0; j < k; j++) {
+//			if (cluster_counts[j] == 0) {
+//				// Find farthest element to its assigned cluster
+//				int farthest_element_idx = 0;
+//				for (unsigned int i = 1; i < n; i++) {
+//					if (distance_to[i] > distance_to[farthest_element_idx]) {
+//						farthest_element_idx = i;
+//					}
+//				}
+//				// Re-assign farthest_element to the found empty cluster
+//				cluster_counts[belongs_to[farthest_element_idx]]--;
+//				belongs_to[farthest_element_idx] = j;
+//				cluster_counts[j]++;
+//				keypoints[farthest_element_idx].class_id = j;
+//				distance_to[farthest_element_idx] = hammingDistance(
+//						descriptors.row(farthest_element_idx),
+//						centroids.row(j));
+//			}
+//		}
 	}
 
 }
