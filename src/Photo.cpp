@@ -10,11 +10,9 @@
 namespace me {
 
 Photo::Photo() {
-	// TODO Auto-generated constructor stub
 }
 
 Photo::~Photo() {
-	// TODO Auto-generated destructor stub
 }
 
 } /* namespace me */
