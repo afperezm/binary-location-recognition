@@ -142,37 +142,37 @@ int main(int argc, char **argv) {
 	cv::waitKey(0);
 
 	// Step 4/5: save descriptors into a file for later use
-	//	save("test.xml.gz", keypoints_1, descriptors_1);
-	//	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
+	save("test.xml.gz", keypoints_1, descriptors_1);
+	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
 
-	// Step 5/5: cluster descriptors
-
-//	Mat descriptors = cv::Mat::zeros(6, 3, CV_8U);
-//	descriptors.at<uchar>(1, 2) = 1;
-//	descriptors.at<uchar>(2, 1) = 1;
-//	descriptors.at<uchar>(3, 1) = 1;
-//	descriptors.at<uchar>(3, 2) = 1;
-//	descriptors.at<uchar>(4, 0) = 1;
-//	descriptors.at<uchar>(5, 0) = 1;
-//	descriptors.at<uchar>(5, 2) = 1;
+//	// Step 5/5: cluster descriptors
 //
-//	std::vector<cv::KeyPoint> keypoints;
-//	for (int i = 0; i < 6; i++) {
-//		keypoints.push_back(cv::KeyPoint());
-//	}
-
-	cv::Ptr<KMajority> obj = new KMajority(3, 100);
-	mytime = cv::getTickCount();
-	obj->cluster(keypoints_1, descriptors_1);
-	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-			* 1000;
-	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-			keypoints_1.size(), 3, mytime);
-
-//	for (int i = 0; i < (int) keypoints_1.size(); i++) {
-//		printf("keypoint(%d) assigned to cluster [%d]\n", i,
-//				keypoints_1[i].class_id);
-//	}
+////	Mat descriptors = cv::Mat::zeros(6, 3, CV_8U);
+////	descriptors.at<uchar>(1, 2) = 1;
+////	descriptors.at<uchar>(2, 1) = 1;
+////	descriptors.at<uchar>(3, 1) = 1;
+////	descriptors.at<uchar>(3, 2) = 1;
+////	descriptors.at<uchar>(4, 0) = 1;
+////	descriptors.at<uchar>(5, 0) = 1;
+////	descriptors.at<uchar>(5, 2) = 1;
+////
+////	std::vector<cv::KeyPoint> keypoints;
+////	for (int i = 0; i < 6; i++) {
+////		keypoints.push_back(cv::KeyPoint());
+////	}
+//
+//	cv::Ptr<KMajority> obj = new KMajority(3, 100);
+//	mytime = cv::getTickCount();
+//	obj->cluster(keypoints_1, descriptors_1);
+//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+//			* 1000;
+//	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
+//			keypoints_1.size(), 3, mytime);
+//
+////	for (int i = 0; i < (int) keypoints_1.size(); i++) {
+////		printf("keypoint(%d) assigned to cluster [%d]\n", i,
+////				keypoints_1[i].class_id);
+////	}
 
 	return EXIT_SUCCESS;
 }
@@ -244,14 +244,16 @@ void printDescriptors(const Mat& descriptors) {
 
 void save(const std::string &filename,
 		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors) {
+	printf("-- Saving feature descriptors to [%s] using OpenCV FileStorage\n",
+			filename.c_str());
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 	if (!fs.isOpened()) {
 		throw string("Could not open file [") + filename + string("]");
 	}
 
 	fs << "TotalKeypoints" << descriptors.rows;
-	fs << "DescriptorSize" << descriptors.cols;
-	fs << "DescriptorType" << descriptors.type();
+	fs << "DescriptorSize" << descriptors.cols; // Recall this is in Bytes
+	fs << "DescriptorType" << descriptors.type(); // CV_8U = 0 for binary descriptors
 
 	fs << "KeyPoints" << "{";
 
@@ -266,15 +268,6 @@ void save(const std::string &filename,
 		fs << "octave" << k.octave;
 
 		fs << "descriptor" << descriptors.row(i);
-//		stringstream ss;
-//		for (int j = 0; j < descriptors.cols; j++) {
-//			if (descriptors.type() == CV_8U) {
-//				ss << (bool) descriptors.at<uchar>(i, j);
-//			} else {
-//				ss << (float) descriptors.at<float>(i, j);
-//			}
-//		}
-//		fs << "descriptor" << ss.str();
 
 		fs << "}";
 	}
@@ -286,8 +279,9 @@ void save(const std::string &filename,
 
 void writeFeaturesToFile(const string& outputFilepath,
 		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors) {
+	printf("-- Saving feature descriptors to [%s] in plain text format\n",
+			outputFilepath.c_str());
 	std::ofstream outputFile;
-	printf("Writing feature descriptors to [%s]\n", outputFilepath.c_str());
 	outputFile.open(outputFilepath.c_str(), ios::out | ios::trunc);
 	outputFile << descriptors.rows << " " << descriptors.cols << " "
 			<< descriptors.type() << std::endl;
@@ -297,9 +291,8 @@ void writeFeaturesToFile(const string& outputFilepath,
 		outputFile << (float) keypoints[i].size << " ";
 		outputFile << (float) keypoints[i].angle << std::endl;
 		for (int j = 0; j < descriptors.cols; ++j) {
-//			outputFile << (int) round(descriptors.at<float>(i, j)) << " ";
 			if (descriptors.type() == CV_8U) {
-				outputFile << (bool) descriptors.at<uchar>(i, j);
+				outputFile << (unsigned int) descriptors.at<uchar>(i, j) << " "; // Print as uint
 			} else {
 				outputFile << (float) descriptors.at<float>(i, j) << " ";
 			}

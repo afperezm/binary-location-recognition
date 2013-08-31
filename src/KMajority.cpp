@@ -44,7 +44,7 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 
 	bool converged = false;
 
-	int iteration = 0;
+	unsigned int iteration = 0;
 	while (converged == false && iteration < max_iterations) {
 		iteration++;
 		// Compute the new cluster centers
@@ -124,7 +124,7 @@ void KMajority::initCentroids(const cv::Mat& descriptors) {
 	int centers_length;
 	cv::Ptr<int> indices = new int[n];
 
-	for (int i = 0; i < this->n; i++) {
+	for (unsigned int i = 0; i < this->n; i++) {
 		indices[i] = i;
 	}
 
@@ -147,16 +147,17 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 	bool converged = true;
 
 	// Comparison of all descriptors vs. all centroids
-	for (int i = 0; i < this->n; i++) {
+	for (unsigned int i = 0; i < this->n; i++) {
 		// Set minimum distance as the distance to its assigned cluster or to the maximum representable integer
 		int min_hd = distance_to[i] >= 0 ? distance_to[i] : INT_MAX;
-		for (int j = 0; j < this->k; j++) {
+		for (unsigned int j = 0; j < this->k; j++) {
 			// TODO Check execution time and see if it can be optimized doing bit counts
 			// maybe instead of storing the descriptors as a matrix of uchar store a matrix of integers or doubles
 
 			// Compute hamming distance between ith descriptor and jth cluster
 			cv::Hamming distance;
-			int hd = distance(descriptors.row(i), centroids.row(j), descriptors.cols);
+			int hd = distance(descriptors.row(i).data, centroids.row(j).data,
+					descriptors.cols);
 
 			// Update cluster assignment to the nearest cluster
 			if (hd < min_hd) {
@@ -176,11 +177,11 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 
 void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
-	for (int i = 0; i < k; i++) {
+	for (unsigned int i = 0; i < k; i++) {
 		cv::Mat clusterMask = cv::Mat::zeros(descriptors.size(),
 				descriptors.type());
 		cv::Mat colwiseCum = cv::Mat::zeros(1, this->dim, CV_32F);
-		for (int j = 0; j < n; j++) {
+		for (unsigned int j = 0; j < n; j++) {
 			if (belongs_to[j] == i) {
 //				for (int k = 0; k < dim; k++) { }
 				descriptors.row(j).copyTo(
