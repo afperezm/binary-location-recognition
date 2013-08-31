@@ -142,8 +142,8 @@ int main(int argc, char **argv) {
 	cv::waitKey(0);
 
 	// Step 4/5: save descriptors into a file for later use
-//	save("test.xml.gz", keypoints_1, descriptors_1);
-//	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
+	//	save("test.xml.gz", keypoints_1, descriptors_1);
+	//	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
 
 	// Step 5/5: cluster descriptors
 
@@ -228,15 +228,16 @@ void printDescriptors(const Mat& descriptors) {
 	for (int i = 0; i < descriptors.rows; i++) {
 		for (int j = 0; j < descriptors.cols; j++) {
 			if (descriptors.type() == CV_8U) {
-				printf("%d", (bool) descriptors.at<uchar>(i, j));
+				bitset<8> byte(descriptors.at<uchar>(i, j));
+				printf("%s", byte.to_string().c_str());
 			} else {
 				printf("%f", (float) descriptors.at<float>(i, j));
 			}
 		}
-		int decimal = BinToDec(descriptors.row(i));
-		if (descriptors.type() == CV_8U) {
-			printf(" = %ld (%d)", decimal, NumberOfSetBits(decimal));
-		}
+//		int decimal = BinToDec(descriptors.row(i));
+//		if (descriptors.type() == CV_8U) {
+//			printf(" = %ld (%d)", decimal, NumberOfSetBits(decimal));
+//		}
 		printf("\n");
 	}
 }
