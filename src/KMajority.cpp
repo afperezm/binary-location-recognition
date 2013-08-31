@@ -145,8 +145,6 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
 	bool converged = true;
-	cv::Mat xor_result(1, descriptors.cols, descriptors.type());
-	xor_result.release();
 
 	// Comparison of all descriptors vs. all centroids
 	for (int i = 0; i < this->n; i++) {
@@ -157,8 +155,8 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 			// maybe instead of storing the descriptors as a matrix of uchar store a matrix of integers or doubles
 
 			// Compute hamming distance between ith descriptor and jth cluster
-			cv::bitwise_xor(descriptors.row(i), centroids.row(j), xor_result);
-			int hd = cv::countNonZero(xor_result);
+			cv::Hamming distance;
+			int hd = distance(descriptors.row(i), centroids.row(j), descriptors.cols);
 
 			// Update cluster assignment to the nearest cluster
 			if (hd < min_hd) {
