@@ -10,22 +10,61 @@
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/internal.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
+
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
+#include <KMajority.h>
 
 using cv::Mat;
 using std::vector;
 
+/**
+ *
+ * @param keypoints
+ */
 void printKeypoints(std::vector<cv::KeyPoint>& keypoints);
 
+/**
+ *
+ *
+ * @param descriptors
+ */
 void printDescriptors(const Mat& descriptors);
 
+/**
+ * Function for printing to standard output the parameters of <i>algorithm</i>
+ *
+ * @param algorithm A pointer to an object of type cv::Algorithm
+ */
 void printParams(cv::Ptr<cv::Algorithm> algorithm);
+
+/**
+ *
+ * @param filename
+ * @param keypoints vector of keypoints
+ * @param descriptors matrix of descriptors
+ */
+void save(const std::string &filename,
+		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors);
+
+/**
+ *
+ * @param filename path to the file where the features will be written
+ * @param keypoints vector of keypoints
+ * @param descriptors matrix of descriptors
+ */
+void writeFeaturesToFile(const std::string& filename,
+		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors);
+
+int NumberOfSetBits(int i);
+
+int BinToDec(const cv::Mat& binRow);
 
 double mytime;
 
@@ -64,7 +103,7 @@ int main(int argc, char **argv) {
 	}
 	printf("-- Image loaded in [%lf] ms\n", mytime);
 
-	// Step 1/4: detect keypoints using FAST or AGAST
+	// Step 1/5: detect keypoints using FAST or AGAST
 	std::vector<cv::KeyPoint> keypoints_1;
 	cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
 			"AGAST");
@@ -77,7 +116,7 @@ int main(int argc, char **argv) {
 	printf("-- Detected [%zu] keypoints in [%lf] ms\n", keypoints_1.size(),
 			mytime);
 
-	// Step 2/4: extract descriptors using BRIEF or DBRIEF
+	// Step 2/5: extract descriptors using BRIEF or DBRIEF
 	cv::Ptr<cv::DescriptorExtractor> extractor =
 			cv::DescriptorExtractor::create("BRIEF");
 
@@ -94,7 +133,7 @@ int main(int argc, char **argv) {
 			descriptors_1.rows, descriptors_1.cols,
 			descriptors_1.type() == CV_8U ? "binary" : "real-valued", mytime);
 
-	// Step 3/4: show keypoints
+	// Step 3/5: show keypoints
 
 	cv::drawKeypoints(img_1, keypoints_1, img_1, cv::Scalar::all(-1));
 	cv::namedWindow("Image keypoints", CV_WINDOW_NORMAL);
@@ -102,7 +141,38 @@ int main(int argc, char **argv) {
 
 	cv::waitKey(0);
 
-	// Step 4/4: save descriptors into a file for later use
+	// Step 4/5: save descriptors into a file for later use
+//	save("test.xml.gz", keypoints_1, descriptors_1);
+//	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
+
+	// Step 5/5: cluster descriptors
+
+//	Mat descriptors = cv::Mat::zeros(6, 3, CV_8U);
+//	descriptors.at<uchar>(1, 2) = 1;
+//	descriptors.at<uchar>(2, 1) = 1;
+//	descriptors.at<uchar>(3, 1) = 1;
+//	descriptors.at<uchar>(3, 2) = 1;
+//	descriptors.at<uchar>(4, 0) = 1;
+//	descriptors.at<uchar>(5, 0) = 1;
+//	descriptors.at<uchar>(5, 2) = 1;
+//
+//	std::vector<cv::KeyPoint> keypoints;
+//	for (int i = 0; i < 6; i++) {
+//		keypoints.push_back(cv::KeyPoint());
+//	}
+
+	cv::Ptr<KMajority> obj = new KMajority(3, 100);
+	mytime = cv::getTickCount();
+	obj->cluster(keypoints_1, descriptors_1);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
+			keypoints_1.size(), 3, mytime);
+
+//	for (int i = 0; i < (int) keypoints_1.size(); i++) {
+//		printf("keypoint(%d) assigned to cluster [%d]\n", i,
+//				keypoints_1[i].class_id);
+//	}
 
 	return EXIT_SUCCESS;
 }
@@ -163,6 +233,103 @@ void printDescriptors(const Mat& descriptors) {
 				printf("%f", (float) descriptors.at<float>(i, j));
 			}
 		}
+		int decimal = BinToDec(descriptors.row(i));
+		if (descriptors.type() == CV_8U) {
+			printf(" = %ld (%d)", decimal, NumberOfSetBits(decimal));
+		}
 		printf("\n");
 	}
+}
+
+void save(const std::string &filename,
+		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors) {
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+	if (!fs.isOpened()) {
+		throw string("Could not open file [") + filename + string("]");
+	}
+
+	fs << "TotalKeypoints" << descriptors.rows;
+	fs << "DescriptorSize" << descriptors.cols;
+	fs << "DescriptorType" << descriptors.type();
+
+	fs << "KeyPoints" << "{";
+
+	for (int i = 0; i < descriptors.rows; i++) {
+		cv::KeyPoint k = keypoints[i];
+		fs << "KeyPoint" << "{";
+		fs << "x" << k.pt.x;
+		fs << "y" << k.pt.y;
+		fs << "size" << k.size;
+		fs << "angle" << k.angle;
+		fs << "response" << k.response;
+		fs << "octave" << k.octave;
+
+		fs << "descriptor" << descriptors.row(i);
+//		stringstream ss;
+//		for (int j = 0; j < descriptors.cols; j++) {
+//			if (descriptors.type() == CV_8U) {
+//				ss << (bool) descriptors.at<uchar>(i, j);
+//			} else {
+//				ss << (float) descriptors.at<float>(i, j);
+//			}
+//		}
+//		fs << "descriptor" << ss.str();
+
+		fs << "}";
+	}
+
+	fs << "}"; // End of structure node
+
+	fs.release();
+}
+
+void writeFeaturesToFile(const string& outputFilepath,
+		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors) {
+	std::ofstream outputFile;
+	printf("Writing feature descriptors to [%s]\n", outputFilepath.c_str());
+	outputFile.open(outputFilepath.c_str(), ios::out | ios::trunc);
+	outputFile << descriptors.rows << " " << descriptors.cols << " "
+			<< descriptors.type() << std::endl;
+	for (int i = 0; i < (int) keypoints.size(); ++i) {
+		outputFile << (float) keypoints[i].pt.x << " ";
+		outputFile << (float) keypoints[i].pt.y << " ";
+		outputFile << (float) keypoints[i].size << " ";
+		outputFile << (float) keypoints[i].angle << std::endl;
+		for (int j = 0; j < descriptors.cols; ++j) {
+//			outputFile << (int) round(descriptors.at<float>(i, j)) << " ";
+			if (descriptors.type() == CV_8U) {
+				outputFile << (bool) descriptors.at<uchar>(i, j);
+			} else {
+				outputFile << (float) descriptors.at<float>(i, j) << " ";
+			}
+		}
+		outputFile << std::endl;
+	}
+	outputFile.close();
+}
+
+/**
+ * Counts the number of bits equal to 1 in a specified number.
+ *
+ * @param i Number to count bits on
+ * @return Number of bits equal to 1
+ */
+int NumberOfSetBits(int i) {
+	i = i - ((i >> 1) & 0x55555555);
+	i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+	return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+
+int BinToDec(const cv::Mat& binRow) {
+	if (binRow.type() != CV_8U) {
+		throw string("BinToDec: error, received matrix is not binary");
+	}
+	if (binRow.rows != 1) {
+		throw string("BinToDec: error, received matrix must have only one row");
+	}
+	int decimal = 0;
+	for (int i = 0; i < binRow.cols; i++) {
+		decimal = decimal * 2 + ((bool) binRow.at<uchar>(0, i));
+	}
+	return decimal;
 }
