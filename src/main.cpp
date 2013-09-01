@@ -155,7 +155,13 @@ int main(int argc, char **argv) {
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
 			keypoints_1.size(), 3, mytime);
 
-//	for (int i = 0; i < (int) keypoints_1.size(); i++) {
+	for (uint k = 0; k < 3; k++) {
+		cout << obj->getCentroids().row(k) << endl;
+		printf("   Cluster %u has %u transactions assigned\n", k,
+				obj->getClusterCounts()[k]);
+	}
+
+//	for (uint i = 0; i < (uint) keypoints_1.size(); i++) {
 //		printf("keypoint(%d) assigned to cluster [%d]\n", i,
 //				keypoints_1[i].class_id);
 //	}
