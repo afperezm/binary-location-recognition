@@ -41,6 +41,10 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 	// i.e. dim*8 the max hamming distance
 	std::fill_n(this->distance_to, this->n, this->dim * 8);
 
+	this->cluster_counts = new unsigned int[this->k];
+	// Initially no transaction is assigned to any cluster
+	std::fill_n(this->cluster_counts, this->k, 0);
+
 	// Randomly generate clusters
 	this->initCentroids(descriptors);
 
@@ -147,6 +151,8 @@ void KMajority::initCentroids(const cv::Mat& descriptors) {
 bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
+	double mytime = cv::getTickCount();
+
 	bool converged = true;
 
 	// Comparison of all descriptors vs. all centroids
@@ -163,46 +169,68 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 			// Update cluster assignment to the nearest cluster
 			if (hd < min_hd) {
 				min_hd = hd;
+				// If cluster assignment changed that means the algorithm hasn't converged yet
 				if (belongs_to[i] != j) {
 					converged = false;
 				}
+				// Decrease cluster count in case it was assigned to some valid cluster before
+				// Recall that initially all transaction are assigned to kth cluster which
+				// is not valid since valid clusters run from 0 to k-1
+				if (belongs_to[i] != k) {
+					cluster_counts[belongs_to[i]]--;
+				}
 				belongs_to[i] = j;
+				cluster_counts[j]++;
 				distance_to[i] = hd;
 				keypoints[i].class_id = j;
 			}
 		}
 	}
 
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("   Method KMajority::quantize executed in %lf ms\n", mytime);
 	return converged;
 }
 
 void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
-	for (unsigned int i = 0; i < k; i++) {
-		cv::Mat clusterMask = cv::Mat::zeros(descriptors.size(),
-				descriptors.type());
-		cv::Mat colwiseCum = cv::Mat::zeros(1, this->dim, CV_32F);
-		for (unsigned int j = 0; j < n; j++) {
-			if (belongs_to[j] == i) {
-				descriptors.row(j).copyTo(
-						clusterMask(cv::Range(j, j + 1),
-								cv::Range(0, clusterMask.cols)));
+
+	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<float>::type);
+	// Loop over all clusters
+	for (unsigned int j = 0; j < k; j++) {
+		// Zeroing all cumulative variable dimension
+		bitwiseCount(cv::Range(0, 1), cv::Range(0, bitwiseCount.cols)) =
+				cv::Scalar::all(0);
+		// Zero all the centroid dimensions
+		centroids(cv::Range(j, j + 1), cv::Range(0, centroids.cols)) =
+				cv::Scalar::all(0);
+		// Loop over all data
+		for (unsigned int i = 0; i < this->n; i++) {
+			// Finding all data assigned to jth clusther
+			if (belongs_to[i] == j) {
+				//double mytime = cv::getTickCount();
+				// TODO Check if there is any speed-up by processing all byte at once
+				for (int l = 0; l < bitwiseCount.cols; l++) {
+					// bit: 7-(l%8) col: (int)k/8 descriptor: i
+					uchar byte = *(descriptors.row(i).col((int) l / 8).data);
+					bitwiseCount.at<float>(0, l) += (int) ((byte
+							>> (7 - (l % 8))) % 2);
+				}
+				//mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency() * 1000;
+				//printf("   Method KMajority::computeCentroids processed descriptor in %lf ms\n", mytime);
 			}
 		}
-		computeCentroid(clusterMask,
-				centroids(cv::Range(i, i + 1), cv::Range(0, centroids.cols)));
+		// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
+		for (int l = 0; l < bitwiseCount.cols; l++) {
+			/**
+			 * If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
+			 * then set bit to 1 otherwise set 0 (implicitly choosing 0 in case of ties)
+			 */
+			bool bit = bitwiseCount.at<float>(0, l)
+					> (int) this->cluster_counts[j] / 2;
+			centroids.at<unsigned char>(j, l) += (bit)
+					<< ((bitwiseCount.cols - 1 - l) % 8);
+		}
 	}
-}
-
-void KMajority::computeCentroid(const cv::Mat& descriptors,
-		cv::Mat centroid) const {
-
-// Initialize matrices
-	cv::Mat colwiseCum = cv::Mat::zeros(1, centroid.cols, CV_32F);
-
-// Compute column wise cumulative sum
-	cv::reduce(descriptors, colwiseCum, 0, CV_REDUCE_SUM, CV_32F);
-
-// Threshold the resulting cumulative sum vector
-	cv::threshold(colwiseCum, centroid, centroid.rows / 2, 1, CV_THRESH_BINARY);
 }
