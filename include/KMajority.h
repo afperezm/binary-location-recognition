@@ -16,13 +16,15 @@ public:
 
 	KMajority(unsigned int _k, unsigned int _max_iterations) :
 			k(_k), max_iterations(_max_iterations), dim(-1), n(-1), belongs_to(
-					new unsigned int[0]), distance_to(new unsigned int[0]) {
+					new unsigned int[0]), distance_to(new unsigned int[0]), cluster_counts(
+					new unsigned int[0]) {
 		;
 	}
 
 	~KMajority() {
 		delete[] belongs_to;
 		delete[] distance_to;
+		delete[] cluster_counts;
 	}
 
 	/**
@@ -32,8 +34,6 @@ public:
 	 * @param descriptors binary matrix of size (n x d)
 	 * @param centroids matrix where centroids will be saved
 	 */
-	void computeCentroid(const cv::Mat& descriptors, cv::Mat centroid) const;
-
 	void computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 			const cv::Mat& descriptors);
 
@@ -50,6 +50,14 @@ public:
 	void cluster(std::vector<cv::KeyPoint>& keypoints,
 			const cv::Mat& descriptors);
 
+	const cv::Mat& getCentroids() const {
+		return centroids;
+	}
+
+	unsigned int* getClusterCounts() const {
+		return cluster_counts;
+	}
+
 private:
 	// Number of clusters
 	unsigned int k;
@@ -63,6 +71,8 @@ private:
 	unsigned int* belongs_to;
 	// List of distance from each transaction to the cluster it belongs to
 	unsigned int* distance_to;
+	// Number of transactions assigned to each cluster
+	unsigned int* cluster_counts;
 	// Matrix of centroids
 	cv::Mat centroids;
 
