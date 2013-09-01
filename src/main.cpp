@@ -145,34 +145,20 @@ int main(int argc, char **argv) {
 	save("test.xml.gz", keypoints_1, descriptors_1);
 	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
 
-//	// Step 5/5: cluster descriptors
-//
-////	Mat descriptors = cv::Mat::zeros(6, 3, CV_8U);
-////	descriptors.at<uchar>(1, 2) = 1;
-////	descriptors.at<uchar>(2, 1) = 1;
-////	descriptors.at<uchar>(3, 1) = 1;
-////	descriptors.at<uchar>(3, 2) = 1;
-////	descriptors.at<uchar>(4, 0) = 1;
-////	descriptors.at<uchar>(5, 0) = 1;
-////	descriptors.at<uchar>(5, 2) = 1;
-////
-////	std::vector<cv::KeyPoint> keypoints;
-////	for (int i = 0; i < 6; i++) {
-////		keypoints.push_back(cv::KeyPoint());
-////	}
-//
-//	cv::Ptr<KMajority> obj = new KMajority(3, 100);
-//	mytime = cv::getTickCount();
-//	obj->cluster(keypoints_1, descriptors_1);
-//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-//			* 1000;
-//	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-//			keypoints_1.size(), 3, mytime);
-//
-////	for (int i = 0; i < (int) keypoints_1.size(); i++) {
-////		printf("keypoint(%d) assigned to cluster [%d]\n", i,
-////				keypoints_1[i].class_id);
-////	}
+	// Step 5/5: cluster descriptors
+
+	cv::Ptr<KMajority> obj = new KMajority(3, 100);
+	mytime = cv::getTickCount();
+	obj->cluster(keypoints_1, descriptors_1);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
+			keypoints_1.size(), 3, mytime);
+
+//	for (int i = 0; i < (int) keypoints_1.size(); i++) {
+//		printf("keypoint(%d) assigned to cluster [%d]\n", i,
+//				keypoints_1[i].class_id);
+//	}
 
 	return EXIT_SUCCESS;
 }
@@ -248,7 +234,9 @@ void save(const std::string &filename,
 			filename.c_str());
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 	if (!fs.isOpened()) {
-		throw string("Could not open file [") + filename + string("]");
+		fprintf(stderr,
+				(string("Could not open file [") + filename + string("]")).c_str());
+		return;
 	}
 
 	fs << "TotalKeypoints" << descriptors.rows;
@@ -316,10 +304,13 @@ int NumberOfSetBits(int i) {
 
 int BinToDec(const cv::Mat& binRow) {
 	if (binRow.type() != CV_8U) {
-		throw string("BinToDec: error, received matrix is not binary");
+		fprintf(stderr, "BinToDec: error, received matrix is not binary");
+		throw;
 	}
 	if (binRow.rows != 1) {
-		throw string("BinToDec: error, received matrix must have only one row");
+		fprintf(stderr,
+				"BinToDec: error, received matrix must have only one row");
+		throw;
 	}
 	int decimal = 0;
 	for (int i = 0; i < binRow.cols; i++) {

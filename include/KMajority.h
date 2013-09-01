@@ -55,7 +55,7 @@ private:
 	unsigned int k;
 	// Maximum number of iterations
 	unsigned int max_iterations;
-	// Dimensionality
+	// Dimensionality (in Bytes)
 	unsigned int dim;
 	// Number of data instances
 	unsigned int n;

@@ -24,17 +24,22 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
 	if (descriptors.type() != CV_8U) {
-		throw std::string(
+		fprintf(stderr,
 				"KMajority::cluster: error, descriptors matrix is not binary");
+		return;
 	}
 
 	this->n = descriptors.rows;
-	this->belongs_to = new unsigned int[this->n];
-	std::fill_n(this->belongs_to, this->n, -1);
-	this->distance_to = new unsigned int[this->n];
-	std::fill_n(this->distance_to, this->n, -1);
-
 	this->dim = descriptors.cols;
+
+	this->belongs_to = new unsigned int[this->n];
+	// Initially all transactions belong to any cluster
+	std::fill_n(this->belongs_to, this->n, this->k);
+
+	this->distance_to = new unsigned int[this->n];
+	// Initially all transactions are at the farthest possible distance
+	// i.e. dim*8 the max hamming distance
+	std::fill_n(this->distance_to, this->n, this->dim * 8);
 
 	// Randomly generate clusters
 	this->initCentroids(descriptors);
@@ -48,12 +53,8 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 	while (converged == false && iteration < max_iterations) {
 		iteration++;
 		// Compute the new cluster centers
-		try {
-			this->computeCentroids(keypoints, descriptors);
-		} catch (cv::Exception& e) {
-			fprintf(stderr, "Error while computing centroids: [%s]",
-					e.err.c_str());
-		}
+		this->computeCentroids(keypoints, descriptors);
+
 		// Reassign data to clusters
 		converged = this->quantize(keypoints, descriptors);
 
@@ -61,13 +62,15 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 //		unsigned int* cluster_counts = new unsigned int[k];
 //		std::fill_n(cluster_counts, k, 0);
 //		for (unsigned int i = 0; i < n; i++) {
-//			cluster_counts[belongs_to[n]]++;
+//			cluster_counts[belongs_to[i]]++;
 //		}
+		// TODO handle empty clusters case
 		// Find empty clusters
 //		for (unsigned int j = 0; j < k; j++) {
 //			if (cluster_counts[j] == 0) {
+//				printf("Cluster %u is empty\n", j);
 //				// Find farthest element to its assigned cluster
-//				int farthest_element_idx = 0;
+//				unsigned int farthest_element_idx = 0;
 //				for (unsigned int i = 1; i < n; i++) {
 //					if (distance_to[i] > distance_to[farthest_element_idx]) {
 //						farthest_element_idx = i;
@@ -120,20 +123,20 @@ void chooseCentersRandom(int k, int* indices, int indices_length, int* centers,
 
 void KMajority::initCentroids(const cv::Mat& descriptors) {
 
+	// Initializing variables useful for obtaining indexes of random chosen center
 	cv::Ptr<int> centers_idx = new int[k];
 	int centers_length;
 	cv::Ptr<int> indices = new int[n];
-
 	for (unsigned int i = 0; i < this->n; i++) {
 		indices[i] = i;
 	}
 
+	// Randomly chose centers
 	std::srand(unsigned(std::time(0)));
-
 	chooseCentersRandom(k, indices, n, centers_idx, centers_length);
 
+	// Assign centers based on the chosen indexes
 	centroids.create(centers_length, dim, descriptors.type());
-
 	for (int i = 0; i < centers_length; i++) {
 		descriptors.row(centers_idx[i]).copyTo(
 				centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
@@ -148,12 +151,10 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 
 	// Comparison of all descriptors vs. all centroids
 	for (unsigned int i = 0; i < this->n; i++) {
-		// Set minimum distance as the distance to its assigned cluster or to the maximum representable integer
-		int min_hd = distance_to[i] >= 0 ? distance_to[i] : INT_MAX;
-		for (unsigned int j = 0; j < this->k; j++) {
-			// TODO Check execution time and see if it can be optimized doing bit counts
-			// maybe instead of storing the descriptors as a matrix of uchar store a matrix of integers or doubles
+		// Set minimum distance as the distance to its assigned cluster
+		int min_hd = distance_to[i];
 
+		for (unsigned int j = 0; j < this->k; j++) {
 			// Compute hamming distance between ith descriptor and jth cluster
 			cv::Hamming distance;
 			int hd = distance(descriptors.row(i).data, centroids.row(j).data,
@@ -183,13 +184,11 @@ void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat colwiseCum = cv::Mat::zeros(1, this->dim, CV_32F);
 		for (unsigned int j = 0; j < n; j++) {
 			if (belongs_to[j] == i) {
-//				for (int k = 0; k < dim; k++) { }
 				descriptors.row(j).copyTo(
 						clusterMask(cv::Range(j, j + 1),
 								cv::Range(0, clusterMask.cols)));
 			}
 		}
-		// Threshold the resulting cumulative sum vector
 		computeCentroid(clusterMask,
 				centroids(cv::Range(i, i + 1), cv::Range(0, centroids.cols)));
 	}
