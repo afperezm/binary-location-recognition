@@ -11,6 +11,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/internal.hpp>
@@ -147,24 +148,21 @@ int main(int argc, char **argv) {
 
 	// Step 5/5: cluster descriptors
 
-	cv::Ptr<KMajority> obj = new KMajority(3, 100);
+	std::srand(unsigned(std::time(0)));
+	cv::Ptr<KMajority> obj = new KMajority(16, 100);
 	mytime = cv::getTickCount();
 	obj->cluster(keypoints_1, descriptors_1);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-			keypoints_1.size(), 3, mytime);
+			keypoints_1.size(), obj->getNumberOfClusters(), mytime);
 
-	for (uint k = 0; k < 3; k++) {
-		cout << obj->getCentroids().row(k) << endl;
-		printf("   Cluster %u has %u transactions assigned\n", k,
-				obj->getClusterCounts()[k]);
+	for (uint j = 0; j < obj->getNumberOfClusters(); j++) {
+//		cout << obj->getCentroids().row(j) << endl;
+//		printDescriptors(obj->getCentroids().row(j));
+		printf("   Cluster %u has %u transactions assigned\n", j + 1,
+				obj->getClusterCounts()[j]);
 	}
-
-//	for (uint i = 0; i < (uint) keypoints_1.size(); i++) {
-//		printf("keypoint(%d) assigned to cluster [%d]\n", i,
-//				keypoints_1[i].class_id);
-//	}
 
 	return EXIT_SUCCESS;
 }

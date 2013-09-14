@@ -58,6 +58,10 @@ public:
 		return cluster_counts;
 	}
 
+	unsigned int getNumberOfClusters() const {
+		return k;
+	}
+
 private:
 	// Number of clusters
 	unsigned int k;

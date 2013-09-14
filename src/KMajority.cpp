@@ -15,7 +15,6 @@
 #include <iostream>
 #include <functional>
 #include <bitset>
-#include <ctime>
 
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
@@ -136,7 +135,6 @@ void KMajority::initCentroids(const cv::Mat& descriptors) {
 	}
 
 	// Randomly chose centers
-	std::srand(unsigned(std::time(0)));
 	chooseCentersRandom(k, indices, n, centers_idx, centers_length);
 
 	// Assign centers based on the chosen indexes
@@ -150,8 +148,6 @@ void KMajority::initCentroids(const cv::Mat& descriptors) {
 
 bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
-
-	double mytime = cv::getTickCount();
 
 	bool converged = true;
 
@@ -187,16 +183,14 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 		}
 	}
 
-	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-			* 1000;
-	printf("   Method KMajority::quantize executed in %lf ms\n", mytime);
 	return converged;
 }
 
 void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
-	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<float>::type);
+	// TODO Warning: using matrix of integers, there might be an overflow when summing too much descriptors
+	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<int>::type);
 	// Loop over all clusters
 	for (unsigned int j = 0; j < k; j++) {
 		// Zeroing all cumulative variable dimension
@@ -209,27 +203,38 @@ void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		for (unsigned int i = 0; i < this->n; i++) {
 			// Finding all data assigned to jth clusther
 			if (belongs_to[i] == j) {
-				//double mytime = cv::getTickCount();
-				// TODO Check if there is any speed-up by processing all byte at once
+				uchar byte;
 				for (int l = 0; l < bitwiseCount.cols; l++) {
-					// bit: 7-(l%8) col: (int)k/8 descriptor: i
-					uchar byte = *(descriptors.row(i).col((int) l / 8).data);
-					bitwiseCount.at<float>(0, l) += (int) ((byte
-							>> (7 - (l % 8))) % 2);
+					// bit: 7-(l%8) col: (int)l/8 descriptor: i
+					// Load byte every 8 bits
+					if ((l % 8) == 0) {
+						byte = *(descriptors.row(i).col((int) l / 8).data);
+					}
+					// TODO Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+					// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
+					bitwiseCount.at<int>(0, l) +=
+							((int) ((byte >> (7 - (l % 8))) % 2));
 				}
-				//mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency() * 1000;
-				//printf("   Method KMajority::computeCentroids processed descriptor in %lf ms\n", mytime);
 			}
 		}
+
 		// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
 		for (int l = 0; l < bitwiseCount.cols; l++) {
-			/**
-			 * If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
-			 * then set bit to 1 otherwise set 0 (implicitly choosing 0 in case of ties)
-			 */
-			bool bit = bitwiseCount.at<float>(0, l)
-					> (int) this->cluster_counts[j] / 2;
-			centroids.at<unsigned char>(j, l) += (bit)
+			// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
+			// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
+			bool bit;
+			// There is a tie if the number of data assigned to jth cluster is even
+			// AND the number of bits set to one in dimension l is the half of the data assigned to jth cluster
+			if (this->cluster_counts[j] % 2 == 1
+					&& 2 * bitwiseCount.at<int>(0, l)
+							== (int) this->cluster_counts[j]) {
+				bit = rand() % 2;
+			} else {
+				bit = 2 * bitwiseCount.at<int>(0, l)
+						> (int) (this->cluster_counts[j]);
+			}
+			centroids.at<unsigned char>(j,
+					(int) (bitwiseCount.cols - 1 - l) / 8) += (bit)
 					<< ((bitwiseCount.cols - 1 - l) % 8);
 		}
 	}
