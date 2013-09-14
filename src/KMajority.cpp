@@ -169,9 +169,9 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 				if (belongs_to[i] != j) {
 					converged = false;
 				}
-				// Decrease cluster count in case it was assigned to some valid cluster before
+				// Decrease cluster count in case it was assigned to some valid cluster before.
 				// Recall that initially all transaction are assigned to kth cluster which
-				// is not valid since valid clusters run from 0 to k-1
+				// is not valid since valid clusters run from 0 to k-1 both inclusive.
 				if (belongs_to[i] != k) {
 					cluster_counts[belongs_to[i]]--;
 				}
@@ -189,7 +189,7 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
-	// TODO Warning: using matrix of integers, there might be an overflow when summing too much descriptors
+	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
 	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<int>::type);
 	// Loop over all clusters
 	for (unsigned int j = 0; j < k; j++) {
@@ -210,7 +210,7 @@ void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 					if ((l % 8) == 0) {
 						byte = *(descriptors.row(i).col((int) l / 8).data);
 					}
-					// TODO Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+					// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
 					// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
 					bitwiseCount.at<int>(0, l) +=
 							((int) ((byte >> (7 - (l % 8))) % 2));
@@ -224,7 +224,7 @@ void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 			// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
 			bool bit;
 			// There is a tie if the number of data assigned to jth cluster is even
-			// AND the number of bits set to one in dimension l is the half of the data assigned to jth cluster
+			// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
 			if (this->cluster_counts[j] % 2 == 1
 					&& 2 * bitwiseCount.at<int>(0, l)
 							== (int) this->cluster_counts[j]) {
