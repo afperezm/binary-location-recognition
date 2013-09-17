@@ -20,7 +20,7 @@
 
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
-#include <KMajority.h>
+#include <kmajority_index.h>
 
 // DBoW2
 #include <DBoW2.h>

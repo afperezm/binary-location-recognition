@@ -1,11 +1,11 @@
 /*
- * KMajority.cpp
+ * kmajority_index.cpp
  *
  *  Created on: Aug 28, 2013
  *      Author: andresf
  */
 
-#include <KMajority.h>
+#include <kmajority_index.h>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>

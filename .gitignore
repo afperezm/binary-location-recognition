@@ -15,3 +15,5 @@ main
 *.lai
 *.la
 *.a
+/test_descriptors
+/test.xml.gz
