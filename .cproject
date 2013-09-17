@@ -29,6 +29,10 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MediaEval-PlacingTask/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DBoW2}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DUtils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DUtilsCV}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DVision}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1749597468" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -39,6 +43,10 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MediaEval-PlacingTask/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DBoW2}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DUtils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DUtilsCV}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DVision}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.168371236" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -48,6 +56,7 @@
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib/lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib/lib"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/lib}&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.166794659" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="agast"/>
@@ -68,6 +77,10 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="opencv_stitching"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="opencv_ts"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="opencv_video"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="DBoW2"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="DUtilsCV"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="DUtils"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="DVision"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.100096169" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

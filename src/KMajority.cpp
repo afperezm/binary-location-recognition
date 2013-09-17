@@ -28,6 +28,11 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 		return;
 	}
 
+	if (descriptors.empty()) {
+		fprintf(stderr, "KMajority::cluster: error, descriptors is empty");
+		return;
+	}
+
 	this->n = descriptors.rows;
 	this->dim = descriptors.cols;
 
@@ -43,6 +48,16 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 	this->cluster_counts = new unsigned int[this->k];
 	// Initially no transaction is assigned to any cluster
 	std::fill_n(this->cluster_counts, this->k, 0);
+
+	// Trivial case: less data than clusters, assign one to each cluster
+	if (this->n <= this->k) {
+		centroids.create(this->k, dim, descriptors.type());
+		for (unsigned int i = 0; i < this->n; ++i) {
+			descriptors.row(i).copyTo(
+					centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
+		}
+		return;
+	}
 
 	// Randomly generate clusters
 	this->initCentroids(descriptors);
@@ -61,12 +76,6 @@ void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
 		// Reassign data to clusters
 		converged = this->quantize(keypoints, descriptors);
 
-		// Compute number of assigned transaction to each cluster
-//		unsigned int* cluster_counts = new unsigned int[k];
-//		std::fill_n(cluster_counts, k, 0);
-//		for (unsigned int i = 0; i < n; i++) {
-//			cluster_counts[belongs_to[i]]++;
-//		}
 		// TODO handle empty clusters case
 		// Find empty clusters
 //		for (unsigned int j = 0; j < k; j++) {
@@ -196,7 +205,7 @@ void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		// Zeroing all cumulative variable dimension
 		bitwiseCount(cv::Range(0, 1), cv::Range(0, bitwiseCount.cols)) =
 				cv::Scalar::all(0);
-		// Zero all the centroid dimensions
+		// Zeroing all the centroid dimensions
 		centroids(cv::Range(j, j + 1), cv::Range(0, centroids.cols)) =
 				cv::Scalar::all(0);
 		// Loop over all data

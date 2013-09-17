@@ -22,6 +22,11 @@
 #include <DBriefDescriptorExtractor.h>
 #include <KMajority.h>
 
+// DBoW2
+#include <DBoW2.h>
+#include <DUtilsCV.h>
+#include <DVision.h>
+
 using cv::Mat;
 using std::vector;
 
@@ -158,11 +163,57 @@ int main(int argc, char **argv) {
 			keypoints_1.size(), obj->getNumberOfClusters(), mytime);
 
 	for (uint j = 0; j < obj->getNumberOfClusters(); j++) {
-//		cout << obj->getCentroids().row(j) << endl;
-//		printDescriptors(obj->getCentroids().row(j));
 		printf("   Cluster %u has %u transactions assigned\n", j + 1,
 				obj->getClusterCounts()[j]);
 	}
+
+	// Transform descriptors to a suitable structure for DBoW2
+	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
+	vector<vector<DVision::BRIEF::bitset> > features;
+	features.resize(1);
+
+	features[0].resize(descriptors_1.rows);
+
+	for (unsigned int i = 0; (int) i < descriptors_1.rows * descriptors_1.cols;
+			i++) {
+		int row = (int) i / descriptors_1.cols;
+		int col = (int) i % descriptors_1.cols;
+		if (col == 0) {
+			(features[0])[row].resize(descriptors_1.cols * 8);
+			(features[0])[row].reset();
+		}
+		unsigned char byte = descriptors_1.at<uchar>(row, col);
+		for (int i = 0 + (descriptors_1.cols - 1 - col) * 8;
+				i <= 7 + (descriptors_1.cols - 1 - col) * 8; i++) {
+			((features[0])[row])[i] = byte & 1;
+			byte >>= 1;
+		}
+	}
+
+	printf("   Obtained [%zu] vectors\n", features.size());
+
+	const int k = 6;
+	const int L = 3;
+	const DBoW2::WeightingType weight = DBoW2::TF_IDF;
+	const DBoW2::ScoringType score = DBoW2::L1_NORM;
+
+	BriefVocabulary voc(k, L, weight, score);
+	mytime = cv::getTickCount();
+	voc.create(features);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf(
+			"-- Vocabulary created in [%lf] ms with NWORDS=%u BRANCHING=%d DEPTH=%d SCORING=%s WEIGHTING=%s\n",
+			mytime, voc.size(), k, L,
+			weight == DBoW2::TF_IDF ? "tf-idf" : weight == DBoW2::TF ? "tf" :
+			weight == DBoW2::IDF ? "idf" :
+			weight == DBoW2::BINARY ? "binary" : "unknown",
+			score == DBoW2::L1_NORM ? "L1-norm" :
+			score == DBoW2::L2_NORM ? "L2-norm" :
+			score == DBoW2::CHI_SQUARE ? "Chi square distance" :
+			score == DBoW2::KL ? "KL-divergence" :
+			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
+			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
 	return EXIT_SUCCESS;
 }
@@ -238,8 +289,7 @@ void save(const std::string &filename,
 			filename.c_str());
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 	if (!fs.isOpened()) {
-		fprintf(stderr,
-				(string("Could not open file [") + filename + string("]")).c_str());
+		fprintf(stderr, "Could not open file [%s]", filename.c_str());
 		return;
 	}
 
