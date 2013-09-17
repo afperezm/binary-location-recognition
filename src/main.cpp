@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
 	// Step 5/5: cluster descriptors
 
 	std::srand(unsigned(std::time(0)));
-	cv::Ptr<KMajority> obj = new KMajority(16, 100);
+	cv::Ptr<KMajorityIndex> obj = new KMajorityIndex(16, 100);
 	mytime = cv::getTickCount();
 	obj->cluster(keypoints_1, descriptors_1);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()

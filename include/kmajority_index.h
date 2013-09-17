@@ -5,23 +5,23 @@
  *      Author: andresf
  */
 
-#ifndef KMAJORITY_H_
-#define KMAJORITY_H_
+#ifndef KMAJORITY_INDEX_H_
+#define KMAJORITY_INDEX_H_
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-class KMajority {
+class KMajorityIndex {
 public:
 
-	KMajority(unsigned int _k, unsigned int _max_iterations) :
+	KMajorityIndex(unsigned int _k, unsigned int _max_iterations) :
 			k(_k), max_iterations(_max_iterations), dim(-1), n(-1), belongs_to(
 					new unsigned int[0]), distance_to(new unsigned int[0]), cluster_counts(
 					new unsigned int[0]) {
 		;
 	}
 
-	~KMajority() {
+	~KMajorityIndex() {
 		delete[] belongs_to;
 		delete[] distance_to;
 		delete[] cluster_counts;
@@ -83,4 +83,4 @@ private:
 	void initCentroids(const cv::Mat& descriptors);
 };
 
-#endif /* KMAJORITY_H_ */
+#endif /* KMAJORITY_INDEX_H_ */

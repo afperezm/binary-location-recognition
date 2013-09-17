@@ -19,17 +19,17 @@
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
 
-void KMajority::cluster(std::vector<cv::KeyPoint>& keypoints,
+void KMajorityIndex::cluster(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
 	if (descriptors.type() != CV_8U) {
 		fprintf(stderr,
-				"KMajority::cluster: error, descriptors matrix is not binary");
+				"KMajorityIndex::cluster: error, descriptors matrix is not binary");
 		return;
 	}
 
 	if (descriptors.empty()) {
-		fprintf(stderr, "KMajority::cluster: error, descriptors is empty");
+		fprintf(stderr, "KMajorityIndex::cluster: error, descriptors is empty");
 		return;
 	}
 
@@ -133,7 +133,7 @@ void chooseCentersRandom(int k, int* indices, int indices_length, int* centers,
 	centers_length = index;
 }
 
-void KMajority::initCentroids(const cv::Mat& descriptors) {
+void KMajorityIndex::initCentroids(const cv::Mat& descriptors) {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
 	cv::Ptr<int> centers_idx = new int[k];
@@ -155,7 +155,7 @@ void KMajority::initCentroids(const cv::Mat& descriptors) {
 
 }
 
-bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
+bool KMajorityIndex::quantize(std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
 	bool converged = true;
@@ -195,7 +195,7 @@ bool KMajority::quantize(std::vector<cv::KeyPoint>& keypoints,
 	return converged;
 }
 
-void KMajority::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
+void KMajorityIndex::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
