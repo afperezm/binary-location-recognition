@@ -244,3 +244,11 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 		}
 	}
 }
+
+void KMajorityIndex::getLabels(cv::Mat& labels) {
+	labels = cv::Mat();
+	labels.create(this->n, 1, cv::DataType<uint>::type);
+	for (uint i = 0; i < this->n; i++) {
+		labels.at<uint>(i, 1) = belongs_to[i];
+	}
+}

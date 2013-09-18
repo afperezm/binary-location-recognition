@@ -56,6 +56,13 @@ public:
 		return k;
 	}
 
+	/**
+	 * Return the cluster indexes each transaction is assigned to.
+	 *
+	 * @param labels - Output matrix storing the transactions cluster labels
+	 */
+	void getLabels(cv::Mat& labels);
+
 private:
 	// Number of clusters
 	unsigned int k;
