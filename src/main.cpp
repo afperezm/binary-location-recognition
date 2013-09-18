@@ -154,17 +154,17 @@ int main(int argc, char **argv) {
 	// Step 5/5: cluster descriptors
 
 	std::srand(unsigned(std::time(0)));
-	cv::Ptr<KMajorityIndex> obj = new KMajorityIndex(16, 100);
+	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
 	mytime = cv::getTickCount();
-	obj->cluster(keypoints_1, descriptors_1);
+	kMajIdx->cluster(keypoints_1, descriptors_1);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-			keypoints_1.size(), obj->getNumberOfClusters(), mytime);
+			keypoints_1.size(), kMajIdx->getNumberOfClusters(), mytime);
 
-	for (uint j = 0; j < obj->getNumberOfClusters(); j++) {
+	for (uint j = 0; j < kMajIdx->getNumberOfClusters(); j++) {
 		printf("   Cluster %u has %u transactions assigned\n", j + 1,
-				obj->getClusterCounts()[j]);
+				kMajIdx->getClusterCounts()[j]);
 	}
 
 	// Transform descriptors to a suitable structure for DBoW2
