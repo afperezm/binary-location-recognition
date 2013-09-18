@@ -31,24 +31,18 @@ public:
 	 * Implements majority voting scheme as explained in Grana2013 for centroid computation
 	 * based on component wise majority of bits from descriptors matrix.
 	 *
-	 * @param descriptors binary matrix of size (n x d)
-	 * @param centroids matrix where centroids will be saved
+	 * @param descriptors - Binary matrix of size (n x d)
 	 */
-	void computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
-			const cv::Mat& descriptors);
+	void computeCentroids(const cv::Mat& descriptors);
 
 	/**
-	 * Computes Hamming distance between each descriptor and each cluster centroid
-	 * and assigns a label to the class_id attribute of the keypoints vector.
-	 * @param keypoints
+	 * Computes Hamming distance between each descriptor and each cluster centroid.
+	 *
 	 * @param descriptors binary matrix of size (n x d)
-	 * @param centroids binary matrix of size (1 x d)
 	 */
-	bool quantize(std::vector<cv::KeyPoint>& keypoints,
-			const cv::Mat& descriptors);
+	bool quantize(const cv::Mat& descriptors);
 
-	void cluster(std::vector<cv::KeyPoint>& keypoints,
-			const cv::Mat& descriptors);
+	void cluster(const cv::Mat& descriptors);
 
 	const cv::Mat& getCentroids() const {
 		return centroids;

@@ -19,8 +19,7 @@
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
 
-void KMajorityIndex::cluster(std::vector<cv::KeyPoint>& keypoints,
-		const cv::Mat& descriptors) {
+void KMajorityIndex::cluster(const cv::Mat& descriptors) {
 
 	if (descriptors.type() != CV_8U) {
 		fprintf(stderr,
@@ -63,7 +62,7 @@ void KMajorityIndex::cluster(std::vector<cv::KeyPoint>& keypoints,
 	this->initCentroids(descriptors);
 
 	// Assign data to clusters
-	this->quantize(keypoints, descriptors);
+	this->quantize(descriptors);
 
 	bool converged = false;
 
@@ -71,10 +70,10 @@ void KMajorityIndex::cluster(std::vector<cv::KeyPoint>& keypoints,
 	while (converged == false && iteration < max_iterations) {
 		iteration++;
 		// Compute the new cluster centers
-		this->computeCentroids(keypoints, descriptors);
+		this->computeCentroids(descriptors);
 
 		// Reassign data to clusters
-		converged = this->quantize(keypoints, descriptors);
+		converged = this->quantize(descriptors);
 
 		// TODO handle empty clusters case
 		// Find empty clusters
@@ -155,8 +154,7 @@ void KMajorityIndex::initCentroids(const cv::Mat& descriptors) {
 
 }
 
-bool KMajorityIndex::quantize(std::vector<cv::KeyPoint>& keypoints,
-		const cv::Mat& descriptors) {
+bool KMajorityIndex::quantize(const cv::Mat& descriptors) {
 
 	bool converged = true;
 
@@ -187,7 +185,6 @@ bool KMajorityIndex::quantize(std::vector<cv::KeyPoint>& keypoints,
 				belongs_to[i] = j;
 				cluster_counts[j]++;
 				distance_to[i] = hd;
-				keypoints[i].class_id = j;
 			}
 		}
 	}
@@ -195,8 +192,7 @@ bool KMajorityIndex::quantize(std::vector<cv::KeyPoint>& keypoints,
 	return converged;
 }
 
-void KMajorityIndex::computeCentroids(const std::vector<cv::KeyPoint>& keypoints,
-		const cv::Mat& descriptors) {
+void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
 	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<int>::type);
