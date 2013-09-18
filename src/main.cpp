@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 	std::srand(unsigned(std::time(0)));
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
 	mytime = cv::getTickCount();
-	kMajIdx->cluster(keypoints_1, descriptors_1);
+	kMajIdx->cluster(descriptors_1);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
