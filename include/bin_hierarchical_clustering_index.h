@@ -38,23 +38,7 @@
 #ifndef BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <limits>
-#include <map>
-#include <string>
-
-#include <opencv2/flann/allocator.h>
-#include <opencv2/flann/dist.h>
-#include <opencv2/flann/general.h>
-#include <opencv2/flann/heap.h>
-#include <opencv2/flann/logger.h>
-#include <opencv2/flann/matrix.h>
-#include <opencv2/flann/nn_index.h>
-#include <opencv2/flann/random.h>
-#include <opencv2/flann/result_set.h>
-#include <opencv2/flann/saving.h>
+#include <opencv2/flann/flann.hpp>
 
 namespace cvflann {
 
