@@ -195,34 +195,31 @@ bool KMajorityIndex::quantize(const cv::Mat& descriptors) {
 void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
-	cv::Mat bitwiseCount(1, this->dim * 8, cv::DataType<int>::type);
+	cv::Mat bitwiseCount(this->k, this->dim * 8, cv::DataType<int>::type);
+	// Zeroing matrix of cumulative bits
+	bitwiseCount = cv::Scalar::all(0);
+	// Zeroing all the centroids dimensions
+	centroids = cv::Scalar::all(0);
+
+	// Loop over all data
+	for (unsigned int i = 0; i < this->n; i++) {
+		unsigned int j = belongs_to[i];
+		// Finding all data assigned to jth clusther
+		uchar byte;
+		for (int l = 0; l < bitwiseCount.cols; l++) {
+			// bit: 7-(l%8) col: (int)l/8 descriptor: i
+			// Load byte every 8 bits
+			if ((l % 8) == 0) {
+				byte = *(descriptors.row(i).col((int) l / 8).data);
+			}
+			// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+			// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
+			bitwiseCount.at<int>(j, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
+		}
+	}
+
 	// Loop over all clusters
 	for (unsigned int j = 0; j < k; j++) {
-		// Zeroing all cumulative variable dimension
-		bitwiseCount(cv::Range(0, 1), cv::Range(0, bitwiseCount.cols)) =
-				cv::Scalar::all(0);
-		// Zeroing all the centroid dimensions
-		centroids(cv::Range(j, j + 1), cv::Range(0, centroids.cols)) =
-				cv::Scalar::all(0);
-		// Loop over all data
-		for (unsigned int i = 0; i < this->n; i++) {
-			// Finding all data assigned to jth clusther
-			if (belongs_to[i] == j) {
-				uchar byte;
-				for (int l = 0; l < bitwiseCount.cols; l++) {
-					// bit: 7-(l%8) col: (int)l/8 descriptor: i
-					// Load byte every 8 bits
-					if ((l % 8) == 0) {
-						byte = *(descriptors.row(i).col((int) l / 8).data);
-					}
-					// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
-					// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
-					bitwiseCount.at<int>(0, l) +=
-							((int) ((byte >> (7 - (l % 8))) % 2));
-				}
-			}
-		}
-
 		// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
 		for (int l = 0; l < bitwiseCount.cols; l++) {
 			// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
@@ -231,11 +228,11 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 			// There is a tie if the number of data assigned to jth cluster is even
 			// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
 			if (this->cluster_counts[j] % 2 == 1
-					&& 2 * bitwiseCount.at<int>(0, l)
+					&& 2 * bitwiseCount.at<int>(j, l)
 							== (int) this->cluster_counts[j]) {
 				bit = rand() % 2;
 			} else {
-				bit = 2 * bitwiseCount.at<int>(0, l)
+				bit = 2 * bitwiseCount.at<int>(j, l)
 						> (int) (this->cluster_counts[j]);
 			}
 			centroids.at<unsigned char>(j,
