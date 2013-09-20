@@ -88,15 +88,14 @@ struct BHCIndexParams: public IndexParams {
 template<typename Distance>
 class BinHierarchicalClusteringIndex: public cvflann::NNIndex<Distance> {
 
-	typedef typename Distance::ElementType ElementType;
-
 private:
 
+	typedef typename Distance::ElementType ElementType;
 	typedef typename Distance::ResultType DistanceType;
 	typedef void (BinHierarchicalClusteringIndex::*centersAlgFunction)(int,
 			int*, int, int*, int&);
 
-	// The function used for choosing the cluster centers.
+	// The function used for choosing the cluster centers
 	centersAlgFunction chooseCenters;
 
 	/**
