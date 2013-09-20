@@ -93,7 +93,8 @@ class BinHierarchicalClusteringIndex: public cvflann::NNIndex<Distance> {
 private:
 
 	typedef typename Distance::ResultType DistanceType;
-	typedef void (BinHierarchicalClusteringIndex::*centersAlgFunction)(int, int*, int, int*, int&);
+	typedef void (BinHierarchicalClusteringIndex::*centersAlgFunction)(int,
+			int*, int, int*, int&);
 
 	// The function used for choosing the cluster centers.
 	centersAlgFunction chooseCenters;
@@ -126,7 +127,8 @@ private:
 				centers[index] = indices[rnd];
 
 				for (int j = 0; j < index; ++j) {
-					DistanceType sq = distance_(dataset_.row(centers[index]).data,
+					DistanceType sq = distance_(
+							dataset_.row(centers[index]).data,
 							dataset_.row(centers[j]).data, dataset_.cols);
 					if (sq < 1e-16) {
 						duplicate = true;
@@ -393,39 +395,54 @@ public:
 	}
 
 	/**
-	 *  Returns size of index.
+	 * Returns the number of features in this index.
+	 *
+	 * @return the index size
 	 */
 	size_t size() const {
 		return size_;
 	}
 
 	/**
-	 * Returns the length of an index feature.
+	 * Returns the dimensionality of the features in this index.
+	 *
+	 * @return the index features length
 	 */
 	size_t veclen() const {
 		return veclen_;
 	}
 
 	/**
-	 * Computes the inde memory usage
-	 * Returns: memory used by the index
+	 * Returns the amount of memory (in bytes) used by the index.
+	 *
+	 * @return the memory used by the index
 	 */
 	int usedMemory() const {
 		return pool_.usedMemory + pool_.wastedMemory + memoryCounter_;
 	}
 
+	/**
+	 * The index type (kdtree, kmeans,...)
+	 *
+	 * @return kmeans index type
+	 */
 	flann_algorithm_t getType() const {
 		// TODO Return the right type, clue: I stored one in the params struct
 		return FLANN_INDEX_KMEANS;
 	}
 
+	/**
+	 * The index parameters.
+	 *
+	 * @return the index parameters
+	 */
 	IndexParams getParameters() const {
 		return index_params_;
 	}
 
 	/**
-	 * Find set of nearest neighbors to vec. Their indices are stored inside
-	 * the result object.
+	 * Finds the nearest-neighbors to a given features vector and stores the result
+	 * inside a result object.
 	 *
 	 * @param result - The result object in which the indices of the nearest neighbors are stored
 	 * @param vec - The vector for which to search the nearest neighbors
