@@ -9,7 +9,9 @@
 
 namespace me {
 
-Photo::Photo() {
+Photo::Photo() :
+		photoID(0), accuracy(0), userID(0), photoLink(""), photoTags(""), dateTaken(
+				0), dateUploaded(0), views(0), licenseID(-1), isTest(false) {
 }
 
 Photo::~Photo() {

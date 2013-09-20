@@ -14,10 +14,10 @@ using std::string;
 
 namespace me {
 
-typedef struct {
+struct coordinates {
 	float latitude;
 	float longitude;
-} coordinates;
+};
 
 class Photo {
 public:
@@ -122,8 +122,8 @@ private:
 	long dateUploaded;
 	int views;
 	int licenseID;
-	coordinates coords;
 	bool isTest;
+	coordinates coords;
 };
 
 } /* namespace me */
