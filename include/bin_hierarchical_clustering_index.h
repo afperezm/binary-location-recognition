@@ -35,27 +35,38 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
+//	/**
+//	 * Index constructor
+//	 *
+//	 * @param inputData - Matrix with the data to be clustered
+//	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
+//	 */
+//	BinHierarchicalClusteringIndex(const cv::Mat& inputData, const BHCIndexParams& params = BHCIndexParams());
+//	virtual ~BinHierarchicalClusteringIndex();
+//	void buildIndex();
+//	void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params);
+//	int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params);
+//	void saveIndex(FILE* stream);
+//	void loadIndex(FILE* stream);
+//	size_t size() const;
+//	size_t veclen() const;
+//	int usedMemory() const;
+//	flann_algorithm_t getType() const;
+//	IndexParams getParameters() const;
+//	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams);
 #ifndef BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
 #include <opencv2/flann/flann.hpp>
+#include <ScoringObject.h>
 
 namespace cvflann {
 
-//struct BHCIndexParams: public IndexParams {
-//	BHCIndexParams(int k = 10, int L = 5, DBoW2::WeightingType weighting =
-//			DBoW2::TF_IDF, DBoW2::ScoringType scoring = DBoW2::L1_NORM) {
-//		(*this)["branching"] = k;
-//		(*this)["depth"] = L;
-//		(*this)["weighting"] = weighting;
-//		(*this)["scoring"] = scoring;
-//	}
-//};
-
 struct BHCIndexParams: public IndexParams {
-	BHCIndexParams(int branching = 32, int iterations = 11,
+	BHCIndexParams(int branching = 6, int depth = 10, int iterations = 11,
 			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
-			float cb_index = 0.2) {
+			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
+			DBoW2::ScoringType scoring = DBoW2::L1_NORM, float cb_index = 0.2) {
 		(*this)["algorithm"] = FLANN_INDEX_KMEANS;
 		// branching factor
 		(*this)["branching"] = branching;
@@ -65,6 +76,12 @@ struct BHCIndexParams: public IndexParams {
 		(*this)["centers_init"] = centers_init;
 		// cluster boundary index. Used when searching the kmeans tree
 		(*this)["cb_index"] = cb_index;
+		// tree depth
+		(*this)["depth"] = depth;
+		// leafs weighting scheme
+		(*this)["weighting"] = weighting;
+		// BoW vectors scoring scheme
+		(*this)["scoring"] = scoring;
 	}
 };
 
@@ -72,11 +89,11 @@ template<typename Distance>
 class BinHierarchicalClusteringIndex: public cvflann::NNIndex<Distance> {
 
 	typedef typename Distance::ElementType ElementType;
-	typedef typename Distance::ResultType DistanceType;
-	typedef void (BHCIndexParams::*centersAlgFunction)(int, int*, int, int*,
-			int&);
 
-public:
+private:
+
+	typedef typename Distance::ResultType DistanceType;
+	typedef void (BinHierarchicalClusteringIndex::*centersAlgFunction)(int, int*, int, int*, int&);
 
 	// The function used for choosing the cluster centers.
 	centersAlgFunction chooseCenters;
@@ -109,8 +126,8 @@ public:
 				centers[index] = indices[rnd];
 
 				for (int j = 0; j < index; ++j) {
-					DistanceType sq = distance_(dataset_[centers[index]],
-							dataset_[centers[j]], dataset_.cols);
+					DistanceType sq = distance_(dataset_.row(centers[index]).data,
+							dataset_.row(centers[j]).data, dataset_.cols);
 					if (sq < 1e-16) {
 						duplicate = true;
 					}
@@ -146,11 +163,12 @@ public:
 			int best_index = -1;
 			DistanceType best_val = 0;
 			for (int j = 0; j < n; ++j) {
-				DistanceType dist = distance_(dataset_[centers[0]],
-						dataset_[indices[j]], dataset_.cols);
+				DistanceType dist = distance_(dataset_.row(centers[0]).data,
+						dataset_.row(indices[j]).data, dataset_.cols);
 				for (int i = 1; i < index; ++i) {
-					DistanceType tmp_dist = distance_(dataset_[centers[i]],
-							dataset_[indices[j]], dataset_.cols);
+					DistanceType tmp_dist = distance_(
+							dataset_.row(centers[i]).data,
+							dataset_.row(indices[j]).data, dataset_.cols);
 					if (tmp_dist < dist) {
 						dist = tmp_dist;
 					}
@@ -193,8 +211,8 @@ public:
 		centers[0] = indices[index];
 
 		for (int i = 0; i < n; i++) {
-			closestDistSq[i] = distance_(dataset_[indices[i]],
-					dataset_[indices[index]], dataset_.cols);
+			closestDistSq[i] = distance_(dataset_.row(indices[i]).data,
+					dataset_.row(indices[index]).data, dataset_.cols);
 			currentPot += closestDistSq[i];
 		}
 
@@ -223,9 +241,9 @@ public:
 				double newPot = 0;
 				for (int i = 0; i < n; i++)
 					newPot += std::min(
-							distance_(dataset_[indices[i]],
-									dataset_[indices[index]], dataset_.cols),
-							closestDistSq[i]);
+							distance_(dataset_.row(indices[i]).data,
+									dataset_.row(indices[index]).data,
+									dataset_.cols), closestDistSq[i]);
 
 				// Store the best result
 				if ((bestNewPot < 0) || (newPot < bestNewPot)) {
@@ -239,9 +257,9 @@ public:
 			currentPot = bestNewPot;
 			for (int i = 0; i < n; i++)
 				closestDistSq[i] = std::min(
-						distance_(dataset_[indices[i]],
-								dataset_[indices[bestNewIndex]], dataset_.cols),
-						closestDistSq[i]);
+						distance_(dataset_.row(indices[i]).data,
+								dataset_.row(indices[bestNewIndex]).data,
+								dataset_.cols), closestDistSq[i]);
 		}
 
 		centers_length = centerCount;
@@ -249,39 +267,31 @@ public:
 		delete[] closestDistSq;
 	}
 
-//	/**
-//	 * Index constructor
-//	 *
-//	 * @param inputData - Matrix with the data to be clustered
-//	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
-//	 */
-//	BinHierarchicalClusteringIndex(const cv::Mat& inputData, const BHCIndexParams& params = BHCIndexParams());
-//	virtual ~BinHierarchicalClusteringIndex();
-
-//	void buildIndex();
-//	void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params);
-//	int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params);
-//	void saveIndex(FILE* stream);
-//	void loadIndex(FILE* stream);
-//	size_t size() const;
-//	size_t veclen() const;
-//	int usedMemory() const;
-//	flann_algorithm_t getType() const;
-//	IndexParams getParameters() const;
-//	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams);
-
-	BinHierarchicalClusteringIndex(const Matrix<ElementType>& inputData,
+public:
+	/**
+	 * Index constructor
+	 *
+	 * @param inputData - Matrix with the data to be clustered
+	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
+	 * @param d
+	 */
+	BinHierarchicalClusteringIndex(const cv::Mat& inputData,
 			const IndexParams& params = BHCIndexParams(), Distance d =
 					Distance()) :
 			dataset_(inputData), index_params_(params), root_(NULL), indices_(
-					NULL), distance_(d) {
-		memoryCounter_ = 0;
+					NULL), distance_(d), m_scoring_object(NULL) {
 
+		// Attributes initialization
+		memoryCounter_ = 0;
 		size_ = dataset_.rows;
 		veclen_ = dataset_.cols;
 
-		branching_ = get_param(params, "branching", 32);
+		branching_ = get_param(params, "branching", 6);
 		iterations_ = get_param(params, "iterations", 11);
+		depth_ = get_param(params, "depth", 10);
+		m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
+		m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
+
 		if (iterations_ < 0) {
 			iterations_ = (std::numeric_limits<int>::max)();
 		}
@@ -297,9 +307,10 @@ public:
 			chooseCenters =
 					&BinHierarchicalClusteringIndex::chooseCentersKMeanspp;
 		} else {
-			throw FLANNException(
+			throw std::runtime_error(
 					"Unknown algorithm for choosing initial centers.");
 		}
+		// TODO I think I don't need this variable
 		cb_index_ = 0.4f;
 	}
 
@@ -322,7 +333,7 @@ public:
 	 */
 	void buildIndex() {
 		if (branching_ < 2) {
-			throw FLANNException("Branching factor must be at least 2");
+			throw std::runtime_error("Branching factor must be at least 2");
 		}
 
 		indices_ = new int[size_];
@@ -330,16 +341,23 @@ public:
 			indices_[i] = int(i);
 		}
 
+		printf("[BHCIndex::buildIndex] Building tree from %d features\n",
+				(int) size_);
+		printf("[BHCIndex::buildIndex]   with depth %d, branching factor %d\n",
+				depth_, branching_);
+		printf("[BHCIndex::buildIndex]   and restarts %d\n", iterations_);
+
 		root_ = pool_.allocate<KMeansNode>();
 		computeNodeStatistics(root_, indices_, (int) size_);
 		computeClustering(root_, indices_, (int) size_, branching_, 0);
 	}
 
-	void set_cb_index(float index) {
-		cb_index_ = index;
-	}
+//	void set_cb_index(float index) {
+//		cb_index_ = index;
+//	}
 
 	void saveIndex(FILE* stream) {
+		// TODO Check other values to save
 		save_value(stream, branching_);
 		save_value(stream, iterations_);
 		save_value(stream, memoryCounter_);
@@ -350,6 +368,7 @@ public:
 	}
 
 	void loadIndex(FILE* stream) {
+		// TODO Check other values to load
 		load_value(stream, branching_);
 		load_value(stream, iterations_);
 		load_value(stream, memoryCounter_);
@@ -396,6 +415,7 @@ public:
 	}
 
 	flann_algorithm_t getType() const {
+		// TODO Return the right type, clue: I stored one in the params struct
 		return FLANN_INDEX_KMEANS;
 	}
 
@@ -407,10 +427,9 @@ public:
 	 * Find set of nearest neighbors to vec. Their indices are stored inside
 	 * the result object.
 	 *
-	 * Params:
-	 *     result = the result object in which the indices of the nearest-neighbors are stored
-	 *     vec = the vector for which to search the nearest neighbors
-	 *     searchParams = parameters that influence the search algorithm (checks, cb_index)
+	 * @param result - The result object in which the indices of the nearest neighbors are stored
+	 * @param vec - The vector for which to search the nearest neighbors
+	 * @param searchParams - Parameters than influence the search algorithm
 	 */
 	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
 			const SearchParams& searchParams) {
@@ -418,19 +437,19 @@ public:
 		int maxChecks = get_param(searchParams, "checks", 32);
 
 		if (maxChecks == FLANN_CHECKS_UNLIMITED) {
-			findExactNN(root_, result, vec);
+//			findExactNN(root_, result, vec);
 		} else {
 			// Priority queue storing intermediate branches in the best-bin-first search
 			Heap<BranchSt>* heap = new Heap<BranchSt>((int) size_);
 
 			int checks = 0;
-			findNN(root_, result, vec, checks, maxChecks, heap);
+//			findNN(root_, result, vec, checks, maxChecks, heap);
 
 			BranchSt branch;
 			while (heap->popMin(branch)
 					&& (checks < maxChecks || !result.full())) {
 				KMeansNodePtr node = branch.node;
-				findNN(node, result, vec, checks, maxChecks, heap);
+//				findNN(node, result, vec, checks, maxChecks, heap);
 			}
 			assert(result.full());
 
@@ -439,38 +458,38 @@ public:
 
 	}
 
-	/**
-	 * Clustering function that takes a cut in the hierarchical k-means
-	 * tree and return the clusters centers of that clustering.
-	 * Params:
-	 *     numClusters = number of clusters to have in the clustering computed
-	 * Returns: number of cluster centers
-	 */
-	int getClusterCenters(Matrix<DistanceType>& centers) {
-		int numClusters = centers.rows;
-		if (numClusters < 1) {
-			throw FLANNException("Number of clusters must be at least 1");
-		}
-
-		DistanceType variance;
-		KMeansNodePtr* clusters = new KMeansNodePtr[numClusters];
-
-		int clusterCount = getMinVarianceClusters(root_, clusters, numClusters,
-				variance);
-
-		Logger::info("Clusters requested: %d, returning %d\n", numClusters,
-				clusterCount);
-
-		for (int i = 0; i < clusterCount; ++i) {
-			DistanceType* center = clusters[i]->pivot;
-			for (size_t j = 0; j < veclen_; ++j) {
-				centers[i][j] = center[j];
-			}
-		}
-		delete[] clusters;
-
-		return clusterCount;
-	}
+//	/**
+//	 * Clustering function that takes a cut in the hierarchical k-means
+//	 * tree and return the clusters centers of that clustering.
+//	 * Params:
+//	 *     numClusters = number of clusters to have in the clustering computed
+//	 * Returns: number of cluster centers
+//	 */
+//	int getClusterCenters(Matrix<DistanceType>& centers) {
+//		int numClusters = centers.rows;
+//		if (numClusters < 1) {
+//			throw FLANNException("Number of clusters must be at least 1");
+//		}
+//
+//		DistanceType variance;
+//		KMeansNodePtr* clusters = new KMeansNodePtr[numClusters];
+//
+//		int clusterCount = getMinVarianceClusters(root_, clusters, numClusters,
+//				variance);
+//
+//		Logger::info("Clusters requested: %d, returning %d\n", numClusters,
+//				clusterCount);
+//
+//		for (int i = 0; i < clusterCount; ++i) {
+//			DistanceType* center = clusters[i]->pivot;
+//			for (size_t j = 0; j < veclen_; ++j) {
+//				centers[i][j] = center[j];
+//			}
+//		}
+//		delete[] clusters;
+//
+//		return clusterCount;
+//	}
 
 private:
 
@@ -527,7 +546,7 @@ private:
 	float cb_index_;
 
 	// The dataset used by this index
-	const Matrix<ElementType> dataset_;
+	const cv::Mat dataset_;
 
 	// Index parameters
 	IndexParams index_params_;
@@ -540,7 +559,6 @@ private:
 
 	// The root node in the tree.
 	KMeansNodePtr root_;
-
 	//  Array of indices to vectors in the dataset
 	int* indices_;
 
@@ -552,6 +570,19 @@ private:
 
 	// Memory occupied by the index
 	int memoryCounter_;
+
+	// Depth levels
+	int depth_;
+	// Weighting method
+	DBoW2::WeightingType m_weighting;
+	// Scoring method
+	DBoW2::ScoringType m_scoring;
+	// Object for computing scores
+	DBoW2::GeneralScoring* m_scoring_object;
+	// Tree nodes
+//	std::vector<DBoW2::Node> m_nodes;
+	// Words of the vocabulary, i.e. tree leaves (m_words[wid]->word_id == wid)
+//	std::vector<DBoW2::Node*> m_words;
 
 	void save_tree(FILE* stream, KMeansNodePtr node) {
 		save_value(stream, *node);
@@ -598,9 +629,9 @@ private:
 	/**
 	 * Computes the statistics of a node (mean, radius, variance).
 	 *
-	 * Params:
-	 *     node = the node to use
-	 *     indices = the indices of the points belonging to the node
+	 * @param node - The node to use
+	 * @param indices - The array of indices of the points belonging to the node
+	 * @param indices_length - The number of indices in the array of indices
 	 */
 	void computeNodeStatistics(KMeansNodePtr node, int* indices,
 			int indices_length) {
@@ -612,26 +643,26 @@ private:
 
 		memset(mean, 0, veclen_ * sizeof(DistanceType));
 
-		for (size_t i = 0; i < size_; ++i) {
-			ElementType* vec = dataset_[indices[i]];
-			for (size_t j = 0; j < veclen_; ++j) {
-				mean[j] += vec[j];
-			}
-			variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
-		}
-		for (size_t j = 0; j < veclen_; ++j) {
-			mean[j] /= size_;
-		}
-		variance /= size_;
-		variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
-
-		DistanceType tmp = 0;
-		for (int i = 0; i < indices_length; ++i) {
-			tmp = distance_(mean, dataset_[indices[i]], veclen_);
-			if (tmp > radius) {
-				radius = tmp;
-			}
-		}
+//		for (size_t i = 0; i < size_; ++i) {
+//			ElementType* vec = dataset_[indices[i]];
+//			for (size_t j = 0; j < veclen_; ++j) {
+//				mean[j] += vec[j];
+//			}
+//			variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
+//		}
+//		for (size_t j = 0; j < veclen_; ++j) {
+//			mean[j] /= size_;
+//		}
+//		variance /= size_;
+//		variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
+//
+//		DistanceType tmp = 0;
+//		for (int i = 0; i < indices_length; ++i) {
+//			tmp = distance_(mean, dataset_[indices[i]], veclen_);
+//			if (tmp > radius) {
+//				radius = tmp;
+//			}
+//		}
 
 		node->variance = variance;
 		node->radius = radius;
@@ -640,32 +671,39 @@ private:
 
 	/**
 	 * The method responsible with actually doing the recursive hierarchical
-	 * clustering
+	 * clustering.
 	 *
-	 * Params:
-	 *     node = the node to cluster
-	 *     indices = indices of the points belonging to the current node
-	 *     branching = the branching factor to use in the clustering
-	 *
-	 * TODO: for 1-sized clusters don't store a cluster center (it's the same as the single cluster point)
+	 * @param node - The node to cluster
+	 * @param indices - Indices of the points belonging to the current node
+	 * @param indices_length
+	 * @param branching - The branching factor to use in the clustering
+	 * @param level
 	 */
+	//TODO for 1-sized clusters don't store a cluster center (it's the same as the single cluster point)
 	void computeClustering(KMeansNodePtr node, int* indices, int indices_length,
 			int branching, int level) {
 		node->size = indices_length;
 		node->level = level;
 
-		if (indices_length < branching) {
+		// Recursion base case: done when the last level is reached
+		// or when there are less data than clusters
+		if (level == depth_ - 1 || indices_length < branching) {
 			node->indices = indices;
 			std::sort(node->indices, node->indices + indices_length);
 			node->childs = NULL;
 			return;
 		}
 
+		printf("[BuildRecurse] (level %d): Running k-means (%d features)\n",
+				level, indices_length);
+
 		int* centers_idx = new int[branching];
 		int centers_length;
 		(this->*chooseCenters)(branching, indices, indices_length, centers_idx,
 				centers_length);
 
+		// Recursion base case: done as well if by case got
+		// less cluster indices than clusters
 		if (centers_length < branching) {
 			node->indices = indices;
 			std::sort(node->indices, node->indices + indices_length);
@@ -674,13 +712,16 @@ private:
 			return;
 		}
 
-		Matrix<double> dcenters(new double[branching * veclen_], branching,
-				veclen_);
-		for (int i = 0; i < centers_length; ++i) {
-			ElementType* vec = dataset_[centers_idx[i]];
-			for (size_t k = 0; k < veclen_; ++k) {
-				dcenters[i][k] = double(vec[k]);
-			}
+		// TODO initCentroids: assign centers based on the chosen indexes
+
+		printf(
+				"[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n",
+				level);
+
+		cv::Mat dcenters(branching, veclen_, dataset_.type());
+		for (int i = 0; i < centers_length; i++) {
+			dataset_.row(centers_idx[i]).copyTo(
+					dcenters(cv::Range(i, i + 1), cv::Range(0, veclen_)));
 		}
 		delete[] centers_idx;
 
@@ -691,24 +732,25 @@ private:
 			count[i] = 0;
 		}
 
-		//	assign points to clusters
+		//TODO quantize: assign points to clusters
 		int* belongs_to = new int[indices_length];
 		for (int i = 0; i < indices_length; ++i) {
 
-			DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0],
-					veclen_);
+			DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
+					dcenters.row(0).data, veclen_);
 			belongs_to[i] = 0;
 			for (int j = 1; j < branching; ++j) {
-				DistanceType new_sq_dist = distance_(dataset_[indices[i]],
-						dcenters[j], veclen_);
+				DistanceType new_sq_dist = distance_(
+						dataset_.row(indices[i]).data, dcenters.row(j).data,
+						veclen_);
 				if (sq_dist > new_sq_dist) {
 					belongs_to[i] = j;
 					sq_dist = new_sq_dist;
 				}
 			}
-			if (sq_dist > radiuses[belongs_to[i]]) {
-				radiuses[belongs_to[i]] = sq_dist;
-			}
+//			if (sq_dist > radiuses[belongs_to[i]]) {
+//				radiuses[belongs_to[i]] = sq_dist;
+//			}
 			count[belongs_to[i]]++;
 		}
 
@@ -718,41 +760,95 @@ private:
 			converged = true;
 			iteration++;
 
-			// compute the new cluster centers
-			for (int i = 0; i < branching; ++i) {
-				memset(dcenters[i], 0, sizeof(double) * veclen_);
-				radiuses[i] = 0;
-			}
-			for (int i = 0; i < indices_length; ++i) {
-				ElementType* vec = dataset_[indices[i]];
-				double* center = dcenters[belongs_to[i]];
-				for (size_t k = 0; k < veclen_; ++k) {
-					center[k] += vec[k];
+			//TODO: computeCentroids compute the new cluster centers
+			// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
+			cv::Mat bitwiseCount(branching, veclen_ * 8,
+					cv::DataType<int>::type);
+			// Zeroing matrix of cumulative bits
+			bitwiseCount = cv::Scalar::all(0);
+			// Zeroing all the centroids dimensions
+			dcenters = cv::Scalar::all(0);
+			// Zeroing all cluster radiuses
+//			for (int i = 0; i < branching; ++i) {
+//				memset(dcenters[i], 0, sizeof(double) * veclen_);
+//				radiuses[i] = 0;
+//			}
+			// Summing component wise the data into center
+//			for (int i = 0; i < indices_length; ++i) {
+//				ElementType* vec = dataset_[indices[i]];
+//				double* center = dcenters[belongs_to[i]];
+//				for (size_t k = 0; k < veclen_; ++k) {
+//					center[k] += vec[k];
+//				}
+//			}
+
+//			printf("[BuildRecurse] (level %d): bitwise summing the data into each centroid\n", level);
+			// Bitwise summing the data into each centroid
+			for (unsigned int i = 0; (int) i < indices_length; i++) {
+				unsigned int j = belongs_to[i];
+//				printf("[BuildRecurse] (level %d): summing %d/%d transaction into %d cluster accumulator\n", level, i, indices_length, j);
+				// Finding all data assigned to jth clusther
+				uchar byte = 0;
+				for (int l = 0; l < bitwiseCount.cols; l++) {
+					// bit: 7-(l%8) col: (int)l/8 descriptor: i
+					// Load byte every 8 bits
+					if ((l % 8) == 0) {
+						byte = *(dataset_.row(i).col((int) l / 8).data);
+					}
+					// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+					// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
+					bitwiseCount.at<int>(j, l) +=
+							((int) ((byte >> (7 - (l % 8))) % 2));
 				}
 			}
-			for (int i = 0; i < branching; ++i) {
-				int cnt = count[i];
-				for (size_t k = 0; k < veclen_; ++k) {
-					dcenters[i][k] /= cnt;
+			// Dividing the centers component wise
+//			for (int i = 0; i < branching; ++i) {
+//				int cnt = count[i];
+//				for (size_t k = 0; k < veclen_; ++k) {
+//					dcenters[i][k] /= cnt;
+//				}
+//			}
+//			printf("[BuildRecurse] (level %d): bitwise majority voting\n", level);
+			// Bitwise majority voting
+			for (unsigned int j = 0; (int) j < branching; j++) {
+				// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
+				for (int l = 0; l < bitwiseCount.cols; l++) {
+					// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
+					// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
+					bool bit;
+					// There is a tie if the number of data assigned to jth cluster is even
+					// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
+					if (count[j] % 2 == 1
+							&& 2 * bitwiseCount.at<int>(j, l)
+									== (int) count[j]) {
+						bit = rand() % 2;
+					} else {
+						bit = 2 * bitwiseCount.at<int>(j, l) > (int) (count[j]);
+					}
+					dcenters.at<unsigned char>(j,
+							(int) (bitwiseCount.cols - 1 - l) / 8) += (bit)
+							<< ((bitwiseCount.cols - 1 - l) % 8);
 				}
 			}
 
-			// reassign points to clusters
+			// TODO quantize: reassign points to clusters
+//			printf("[BuildRecurse] (level %d): quantize - reassign points to clusters\n", level);
 			for (int i = 0; i < indices_length; ++i) {
-				DistanceType sq_dist = distance_(dataset_[indices[i]],
-						dcenters[0], veclen_);
+				DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
+						dcenters.row(0).data, veclen_);
 				int new_centroid = 0;
 				for (int j = 1; j < branching; ++j) {
-					DistanceType new_sq_dist = distance_(dataset_[indices[i]],
-							dcenters[j], veclen_);
+					DistanceType new_sq_dist = distance_(
+							dataset_.row(indices[i]).data, dcenters.row(j).data,
+							veclen_);
 					if (sq_dist > new_sq_dist) {
 						new_centroid = j;
 						sq_dist = new_sq_dist;
 					}
 				}
-				if (sq_dist > radiuses[new_centroid]) {
-					radiuses[new_centroid] = sq_dist;
-				}
+//				if (sq_dist > radiuses[new_centroid]) {
+//					radiuses[new_centroid] = sq_dist;
+//				}
 				if (new_centroid != belongs_to[i]) {
 					count[belongs_to[i]]--;
 					count[new_centroid]++;
@@ -762,6 +858,7 @@ private:
 				}
 			}
 
+//			printf("[BuildRecurse] (level %d): handling empty clusters\n", level);
 			for (int i = 0; i < branching; ++i) {
 				// if one cluster converges to an empty cluster,
 				// move an element into that cluster
@@ -785,13 +882,15 @@ private:
 
 		}
 
+		printf("[BuildRecurse] (level %d): Finished clustering\n", level);
+
 		DistanceType** centers = new DistanceType*[branching];
 
 		for (int i = 0; i < branching; ++i) {
 			centers[i] = new DistanceType[veclen_];
 			memoryCounter_ += (int) (veclen_ * sizeof(DistanceType));
 			for (size_t k = 0; k < veclen_; ++k) {
-				centers[i][k] = (DistanceType) dcenters[i][k];
+				centers[i][k] = (DistanceType) dcenters.at<uchar>(i, k);
 			}
 		}
 
@@ -800,26 +899,27 @@ private:
 		int start = 0;
 		int end = start;
 		for (int c = 0; c < branching; ++c) {
-			int s = count[c];
+//			int s = count[c];
 
 			DistanceType variance = 0;
 			DistanceType mean_radius = 0;
+			// Re-order indices by chunks in clustering order
 			for (int i = 0; i < indices_length; ++i) {
 				if (belongs_to[i] == c) {
-					DistanceType d = distance_(dataset_[indices[i]],
-							ZeroIterator<ElementType>(), veclen_);
-					variance += d;
-					mean_radius += sqrt(d);
+//					DistanceType d = distance_(dataset_[indices[i]],
+//							ZeroIterator<ElementType>(), veclen_);
+//					variance += d;
+//					mean_radius += sqrt(d);
 					std::swap(indices[i], indices[end]);
 					std::swap(belongs_to[i], belongs_to[end]);
 					end++;
 				}
 			}
-			variance /= s;
-			mean_radius /= s;
-			variance -= distance_(centers[c], ZeroIterator<ElementType>(),
-					veclen_);
-
+//			variance /= s;
+//			mean_radius /= s;
+//			variance -= distance_(centers[c], ZeroIterator<ElementType>(),
+//					veclen_);
+//
 			node->childs[c] = pool_.allocate<KMeansNode>();
 			node->childs[c]->radius = radiuses[c];
 			node->childs[c]->pivot = centers[c];
@@ -831,239 +931,240 @@ private:
 			start = end;
 		}
 
-		delete[] dcenters.data;
+		dcenters.release();
 		delete[] centers;
 		delete[] count;
 		delete[] belongs_to;
 	}
 
-	/**
-	 * Performs one descent in the hierarchical k-means tree. The branches not
-	 * visited are stored in a priority queue.
-	 *
-	 * Params:
-	 *      node = node to explore
-	 *      result = container for the k-nearest neighbors found
-	 *      vec = query points
-	 *      checks = how many points in the dataset have been checked so far
-	 *      maxChecks = maximum dataset points to checks
-	 */
-	void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
-			const ElementType* vec, int& checks, int maxChecks,
-			Heap<BranchSt>* heap) {
-		// Ignore those clusters that are too far away
-		{
-			DistanceType bsq = distance_(vec, node->pivot, veclen_);
-			DistanceType rsq = node->radius;
-			DistanceType wsq = result.worstDist();
+//	/**
+//	 * Performs one descent in the hierarchical k-means tree. The branches not
+//	 * visited are stored in a priority queue.
+//	 *
+//	 * Params:
+//	 *      node = node to explore
+//	 *      result = container for the k-nearest neighbors found
+//	 *      vec = query points
+//	 *      checks = how many points in the dataset have been checked so far
+//	 *      maxChecks = maximum dataset points to checks
+//	 */
+//	void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
+//			const ElementType* vec, int& checks, int maxChecks,
+//			Heap<BranchSt>* heap) {
+//		// Ignore those clusters that are too far away
+//		{
+//			DistanceType bsq = distance_(vec, node->pivot, veclen_);
+//			DistanceType rsq = node->radius;
+//			DistanceType wsq = result.worstDist();
+//
+//			DistanceType val = bsq - rsq - wsq;
+//			DistanceType val2 = val * val - 4 * rsq * wsq;
+//
+//			//if (val>0) {
+//			if ((val > 0) && (val2 > 0)) {
+//				return;
+//			}
+//		}
+//
+//		if (node->childs == NULL) {
+//			if (checks >= maxChecks) {
+//				if (result.full())
+//					return;
+//			}
+//			checks += node->size;
+//			for (int i = 0; i < node->size; ++i) {
+//				int index = node->indices[i];
+//				DistanceType dist = distance_(dataset_[index], vec, veclen_);
+//				result.addPoint(dist, index);
+//			}
+//		} else {
+//			DistanceType* domain_distances = new DistanceType[branching_];
+//			int closest_center = exploreNodeBranches(node, vec,
+//					domain_distances, heap);
+//			delete[] domain_distances;
+//			findNN(node->childs[closest_center], result, vec, checks, maxChecks,
+//					heap);
+//		}
+//	}
+//
+//	/**
+//	 * Helper function that computes the nearest childs of a node to a given query point.
+//	 * Params:
+//	 *     node = the node
+//	 *     q = the query point
+//	 *     distances = array with the distances to each child node.
+//	 * Returns:
+//	 */
+//	int exploreNodeBranches(KMeansNodePtr node, const ElementType* q,
+//			DistanceType* domain_distances, Heap<BranchSt>* heap) {
+//
+//		int best_index = 0;
+//		domain_distances[best_index] = distance_(q,
+//				node->childs[best_index]->pivot, veclen_);
+//		for (int i = 1; i < branching_; ++i) {
+//			domain_distances[i] = distance_(q, node->childs[i]->pivot, veclen_);
+//			if (domain_distances[i] < domain_distances[best_index]) {
+//				best_index = i;
+//			}
+//		}
+//
+//		//		float* best_center = node->childs[best_index]->pivot;
+//		for (int i = 0; i < branching_; ++i) {
+//			if (i != best_index) {
+//				domain_distances[i] -= cb_index_ * node->childs[i]->variance;
+//
+//				//				float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
+//				//				if (domain_distances[i]<dist_to_border) {
+//				//					domain_distances[i] = dist_to_border;
+//				//				}
+//				heap->insert(BranchSt(node->childs[i], domain_distances[i]));
+//			}
+//		}
+//
+//		return best_index;
+//	}
+//
+//	/**
+//	 * Function the performs exact nearest neighbor search by traversing the entire tree.
+//	 */
+//	void findExactNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
+//			const ElementType* vec) {
+//		// Ignore those clusters that are too far away
+//		{
+//			DistanceType bsq = distance_(vec, node->pivot, veclen_);
+//			DistanceType rsq = node->radius;
+//			DistanceType wsq = result.worstDist();
+//
+//			DistanceType val = bsq - rsq - wsq;
+//			DistanceType val2 = val * val - 4 * rsq * wsq;
+//
+//			//                  if (val>0) {
+//			if ((val > 0) && (val2 > 0)) {
+//				return;
+//			}
+//		}
+//
+//		if (node->childs == NULL) {
+//			for (int i = 0; i < node->size; ++i) {
+//				int index = node->indices[i];
+//				DistanceType dist = distance_(dataset_[index], vec, veclen_);
+//				result.addPoint(dist, index);
+//			}
+//		} else {
+//			int* sort_indices = new int[branching_];
+//
+//			getCenterOrdering(node, vec, sort_indices);
+//
+//			for (int i = 0; i < branching_; ++i) {
+//				findExactNN(node->childs[sort_indices[i]], result, vec);
+//			}
+//
+//			delete[] sort_indices;
+//		}
+//	}
+//
+//	/**
+//	 * Helper function.
+//	 *
+//	 * I computes the order in which to traverse the child nodes of a particular node.
+//	 */
+//	void getCenterOrdering(KMeansNodePtr node, const ElementType* q,
+//			int* sort_indices) {
+//		DistanceType* domain_distances = new DistanceType[branching_];
+//		for (int i = 0; i < branching_; ++i) {
+//			DistanceType dist = distance_(q, node->childs[i]->pivot, veclen_);
+//
+//			int j = 0;
+//			while (domain_distances[j] < dist && j < i)
+//				j++;
+//			for (int k = i; k > j; --k) {
+//				domain_distances[k] = domain_distances[k - 1];
+//				sort_indices[k] = sort_indices[k - 1];
+//			}
+//			domain_distances[j] = dist;
+//			sort_indices[j] = i;
+//		}
+//		delete[] domain_distances;
+//	}
+//
+//	/**
+//	 * Method that computes the squared distance from the query point q
+//	 * from inside region with center c to the border between this
+//	 * region and the region with center p
+//	 */
+//	DistanceType getDistanceToBorder(DistanceType* p, DistanceType* c,
+//			DistanceType* q) {
+//		DistanceType sum = 0;
+//		DistanceType sum2 = 0;
+//
+//		for (int i = 0; i < veclen_; ++i) {
+//			DistanceType t = c[i] - p[i];
+//			sum += t * (q[i] - (c[i] + p[i]) / 2);
+//			sum2 += t * t;
+//		}
+//
+//		return sum * sum / sum2;
+//	}
+//
+//	/**
+//	 * Helper function the descends in the hierarchical k-means tree by spliting those clusters that minimize
+//	 * the overall variance of the clustering.
+//	 * Params:
+//	 *     root = root node
+//	 *     clusters = array with clusters centers (return value)
+//	 *     varianceValue = variance of the clustering (return value)
+//	 * Returns:
+//	 */
+//	int getMinVarianceClusters(KMeansNodePtr root, KMeansNodePtr* clusters,
+//			int clusters_length, DistanceType& varianceValue) {
+//		int clusterCount = 1;
+//		clusters[0] = root;
+//
+//		DistanceType meanVariance = root->variance * root->size;
+//
+//		while (clusterCount < clusters_length) {
+//			DistanceType minVariance =
+//					(std::numeric_limits<DistanceType>::max)();
+//			int splitIndex = -1;
+//
+//			for (int i = 0; i < clusterCount; ++i) {
+//				if (clusters[i]->childs != NULL) {
+//
+//					DistanceType variance = meanVariance
+//							- clusters[i]->variance * clusters[i]->size;
+//
+//					for (int j = 0; j < branching_; ++j) {
+//						variance += clusters[i]->childs[j]->variance
+//								* clusters[i]->childs[j]->size;
+//					}
+//					if (variance < minVariance) {
+//						minVariance = variance;
+//						splitIndex = i;
+//					}
+//				}
+//			}
+//
+//			if (splitIndex == -1)
+//				break;
+//			if ((branching_ + clusterCount - 1) > clusters_length)
+//				break;
+//
+//			meanVariance = minVariance;
+//
+//			// split node
+//			KMeansNodePtr toSplit = clusters[splitIndex];
+//			clusters[splitIndex] = toSplit->childs[0];
+//			for (int i = 1; i < branching_; ++i) {
+//				clusters[clusterCount++] = toSplit->childs[i];
+//			}
+//		}
+//
+//		varianceValue = meanVariance / root->size;
+//		return clusterCount;
+//	}
 
-			DistanceType val = bsq - rsq - wsq;
-			DistanceType val2 = val * val - 4 * rsq * wsq;
-
-			//if (val>0) {
-			if ((val > 0) && (val2 > 0)) {
-				return;
-			}
-		}
-
-		if (node->childs == NULL) {
-			if (checks >= maxChecks) {
-				if (result.full())
-					return;
-			}
-			checks += node->size;
-			for (int i = 0; i < node->size; ++i) {
-				int index = node->indices[i];
-				DistanceType dist = distance_(dataset_[index], vec, veclen_);
-				result.addPoint(dist, index);
-			}
-		} else {
-			DistanceType* domain_distances = new DistanceType[branching_];
-			int closest_center = exploreNodeBranches(node, vec,
-					domain_distances, heap);
-			delete[] domain_distances;
-			findNN(node->childs[closest_center], result, vec, checks, maxChecks,
-					heap);
-		}
-	}
-
-	/**
-	 * Helper function that computes the nearest childs of a node to a given query point.
-	 * Params:
-	 *     node = the node
-	 *     q = the query point
-	 *     distances = array with the distances to each child node.
-	 * Returns:
-	 */
-	int exploreNodeBranches(KMeansNodePtr node, const ElementType* q,
-			DistanceType* domain_distances, Heap<BranchSt>* heap) {
-
-		int best_index = 0;
-		domain_distances[best_index] = distance_(q,
-				node->childs[best_index]->pivot, veclen_);
-		for (int i = 1; i < branching_; ++i) {
-			domain_distances[i] = distance_(q, node->childs[i]->pivot, veclen_);
-			if (domain_distances[i] < domain_distances[best_index]) {
-				best_index = i;
-			}
-		}
-
-		//		float* best_center = node->childs[best_index]->pivot;
-		for (int i = 0; i < branching_; ++i) {
-			if (i != best_index) {
-				domain_distances[i] -= cb_index_ * node->childs[i]->variance;
-
-				//				float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
-				//				if (domain_distances[i]<dist_to_border) {
-				//					domain_distances[i] = dist_to_border;
-				//				}
-				heap->insert(BranchSt(node->childs[i], domain_distances[i]));
-			}
-		}
-
-		return best_index;
-	}
-
-	/**
-	 * Function the performs exact nearest neighbor search by traversing the entire tree.
-	 */
-	void findExactNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
-			const ElementType* vec) {
-		// Ignore those clusters that are too far away
-		{
-			DistanceType bsq = distance_(vec, node->pivot, veclen_);
-			DistanceType rsq = node->radius;
-			DistanceType wsq = result.worstDist();
-
-			DistanceType val = bsq - rsq - wsq;
-			DistanceType val2 = val * val - 4 * rsq * wsq;
-
-			//                  if (val>0) {
-			if ((val > 0) && (val2 > 0)) {
-				return;
-			}
-		}
-
-		if (node->childs == NULL) {
-			for (int i = 0; i < node->size; ++i) {
-				int index = node->indices[i];
-				DistanceType dist = distance_(dataset_[index], vec, veclen_);
-				result.addPoint(dist, index);
-			}
-		} else {
-			int* sort_indices = new int[branching_];
-
-			getCenterOrdering(node, vec, sort_indices);
-
-			for (int i = 0; i < branching_; ++i) {
-				findExactNN(node->childs[sort_indices[i]], result, vec);
-			}
-
-			delete[] sort_indices;
-		}
-	}
-
-	/**
-	 * Helper function.
-	 *
-	 * I computes the order in which to traverse the child nodes of a particular node.
-	 */
-	void getCenterOrdering(KMeansNodePtr node, const ElementType* q,
-			int* sort_indices) {
-		DistanceType* domain_distances = new DistanceType[branching_];
-		for (int i = 0; i < branching_; ++i) {
-			DistanceType dist = distance_(q, node->childs[i]->pivot, veclen_);
-
-			int j = 0;
-			while (domain_distances[j] < dist && j < i)
-				j++;
-			for (int k = i; k > j; --k) {
-				domain_distances[k] = domain_distances[k - 1];
-				sort_indices[k] = sort_indices[k - 1];
-			}
-			domain_distances[j] = dist;
-			sort_indices[j] = i;
-		}
-		delete[] domain_distances;
-	}
-
-	/**
-	 * Method that computes the squared distance from the query point q
-	 * from inside region with center c to the border between this
-	 * region and the region with center p
-	 */
-	DistanceType getDistanceToBorder(DistanceType* p, DistanceType* c,
-			DistanceType* q) {
-		DistanceType sum = 0;
-		DistanceType sum2 = 0;
-
-		for (int i = 0; i < veclen_; ++i) {
-			DistanceType t = c[i] - p[i];
-			sum += t * (q[i] - (c[i] + p[i]) / 2);
-			sum2 += t * t;
-		}
-
-		return sum * sum / sum2;
-	}
-
-	/**
-	 * Helper function the descends in the hierarchical k-means tree by spliting those clusters that minimize
-	 * the overall variance of the clustering.
-	 * Params:
-	 *     root = root node
-	 *     clusters = array with clusters centers (return value)
-	 *     varianceValue = variance of the clustering (return value)
-	 * Returns:
-	 */
-	int getMinVarianceClusters(KMeansNodePtr root, KMeansNodePtr* clusters,
-			int clusters_length, DistanceType& varianceValue) {
-		int clusterCount = 1;
-		clusters[0] = root;
-
-		DistanceType meanVariance = root->variance * root->size;
-
-		while (clusterCount < clusters_length) {
-			DistanceType minVariance =
-					(std::numeric_limits<DistanceType>::max)();
-			int splitIndex = -1;
-
-			for (int i = 0; i < clusterCount; ++i) {
-				if (clusters[i]->childs != NULL) {
-
-					DistanceType variance = meanVariance
-							- clusters[i]->variance * clusters[i]->size;
-
-					for (int j = 0; j < branching_; ++j) {
-						variance += clusters[i]->childs[j]->variance
-								* clusters[i]->childs[j]->size;
-					}
-					if (variance < minVariance) {
-						minVariance = variance;
-						splitIndex = i;
-					}
-				}
-			}
-
-			if (splitIndex == -1)
-				break;
-			if ((branching_ + clusterCount - 1) > clusters_length)
-				break;
-
-			meanVariance = minVariance;
-
-			// split node
-			KMeansNodePtr toSplit = clusters[splitIndex];
-			clusters[splitIndex] = toSplit->childs[0];
-			for (int i = 1; i < branching_; ++i) {
-				clusters[clusterCount++] = toSplit->childs[i];
-			}
-		}
-
-		varianceValue = meanVariance / root->size;
-		return clusterCount;
-	}
-
-};
+}
+;
 
 } /* namespace cvflann */
 #endif /* BIN_HIERARCHICAL_CLUSTERING_INDEX_H_ */
