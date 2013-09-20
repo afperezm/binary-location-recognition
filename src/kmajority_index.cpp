@@ -205,7 +205,7 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 	for (unsigned int i = 0; i < this->n; i++) {
 		unsigned int j = belongs_to[i];
 		// Finding all data assigned to jth clusther
-		uchar byte;
+		uchar byte = 0;
 		for (int l = 0; l < bitwiseCount.cols; l++) {
 			// bit: 7-(l%8) col: (int)l/8 descriptor: i
 			// Load byte every 8 bits
