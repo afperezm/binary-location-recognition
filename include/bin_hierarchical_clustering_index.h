@@ -35,24 +35,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-//	/**
-//	 * Index constructor
-//	 *
-//	 * @param inputData - Matrix with the data to be clustered
-//	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
-//	 */
-//	BinHierarchicalClusteringIndex(const cv::Mat& inputData, const BHCIndexParams& params = BHCIndexParams());
-//	virtual ~BinHierarchicalClusteringIndex();
-//	void buildIndex();
 //	void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params);
 //	int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params);
-//	void saveIndex(FILE* stream);
-//	void loadIndex(FILE* stream);
-//	size_t size() const;
-//	size_t veclen() const;
-//	int usedMemory() const;
-//	flann_algorithm_t getType() const;
-//	IndexParams getParameters() const;
 //	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams);
 #ifndef BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
