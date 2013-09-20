@@ -17,10 +17,12 @@
 #include <opencv2/core/internal.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
+#include <opencv2/flann/flann.hpp>
 
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
 #include <clustering.hpp>
+#include <bin_hierarchical_clustering_index.h>
 
 // DBoW2
 #include <DBoW2.h>
@@ -151,7 +153,7 @@ int main(int argc, char **argv) {
 	save("test.xml.gz", keypoints_1, descriptors_1);
 	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
 
-	// Step 5/5: cluster descriptors
+	// Step 5a/5: cluster descriptors
 
 	std::srand(unsigned(std::time(0)));
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
@@ -166,6 +168,8 @@ int main(int argc, char **argv) {
 		printf("   Cluster %u has %u transactions assigned\n", j + 1,
 				kMajIdx->getClusterCounts()[j]);
 	}
+
+	// Step 5b/5: cluster descriptors using binary vocabulary tree
 
 	// Transform descriptors to a suitable structure for DBoW2
 	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
@@ -214,6 +218,31 @@ int main(int argc, char **argv) {
 			score == DBoW2::KL ? "KL-divergence" :
 			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
+
+	// Step 5c/5: cluster descriptors Binary Hierarchical Clustering
+	typedef cv::flann::Hamming<uchar> Distance;
+	cvflann::BHCIndexParams params;
+//	params["depth"] = 1;
+	cvflann::BinHierarchicalClusteringIndex<Distance> index(descriptors_1,
+			params);
+
+	index.buildIndex();
+
+	// Step 5d/5d: example of OpenCV Hierarchical Clustering
+//	typedef cv::flann::L2<float> Distance;
+//	int featureNum = 1000000;
+//	int dim = 2;
+//	float *data = new float[featureNum * dim];
+//	for (int i = 0; i < 1000000; ++i) {
+//		data[i * 2] = (float) (rand() % 255);
+//		data[i * 2 + 1] = (float) (rand() % 255);
+//	}
+//	cvflann::Matrix<Distance::ElementType> points(data, featureNum, dim);
+//	float *center = new float[10000 * 2];
+//	cvflann::Matrix<Distance::ResultType> centers(center, 10000, 2);
+//	cvflann::KMeansIndexParams indexParams(10, 1);
+//	int n = cvflann::hierarchicalClustering<Distance>(points, centers, indexParams);
+//	printf("-- Clustered [%zu] keypoints in [%d] clusters using cvflann::hierarchicalClustering\n", points.rows, n);
 
 	return EXIT_SUCCESS;
 }
