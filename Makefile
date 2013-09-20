@@ -28,9 +28,18 @@ SOURCES=$(wildcard src/*.cpp)
 
 OBJS += $(SOURCES:.cpp=.o)
 
+BINLIB = ./lib
+
+LIBRARY = libkmaj
+
 TARGET = main
 
 all: $(TARGET)
+
+$(LIBRARY).so: 
+	mkdir -p $(BINLIB)
+	$(CXX) -c $(CXXFLAGS) -fPIC src/kmajority_index.cpp -o src/kmajority_index_shared.o
+	$(CXX) -shared src/kmajority_index_shared.o -o $(BINLIB)/$@ $(LDFLAGS)
 
 $(TARGET): $(OBJS)
 	$(CXX) -o $(TARGET) $(OBJS) $(LDFLAGS)
@@ -43,4 +52,4 @@ clean:
 
 cleanObjs:
 #	find ./ -name "*.o" | xargs -I {} rm -f {}
-	rm $(OBJS)
+	rm $(OBJS) src/kmajority_index_shared.o
