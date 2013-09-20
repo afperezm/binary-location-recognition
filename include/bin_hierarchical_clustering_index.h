@@ -86,14 +86,13 @@ struct BHCIndexParams: public IndexParams {
 };
 
 template<typename Distance>
-class BinHierarchicalClusteringIndex: public cvflann::NNIndex<Distance> {
+class BHCIndex: public cvflann::NNIndex<Distance> {
 
 private:
 
 	typedef typename Distance::ElementType ElementType;
 	typedef typename Distance::ResultType DistanceType;
-	typedef void (BinHierarchicalClusteringIndex::*centersAlgFunction)(int,
-			int*, int, int*, int&);
+	typedef void (BHCIndex::*centersAlgFunction)(int, int*, int, int*, int&);
 
 	// The function used for choosing the cluster centers
 	centersAlgFunction chooseCenters;
@@ -276,9 +275,8 @@ public:
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 * @param d
 	 */
-	BinHierarchicalClusteringIndex(const cv::Mat& inputData,
-			const IndexParams& params = BHCIndexParams(), Distance d =
-					Distance()) :
+	BHCIndex(const cv::Mat& inputData, const IndexParams& params =
+			BHCIndexParams(), Distance d = Distance()) :
 			dataset_(inputData), index_params_(params), root_(NULL), indices_(
 					NULL), distance_(d), m_scoring_object(NULL) {
 
@@ -299,14 +297,11 @@ public:
 		centers_init_ = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
 
 		if (centers_init_ == FLANN_CENTERS_RANDOM) {
-			chooseCenters =
-					&BinHierarchicalClusteringIndex::chooseCentersRandom;
+			chooseCenters = &BHCIndex::chooseCentersRandom;
 		} else if (centers_init_ == FLANN_CENTERS_GONZALES) {
-			chooseCenters =
-					&BinHierarchicalClusteringIndex::chooseCentersGonzales;
+			chooseCenters = &BHCIndex::chooseCentersGonzales;
 		} else if (centers_init_ == FLANN_CENTERS_KMEANSPP) {
-			chooseCenters =
-					&BinHierarchicalClusteringIndex::chooseCentersKMeanspp;
+			chooseCenters = &BHCIndex::chooseCentersKMeanspp;
 		} else {
 			throw std::runtime_error(
 					"Unknown algorithm for choosing initial centers.");
@@ -320,7 +315,7 @@ public:
 	 *
 	 * Release the memory used by the index.
 	 */
-	virtual ~BinHierarchicalClusteringIndex() {
+	virtual ~BHCIndex() {
 		if (root_ != NULL) {
 			free_centers(root_);
 		}

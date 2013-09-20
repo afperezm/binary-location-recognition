@@ -128,18 +128,18 @@ int main(int argc, char **argv) {
 	cv::Ptr<cv::DescriptorExtractor> extractor =
 			cv::DescriptorExtractor::create("BRIEF");
 
-	Mat descriptors_1;
+	Mat descriptors;
 
 	mytime = cv::getTickCount();
-	extractor->compute(img_1, keypoints_1, descriptors_1);
+	extractor->compute(img_1, keypoints_1, descriptors);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
 	// Notice that number of keypoints might be reduced due to border effect
 	printf(
 			"-- Extracted [%d] descriptors of size [%d] and type [%s] in [%lf] ms\n",
-			descriptors_1.rows, descriptors_1.cols,
-			descriptors_1.type() == CV_8U ? "binary" : "real-valued", mytime);
+			descriptors.rows, descriptors.cols,
+			descriptors.type() == CV_8U ? "binary" : "real-valued", mytime);
 
 	// Step 3/5: show keypoints
 
@@ -150,15 +150,15 @@ int main(int argc, char **argv) {
 	cv::waitKey(0);
 
 	// Step 4/5: save descriptors into a file for later use
-	save("test.xml.gz", keypoints_1, descriptors_1);
-	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors_1);
+	save("test.xml.gz", keypoints_1, descriptors);
+	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors);
 
 	// Step 5a/5: cluster descriptors
 
 	std::srand(unsigned(std::time(0)));
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
 	mytime = cv::getTickCount();
-	kMajIdx->cluster(descriptors_1);
+	kMajIdx->cluster(descriptors);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
@@ -176,19 +176,19 @@ int main(int argc, char **argv) {
 	vector<vector<DVision::BRIEF::bitset> > features;
 	features.resize(1);
 
-	features[0].resize(descriptors_1.rows);
+	features[0].resize(descriptors.rows);
 
-	for (unsigned int i = 0; (int) i < descriptors_1.rows * descriptors_1.cols;
+	for (unsigned int i = 0; (int) i < descriptors.rows * descriptors.cols;
 			i++) {
-		int row = (int) i / descriptors_1.cols;
-		int col = (int) i % descriptors_1.cols;
+		int row = (int) i / descriptors.cols;
+		int col = (int) i % descriptors.cols;
 		if (col == 0) {
-			(features[0])[row].resize(descriptors_1.cols * 8);
+			(features[0])[row].resize(descriptors.cols * 8);
 			(features[0])[row].reset();
 		}
-		unsigned char byte = descriptors_1.at<uchar>(row, col);
-		for (int i = 0 + (descriptors_1.cols - 1 - col) * 8;
-				i <= 7 + (descriptors_1.cols - 1 - col) * 8; i++) {
+		unsigned char byte = descriptors.at<uchar>(row, col);
+		for (int i = 0 + (descriptors.cols - 1 - col) * 8;
+				i <= 7 + (descriptors.cols - 1 - col) * 8; i++) {
 			((features[0])[row])[i] = byte & 1;
 			byte >>= 1;
 		}
@@ -223,8 +223,7 @@ int main(int argc, char **argv) {
 	typedef cv::flann::Hamming<uchar> Distance;
 	cvflann::BHCIndexParams params;
 //	params["depth"] = 1;
-	cvflann::BinHierarchicalClusteringIndex<Distance> index(descriptors_1,
-			params);
+	cvflann::BHCIndex<Distance> index(descriptors, params);
 
 	index.buildIndex();
 
