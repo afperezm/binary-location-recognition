@@ -306,8 +306,8 @@ public:
 			throw std::runtime_error(
 					"Unknown algorithm for choosing initial centers.");
 		}
-		// TODO I think I don't need this variable
-		cb_index_ = 0.4f;
+
+//		cb_index_ = 0.4f;
 	}
 
 	/**
@@ -357,7 +357,7 @@ public:
 		save_value(stream, branching_);
 		save_value(stream, iterations_);
 		save_value(stream, memoryCounter_);
-		save_value(stream, cb_index_);
+//		save_value(stream, cb_index_);
 		save_value(stream, *indices_, (int) size_);
 
 		save_tree(stream, root_);
@@ -368,7 +368,7 @@ public:
 		load_value(stream, branching_);
 		load_value(stream, iterations_);
 		load_value(stream, memoryCounter_);
-		load_value(stream, cb_index_);
+//		load_value(stream, cb_index_);
 		if (indices_ != NULL) {
 			delete[] indices_;
 		}
@@ -384,7 +384,7 @@ public:
 		index_params_["branching"] = branching_;
 		index_params_["iterations"] = iterations_;
 		index_params_["centers_init"] = centers_init_;
-		index_params_["cb_index"] = cb_index_;
+//		index_params_["cb_index"] = cb_index_;
 
 	}
 
@@ -554,7 +554,7 @@ private:
 	flann_centers_init_t centers_init_;
 
 	// Cluster border index
-	float cb_index_;
+//	float cb_index_;
 
 	// The dataset used by this index
 	const cv::Mat dataset_;
