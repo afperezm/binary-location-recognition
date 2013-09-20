@@ -10,7 +10,7 @@
 
 #include <kmajority_index.h>
 
-namespace clustering {
+//namespace clustering {
 
 /**
  * Performs kmeans clustering of the points passed as argument using
@@ -26,23 +26,23 @@ namespace clustering {
  * @return The compactness measure of the resulting clustering computed
  *         as the sum of squared distances from each transaction to its center.
  */
-void kmajority(const cv::Mat data, const int K, cv::Mat labels,
-		const cv::TermCriteria criteria, const int flags, cv::Mat centers) {
+//void kmajority(const cv::Mat data, const int K, cv::Mat labels,
+//		const cv::TermCriteria criteria, const int flags, cv::Mat centers) {
+//
+////	cvflann::KMeansIndexParams params;
+////	int branching_ = cvflann::get_param(params, "branching", 32);
+////	int iterations_ = cvflann::get_param(params, "iterations", 11);
+//
+//	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(K, criteria.maxCount);
+//	kMajIdx->cluster(data);
+//
+//	centers = kMajIdx->getCentroids();
+//	kMajIdx->getLabels(labels);
+//
+//	return;
+//}
 
-//	cvflann::KMeansIndexParams params;
-//	int branching_ = cvflann::get_param(params, "branching", 32);
-//	int iterations_ = cvflann::get_param(params, "iterations", 11);
-
-	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(K, criteria.maxCount);
-	kMajIdx->cluster(data);
-
-	centers = kMajIdx->getCentroids();
-	kMajIdx->getLabels(labels);
-
-	return;
-}
-
-}
+//}
 // namespace name
 
 #endif /* CLUSTERING_HPP_ */

@@ -1,11 +1,12 @@
-/*
+/***********************************************************************
+ *
  * bin_hierarchical_clustering_index.h
  *
  *  Created on: Sep 18, 2013
  *      Author: andresf
- */
-
-/***********************************************************************
+ *
+ ***********************************************************************
+ *
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.

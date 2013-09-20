@@ -21,8 +21,8 @@
 
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
-#include <clustering.hpp>
-#include <bin_hierarchical_clustering_index.h>
+#include <KMajorityIndex.h>
+#include <BHCIndex.h>
 
 // DBoW2
 #include <DBoW2.h>
@@ -89,6 +89,9 @@ CV_INIT_ALGORITHM(DBriefDescriptorExtractor, "Feature2D.DBRIEF", obj.info())
 
 int main(int argc, char **argv) {
 
+	cv::AgastFeatureDetector_info_auto.name();
+	cv::DBriefDescriptorExtractor_info_auto.name();
+
 	if (argc != 2) {
 		printf("\n");
 		printf("Usage: %s <img1>", argv[0]);
@@ -153,7 +156,7 @@ int main(int argc, char **argv) {
 	save("test.xml.gz", keypoints_1, descriptors);
 	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors);
 
-	// Step 5a/5: cluster descriptors
+	// Step 5a/5: Cluster descriptors using k-majority
 
 	std::srand(unsigned(std::time(0)));
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
@@ -169,7 +172,7 @@ int main(int argc, char **argv) {
 				kMajIdx->getClusterCounts()[j]);
 	}
 
-	// Step 5b/5: cluster descriptors using binary vocabulary tree
+	// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
 
 	// Transform descriptors to a suitable structure for DBoW2
 	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
@@ -219,15 +222,13 @@ int main(int argc, char **argv) {
 			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
-	// Step 5c/5: cluster descriptors Binary Hierarchical Clustering
+	// Step 5c/5: Cluster descriptors Binary Hierarchical Clustering
 	typedef cv::flann::Hamming<uchar> Distance;
 	cvflann::BHCIndexParams params;
-//	params["depth"] = 1;
 	cvflann::BHCIndex<Distance> index(descriptors, params);
-
 	index.buildIndex();
 
-	// Step 5d/5d: example of OpenCV Hierarchical Clustering
+// Step 5d/5d: example of OpenCV Hierarchical Clustering
 //	typedef cv::flann::L2<float> Distance;
 //	int featureNum = 1000000;
 //	int dim = 2;
