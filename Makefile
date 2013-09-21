@@ -38,8 +38,8 @@ all: $(TARGET)
 
 $(LIBRARY).so: 
 	mkdir -p $(BINLIB)
-	$(CXX) -c $(CXXFLAGS) -fPIC src/kmajority_index.cpp -o src/kmajority_index_shared.o
-	$(CXX) -shared src/kmajority_index_shared.o -o $(BINLIB)/$@ $(LDFLAGS)
+	$(CXX) -c $(CXXFLAGS) -fPIC src/KMajorityIndex.cpp -o src/KMajorityIndex_shared.o
+	$(CXX) -shared src/KMajorityIndex_shared.o -o $(BINLIB)/$@ $(LDFLAGS)
 
 $(TARGET): $(OBJS)
 	$(CXX) -o $(TARGET) $(OBJS) $(LDFLAGS)
@@ -52,4 +52,4 @@ clean:
 
 cleanObjs:
 #	find ./ -name "*.o" | xargs -I {} rm -f {}
-	rm $(OBJS) src/kmajority_index_shared.o
+	rm $(OBJS) src/KMajorityIndex_shared.o
