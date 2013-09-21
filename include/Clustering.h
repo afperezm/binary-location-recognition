@@ -8,41 +8,31 @@
 #ifndef CLUSTERING_HPP_
 #define CLUSTERING_HPP_
 
-#include <kmajority_index.h>
+#include <KMajorityIndex.h>
 
-//namespace clustering {
+namespace clustering {
 
 /**
- * Performs kmeans clustering of the points passed as argument using
- * Hamming distance and a majority voting scheme for centers computation.
+ * Performs k-means clustering of the data using Hamming distance and
+ * a majority voting scheme for centers computation.
  *
- * @param data - Matrix containing data for clustering.
- * @param K - Number of clusters to split the set by.
- * @param labels - Output matrix that stores the cluster indices for every sample.
- * @param criteria - The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy.
- * @param flags - Flag indicating initialization method, one of KMEANS_RANDOM_CENTERS, KMEANS_PP_CENTERS or KMEANS_USE_INITIAL_LABELS
- * @param centers - Output matrix of the cluster centers, one row per each cluster center.
- *
- * @return The compactness measure of the resulting clustering computed
- *         as the sum of squared distances from each transaction to its center.
+ * @param k - Number of clusters
+ * @param max_iterations - Maximum number of iterations
+ * @param data - data to cluster composed of n d-dimensional features
+ * @param labels - Matrix with the assignment of data to clusters
+ * @param centroids - Matrix of k d-dimensional centroids
  */
-//void kmajority(const cv::Mat data, const int K, cv::Mat labels,
-//		const cv::TermCriteria criteria, const int flags, cv::Mat centers) {
-//
-////	cvflann::KMeansIndexParams params;
-////	int branching_ = cvflann::get_param(params, "branching", 32);
-////	int iterations_ = cvflann::get_param(params, "iterations", 11);
-//
-//	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(K, criteria.maxCount);
-//	kMajIdx->cluster(data);
-//
-//	centers = kMajIdx->getCentroids();
-//	kMajIdx->getLabels(labels);
-//
-//	return;
-//}
+void kmajority(int k, int max_iterations, const cv::Mat& data, cv::Mat& labels,
+		cv::Mat& centroids) {
 
-//}
+	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(k, max_iterations);
+	kMajIdx->cluster(data);
+
+	centroids = kMajIdx->getCentroids();
+	kMajIdx->getLabels(labels);
+}
+
+}
 // namespace name
 
 #endif /* CLUSTERING_HPP_ */
