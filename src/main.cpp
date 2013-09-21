@@ -228,22 +228,6 @@ int main(int argc, char **argv) {
 	cvflann::BHCIndex<Distance> index(descriptors, params);
 	index.buildIndex();
 
-// Step 5d/5d: example of OpenCV Hierarchical Clustering
-//	typedef cv::flann::L2<float> Distance;
-//	int featureNum = 1000000;
-//	int dim = 2;
-//	float *data = new float[featureNum * dim];
-//	for (int i = 0; i < 1000000; ++i) {
-//		data[i * 2] = (float) (rand() % 255);
-//		data[i * 2 + 1] = (float) (rand() % 255);
-//	}
-//	cvflann::Matrix<Distance::ElementType> points(data, featureNum, dim);
-//	float *center = new float[10000 * 2];
-//	cvflann::Matrix<Distance::ResultType> centers(center, 10000, 2);
-//	cvflann::KMeansIndexParams indexParams(10, 1);
-//	int n = cvflann::hierarchicalClustering<Distance>(points, centers, indexParams);
-//	printf("-- Clustered [%zu] keypoints in [%d] clusters using cvflann::hierarchicalClustering\n", points.rows, n);
-
 	return EXIT_SUCCESS;
 }
 

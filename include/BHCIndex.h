@@ -89,18 +89,18 @@ private:
 		 * The cluster center.
 		 */
 		DistanceType* pivot;
-		/**
-		 * The cluster radius.
-		 */
-		DistanceType radius;
-		/**
-		 * The cluster mean radius.
-		 */
-		DistanceType mean_radius;
-		/**
-		 * The cluster variance.
-		 */
-		DistanceType variance;
+//		/**
+//		 * The cluster radius.
+//		 */
+//		DistanceType radius;
+//		/**
+//		 * The cluster mean radius.
+//		 */
+//		DistanceType mean_radius;
+//		/**
+//		 * The cluster variance.
+//		 */
+//		DistanceType variance;
 		/**
 		 * The cluster size (number of points in the cluster)
 		 */
@@ -117,6 +117,19 @@ private:
 		 * Level
 		 */
 		int level;
+
+		// Node id
+		DBoW2::NodeId id;
+		// Weight if the node is a word
+		DBoW2::WordValue weight;
+		// Children
+		vector<NodeId> children;
+		// Parent node (undefined in case of root)
+		DBoW2::NodeId parent;
+		// Node descriptor
+		cv::Mat descriptor;
+		// Word id if the node is a word
+		DBoW2::WordId word_id;
 	};
 
 	typedef KMeansNode* KMeansNodePtr;
@@ -994,8 +1007,8 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 //			}
 //		}
 
-	node->variance = variance;
-	node->radius = radius;
+//	node->variance = variance;
+//	node->radius = radius;
 	node->pivot = mean;
 }
 
@@ -1088,25 +1101,12 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		bitwiseCount = cv::Scalar::all(0);
 		// Zeroing all the centroids dimensions
 		dcenters = cv::Scalar::all(0);
-		// Zeroing all cluster radiuses
-//			for (int i = 0; i < branching; ++i) {
-//				memset(dcenters[i], 0, sizeof(double) * veclen_);
-//				radiuses[i] = 0;
-//			}
-		// Summing component wise the data into center
-//			for (int i = 0; i < indices_length; ++i) {
-//				ElementType* vec = dataset_[indices[i]];
-//				double* center = dcenters[belongs_to[i]];
-//				for (size_t k = 0; k < veclen_; ++k) {
-//					center[k] += vec[k];
-//				}
-//			}
 
-//			printf("[BuildRecurse] (level %d): bitwise summing the data into each centroid\n", level);
+//		printf("[BuildRecurse] (level %d): bitwise summing the data into each centroid\n", level);
 		// Bitwise summing the data into each centroid
 		for (unsigned int i = 0; (int) i < indices_length; i++) {
 			unsigned int j = belongs_to[i];
-//				printf("[BuildRecurse] (level %d): summing %d/%d transaction into %d cluster accumulator\n", level, i, indices_length, j);
+//			printf("[BuildRecurse] (level %d): summing %d/%d transaction into %d cluster accumulator\n", level, i, indices_length, j);
 			// Finding all data assigned to jth clusther
 			uchar byte = 0;
 			for (int l = 0; l < bitwiseCount.cols; l++) {
@@ -1121,13 +1121,6 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 						% 2));
 			}
 		}
-		// Dividing the centers component wise
-//			for (int i = 0; i < branching; ++i) {
-//				int cnt = count[i];
-//				for (size_t k = 0; k < veclen_; ++k) {
-//					dcenters[i][k] /= cnt;
-//				}
-//			}
 //			printf("[BuildRecurse] (level %d): bitwise majority voting\n", level);
 		// Bitwise majority voting
 		for (unsigned int j = 0; (int) j < branching; j++) {
@@ -1151,7 +1144,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		}
 
 		// TODO quantize: reassign points to clusters
-//			printf("[BuildRecurse] (level %d): quantize - reassign points to clusters\n", level);
+//		printf("[BuildRecurse] (level %d): quantize - reassign points to clusters\n", level);
 		for (int i = 0; i < indices_length; ++i) {
 			DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
 					dcenters.row(0).data, veclen_);
@@ -1165,9 +1158,9 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 					sq_dist = new_sq_dist;
 				}
 			}
-//				if (sq_dist > radiuses[new_centroid]) {
-//					radiuses[new_centroid] = sq_dist;
-//				}
+//			if (sq_dist > radiuses[new_centroid]) {
+//				radiuses[new_centroid] = sq_dist;
+//			}
 			if (new_centroid != belongs_to[i]) {
 				count[belongs_to[i]]--;
 				count[new_centroid]++;
@@ -1177,7 +1170,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			}
 		}
 
-//			printf("[BuildRecurse] (level %d): handling empty clusters\n", level);
+//		printf("[BuildRecurse] (level %d): handling empty clusters\n", level);
 		for (int i = 0; i < branching; ++i) {
 			// if one cluster converges to an empty cluster,
 			// move an element into that cluster
