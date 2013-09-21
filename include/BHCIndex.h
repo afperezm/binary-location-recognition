@@ -123,7 +123,7 @@ private:
 		// Weight if the node is a word
 		DBoW2::WordValue weight;
 		// Children
-		vector<NodeId> children;
+//		vector<NodeId> children;
 		// Parent node (undefined in case of root)
 		DBoW2::NodeId parent;
 		// Node descriptor
@@ -1233,10 +1233,10 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 //					veclen_);
 //
 		node->childs[c] = pool_.allocate<KMeansNode>();
-		node->childs[c]->radius = radiuses[c];
+//		node->childs[c]->radius = radiuses[c];
 		node->childs[c]->pivot = centers[c];
-		node->childs[c]->variance = variance;
-		node->childs[c]->mean_radius = mean_radius;
+//		node->childs[c]->variance = variance;
+//		node->childs[c]->mean_radius = mean_radius;
 		node->childs[c]->indices = NULL;
 		computeClustering(node->childs[c], indices + start, end - start,
 				branching, level + 1);

@@ -14,74 +14,83 @@
 class KMajorityIndex {
 public:
 
-	KMajorityIndex(unsigned int _k, unsigned int _max_iterations) :
-			k(_k), max_iterations(_max_iterations), dim(-1), n(-1), belongs_to(
-					new unsigned int[0]), distance_to(new unsigned int[0]), cluster_counts(
-					new unsigned int[0]) {
-		;
-	}
+	/**
+	 *
+	 * @param _k
+	 * @param _max_iterations
+	 * @param _data
+	 * @param _indices
+	 * @param _indices_length
+	 */
+	KMajorityIndex(unsigned int _k, unsigned int _max_iterations,
+			const cv::Mat& _data, cv::Ptr<int>& _indices,
+			const int& _indices_length);
 
-	~KMajorityIndex() {
-		delete[] belongs_to;
-		delete[] distance_to;
-		delete[] cluster_counts;
-	}
+	~KMajorityIndex();
 
 	/**
-	 * Implements majority voting scheme as explained in Grana2013 for centroid computation
-	 * based on component wise majority of bits from descriptors matrix.
+	 * Implements k-means clustering loop.
 	 *
-	 * @param descriptors - Binary matrix of size (n x d)
+	 * @param indices - The set of indices indicating which data points should be clustered
 	 */
-	void computeCentroids(const cv::Mat& descriptors);
+	void cluster();
 
-	/**
-	 * Computes Hamming distance between each descriptor and each cluster centroid.
-	 *
-	 * @param descriptors binary matrix of size (n x d)
-	 */
-	bool quantize(const cv::Mat& descriptors);
+	const cv::Mat& getCentroids() const;
 
-	void cluster(const cv::Mat& descriptors);
+	uint* getClusterCounts() const;
 
-	const cv::Mat& getCentroids() const {
-		return centroids;
-	}
+	uint* getClusterAssignments() const;
 
-	unsigned int* getClusterCounts() const {
-		return cluster_counts;
-	}
-
-	unsigned int getNumberOfClusters() const {
-		return k;
-	}
-
-	/**
-	 * Return the cluster indexes each transaction is assigned to.
-	 *
-	 * @param labels - Output matrix storing the transactions cluster labels
-	 */
-	void getLabels(cv::Mat& labels);
+	int getNumberOfClusters() const;
 
 private:
 	// Number of clusters
-	unsigned int k;
+	uint k;
 	// Maximum number of iterations
-	unsigned int max_iterations;
+	uint max_iterations;
+	// Reference to the matrix with data to cluster
+	const cv::Mat& data;
+	// Array of indices indicating data points involved in the clustering process
+	cv::Ptr<int>& indices;
+	// Number of indices
+	const int& indices_length;
 	// Dimensionality (in Bytes)
-	unsigned int dim;
+	uint dim;
 	// Number of data instances
-	unsigned int n;
-	// List of the cluster each transaction belongs to
-	unsigned int* belongs_to;
-	// List of distance from each transaction to the cluster it belongs to
-	unsigned int* distance_to;
+	uint n;
+	// List of the cluster each data point belongs to
+	uint* belongs_to;
+	// List of distance from each data point to the cluster it belongs to
+	uint* distance_to;
 	// Number of transactions assigned to each cluster
-	unsigned int* cluster_counts;
-	// Matrix of centroids
+	uint* cluster_counts;
+	// Matrix of clusters centers
 	cv::Mat centroids;
 
-	void initCentroids(const cv::Mat& descriptors);
+	/**
+	 * Initializes cluster centers choosing among the data points indicated by indices.
+	 *
+	 * @param indices - The set of indices among which to choose
+	 */
+	void initCentroids();
+
+	/**
+	 * Implements majority voting scheme for cluster centers computation
+	 * based on component wise majority of bits from data matrix
+	 * as proposed by Grana2013.
+	 *
+	 * @param indices - The set of indices indicating the data points
+	 * 					involved in the cluster centers computation
+	 */
+	void computeCentroids();
+
+	/**
+	 * Computes Hamming distance between each descriptor and each cluster center.
+	 *
+	 * @param indices - The set of indices indicating the data points to quantize
+	 */
+	bool quantize();
+
 };
 
 #endif /* KMAJORITY_INDEX_H_ */

@@ -19,61 +19,73 @@
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
 
-void KMajorityIndex::cluster(const cv::Mat& descriptors) {
+KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
+		const cv::Mat& _data, cv::Ptr<int>& _indices,
+		const int& _indices_length) :
+		k(_k), max_iterations(_max_iterations), data(_data), indices(_indices), indices_length(
+				_indices_length), dim(_data.cols), n(_indices_length), belongs_to(
+				new uint[_indices_length]), distance_to(
+				new uint[_indices_length]), cluster_counts(new uint[_k]) {
 
-	if (descriptors.type() != CV_8U) {
+	// Initially all transactions belong to any cluster
+	std::fill_n(this->belongs_to, _indices_length, _k);
+
+	// Initially all transactions are at the farthest possible distance
+	// i.e. dim*8 the max hamming distance
+	std::fill_n(this->distance_to, _indices_length, _data.cols * 8);
+
+	// Initially no transaction is assigned to any cluster
+	std::fill_n(this->cluster_counts, this->k, 0);
+}
+
+KMajorityIndex::~KMajorityIndex() {
+//	delete[] belongs_to;
+//	delete[] distance_to;
+//	delete[] cluster_counts;
+}
+
+void KMajorityIndex::cluster() {
+
+	if (data.type() != CV_8U) {
 		fprintf(stderr,
 				"KMajorityIndex::cluster: error, descriptors matrix is not binary");
 		return;
 	}
 
-	if (descriptors.empty()) {
+	if (data.empty()) {
 		fprintf(stderr, "KMajorityIndex::cluster: error, descriptors is empty");
 		return;
 	}
 
-	this->n = descriptors.rows;
-	this->dim = descriptors.cols;
-
-	this->belongs_to = new unsigned int[this->n];
-	// Initially all transactions belong to any cluster
-	std::fill_n(this->belongs_to, this->n, this->k);
-
-	this->distance_to = new unsigned int[this->n];
-	// Initially all transactions are at the farthest possible distance
-	// i.e. dim*8 the max hamming distance
-	std::fill_n(this->distance_to, this->n, this->dim * 8);
-
-	this->cluster_counts = new unsigned int[this->k];
-	// Initially no transaction is assigned to any cluster
-	std::fill_n(this->cluster_counts, this->k, 0);
-
-	// Trivial case: less data than clusters, assign one to each cluster
+	// Trivial case: less data than clusters, assign one data point per cluster
 	if (this->n <= this->k) {
-		centroids.create(this->k, dim, descriptors.type());
-		for (unsigned int i = 0; i < this->n; ++i) {
-			descriptors.row(i).copyTo(
+		centroids.create(this->k, dim, data.type());
+		for (uint i = 0; i < this->n; ++i) {
+			data.row(i).copyTo(
 					centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
+			belongs_to[i] = i;
 		}
 		return;
 	}
 
 	// Randomly generate clusters
-	this->initCentroids(descriptors);
+	this->initCentroids();
 
 	// Assign data to clusters
-	this->quantize(descriptors);
+	this->quantize();
 
 	bool converged = false;
+	uint iteration = 0;
 
-	unsigned int iteration = 0;
 	while (converged == false && iteration < max_iterations) {
+
 		iteration++;
+
 		// Compute the new cluster centers
-		this->computeCentroids(descriptors);
+		this->computeCentroids();
 
 		// Reassign data to clusters
-		converged = this->quantize(descriptors);
+		converged = this->quantize();
 
 		// TODO handle empty clusters case
 		// Find empty clusters
@@ -132,42 +144,38 @@ void chooseCentersRandom(int k, int* indices, int indices_length, int* centers,
 	centers_length = index;
 }
 
-void KMajorityIndex::initCentroids(const cv::Mat& descriptors) {
+void KMajorityIndex::initCentroids() {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
 	cv::Ptr<int> centers_idx = new int[k];
 	int centers_length;
-	cv::Ptr<int> indices = new int[n];
-	for (unsigned int i = 0; i < this->n; i++) {
-		indices[i] = i;
-	}
 
 	// Randomly chose centers
 	chooseCentersRandom(k, indices, n, centers_idx, centers_length);
 
 	// Assign centers based on the chosen indexes
-	centroids.create(centers_length, dim, descriptors.type());
+	centroids.create(centers_length, dim, data.type());
 	for (int i = 0; i < centers_length; i++) {
-		descriptors.row(centers_idx[i]).copyTo(
+		data.row(centers_idx[i]).copyTo(
 				centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
 	}
 
 }
 
-bool KMajorityIndex::quantize(const cv::Mat& descriptors) {
+bool KMajorityIndex::quantize() {
 
 	bool converged = true;
 
 	// Comparison of all descriptors vs. all centroids
-	for (unsigned int i = 0; i < this->n; i++) {
+	for (size_t i = 0; i < this->n; i++) {
 		// Set minimum distance as the distance to its assigned cluster
 		int min_hd = distance_to[i];
 
-		for (unsigned int j = 0; j < this->k; j++) {
+		for (size_t j = 0; j < this->k; j++) {
 			// Compute hamming distance between ith descriptor and jth cluster
 			cv::Hamming distance;
-			int hd = distance(descriptors.row(i).data, centroids.row(j).data,
-					descriptors.cols);
+			int hd = distance(data.row(indices[i]).data, centroids.row(j).data,
+					data.cols);
 
 			// Update cluster assignment to the nearest cluster
 			if (hd < min_hd) {
@@ -192,7 +200,7 @@ bool KMajorityIndex::quantize(const cv::Mat& descriptors) {
 	return converged;
 }
 
-void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
+void KMajorityIndex::computeCentroids() {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
 	cv::Mat bitwiseCount(this->k, this->dim * 8, cv::DataType<int>::type);
@@ -201,16 +209,16 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 	// Zeroing all the centroids dimensions
 	centroids = cv::Scalar::all(0);
 
-	// Loop over all data
-	for (unsigned int i = 0; i < this->n; i++) {
-		unsigned int j = belongs_to[i];
+	// Bitwise summing the data into each centroid
+	for (size_t i = 0; i < this->n; i++) {
+		uint j = belongs_to[i];
 		// Finding all data assigned to jth clusther
 		uchar byte = 0;
 		for (int l = 0; l < bitwiseCount.cols; l++) {
 			// bit: 7-(l%8) col: (int)l/8 descriptor: i
 			// Load byte every 8 bits
 			if ((l % 8) == 0) {
-				byte = *(descriptors.row(i).col((int) l / 8).data);
+				byte = *(data.row(i).col((int) l / 8).data);
 			}
 			// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
 			// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
@@ -218,8 +226,8 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 		}
 	}
 
-	// Loop over all clusters
-	for (unsigned int j = 0; j < k; j++) {
+	// Bitwise majority voting
+	for (size_t j = 0; j < k; j++) {
 		// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
 		for (int l = 0; l < bitwiseCount.cols; l++) {
 			// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
@@ -242,10 +250,18 @@ void KMajorityIndex::computeCentroids(const cv::Mat& descriptors) {
 	}
 }
 
-void KMajorityIndex::getLabels(cv::Mat& labels) {
-	labels = cv::Mat();
-	labels.create(this->n, 1, cv::DataType<uint>::type);
-	for (uint i = 0; i < this->n; i++) {
-		labels.at<uint>(i, 1) = belongs_to[i];
-	}
+const cv::Mat& KMajorityIndex::getCentroids() const {
+	return centroids;
+}
+
+uint* KMajorityIndex::getClusterCounts() const {
+	return cluster_counts;
+}
+
+uint* KMajorityIndex::getClusterAssignments() const {
+	return belongs_to;
+}
+
+int KMajorityIndex::getNumberOfClusters() const {
+	return centroids.rows;
 }

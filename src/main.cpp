@@ -21,7 +21,8 @@
 
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
-#include <KMajorityIndex.h>
+//#include <KMajorityIndex.h>
+#include <Clustering.h>
 #include <BHCIndex.h>
 
 // DBoW2
@@ -144,7 +145,7 @@ int main(int argc, char **argv) {
 			descriptors.rows, descriptors.cols,
 			descriptors.type() == CV_8U ? "binary" : "real-valued", mytime);
 
-	// Step 3/5: show keypoints
+	// Step 3/5: Show keypoints
 
 	cv::drawKeypoints(img_1, keypoints_1, img_1, cv::Scalar::all(-1));
 	cv::namedWindow("Image keypoints", CV_WINDOW_NORMAL);
@@ -158,23 +159,41 @@ int main(int argc, char **argv) {
 
 	// Step 5a/5: Cluster descriptors using k-majority
 
-	std::srand(unsigned(std::time(0)));
-	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100);
+//	std::srand(unsigned(std::time(0)));
+	cv::Ptr<int> indices = new int[descriptors.rows];
+	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
+		indices[i] = int(i);
+	}
+	cv::Ptr<uint> labels;
+	cv::Mat centroids;
+//	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100, descriptors,
+//			indices, descriptors.rows);
 	mytime = cv::getTickCount();
-	kMajIdx->cluster(descriptors);
+	clustering::kmajority(16, 100, descriptors, indices, descriptors.rows,
+			labels, centroids);
+//	kMajIdx->cluster();
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-			keypoints_1.size(), kMajIdx->getNumberOfClusters(), mytime);
+			keypoints_1.size(), centroids.rows, mytime);
 
-	for (uint j = 0; j < kMajIdx->getNumberOfClusters(); j++) {
-		printf("   Cluster %u has %u transactions assigned\n", j + 1,
-				kMajIdx->getClusterCounts()[j]);
+	for (size_t j = 0; (int) j < centroids.rows; j++) {
+//		printf("   Cluster %u has %u transactions assigned\n", j + 1,
+//				kMajIdx->getClusterCounts()[j]);
+		printf("   Cluster %lu:\n", j + 1);
+		printDescriptors(centroids.row(j));
 	}
 
-	// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
+//	for (uint i = 0; (int) i < descriptors.rows; i++) {
+//		printf("[%4u]-->[%2u] ", i, kMajIdx->getClusterAssignments()[i]);
+//		if (i != 0 && (i + 1) % 10 == 0)
+//			printf("\n");
+//	}
+//	printf("\n");
 
-	// Transform descriptors to a suitable structure for DBoW2
+// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
+
+// Transform descriptors to a suitable structure for DBoW2
 	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
 	vector<vector<DVision::BRIEF::bitset> > features;
 	features.resize(1);
@@ -223,10 +242,11 @@ int main(int argc, char **argv) {
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
 	// Step 5c/5: Cluster descriptors Binary Hierarchical Clustering
+
 	typedef cv::flann::Hamming<uchar> Distance;
 	cvflann::BHCIndexParams params;
 	cvflann::BHCIndex<Distance> index(descriptors, params);
-	index.buildIndex();
+//	index.buildIndex();
 
 	return EXIT_SUCCESS;
 }
