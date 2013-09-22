@@ -36,9 +36,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-//	void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params);
-//	int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params);
-//	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams);
 #ifndef BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
@@ -85,37 +82,13 @@ private:
 	 * Structure representing a node in the hierarchical k-means tree.
 	 */
 	struct KMeansNode {
-		/**
-		 * The cluster center.
-		 */
-//		DistanceType* pivot;
-//		/**
-//		 * The cluster radius.
-//		 */
-//		DistanceType radius;
-//		/**
-//		 * The cluster mean radius.
-//		 */
-//		DistanceType mean_radius;
-//		/**
-//		 * The cluster variance.
-//		 */
-//		DistanceType variance;
-		/**
-		 * The cluster size (number of points in the cluster)
-		 */
+		// The cluster size (number of points in the cluster)
 		int size;
-		/**
-		 * Child nodes (only for non-terminal nodes)
-		 */
+		// Child nodes (only for non-terminal nodes)
 		KMeansNode** childs;
-		/**
-		 * Node points (only for terminal nodes)
-		 */
+		// Node points (only for terminal nodes)
 		int* indices;
-		/**
-		 * Level
-		 */
+		// Level
 		int level;
 
 		// Node id
@@ -126,6 +99,7 @@ private:
 		DBoW2::NodeId parent;
 		// The cluster center
 		cv::Mat descriptor;
+//		DistanceType* pivot;
 		// Word id if the node is a word
 		DBoW2::WordId word_id;
 
@@ -143,9 +117,7 @@ private:
 
 private:
 
-	/**
-	 * The function used for choosing the cluster centers
-	 */
+	// The function used for choosing the cluster centers
 	centersAlgFunction chooseCenters;
 
 	// The branching factor used in the hierarchical k-means clustering
@@ -156,9 +128,6 @@ private:
 
 	// Algorithm for choosing the cluster centers
 	flann_centers_init_t centers_init_;
-
-	// Cluster border index
-	//	float cb_index_;
 
 	// The dataset used by this index
 	const cv::Mat dataset_;
@@ -239,7 +208,6 @@ public:
 					"Unknown algorithm for choosing initial centers.");
 		}
 
-//		cb_index_ = 0.4f;
 	}
 
 	/**
@@ -253,10 +221,6 @@ public:
 	 * Builds the index
 	 */
 	void buildIndex();
-
-//	void set_cb_index(float index) {
-//		cb_index_ = index;
-//	}
 
 	void saveIndex(FILE* stream);
 
@@ -830,7 +794,6 @@ void BHCIndex<Distance>::saveIndex(FILE* stream) {
 	save_value(stream, branching_);
 	save_value(stream, iterations_);
 	save_value(stream, memoryCounter_);
-//		save_value(stream, cb_index_);
 	save_value(stream, *indices_, (int) size_);
 
 	save_tree(stream, root_);
@@ -844,7 +807,6 @@ void BHCIndex<Distance>::loadIndex(FILE* stream) {
 	load_value(stream, branching_);
 	load_value(stream, iterations_);
 	load_value(stream, memoryCounter_);
-//		load_value(stream, cb_index_);
 	if (indices_ != NULL) {
 		delete[] indices_;
 	}
@@ -860,8 +822,6 @@ void BHCIndex<Distance>::loadIndex(FILE* stream) {
 	index_params_["branching"] = branching_;
 	index_params_["iterations"] = iterations_;
 	index_params_["centers_init"] = centers_init_;
-//		index_params_["cb_index"] = cb_index_;
-
 }
 
 // --------------------------------------------------------------------------
@@ -1134,9 +1094,6 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 					sq_dist = new_sq_dist;
 				}
 			}
-//			if (sq_dist > radiuses[new_centroid]) {
-//				radiuses[new_centroid] = sq_dist;
-//			}
 			if (new_centroid != belongs_to[i]) {
 				count[belongs_to[i]]--;
 				count[new_centroid]++;
@@ -1187,30 +1144,17 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < branching; ++c) {
-//			int s = count[c];
 		// Re-order indices by chunks in clustering order
 		for (int i = 0; i < indices_length; ++i) {
 			if (belongs_to[i] == c) {
-//					DistanceType d = distance_(dataset_[indices[i]],
-//							ZeroIterator<ElementType>(), veclen_);
-//					variance += d;
-//					mean_radius += sqrt(d);
 				std::swap(indices[i], indices[end]);
 				std::swap(belongs_to[i], belongs_to[end]);
 				end++;
 			}
 		}
-//			variance /= s;
-//			mean_radius /= s;
-//			variance -= distance_(centers[c], ZeroIterator<ElementType>(),
-//					veclen_);
-//
+
 		node->childs[c] = pool_.allocate<KMeansNode>();
-//		node->childs[c]->radius = radiuses[c];
-//		node->childs[c]->pivot = centers[c];
 		node->childs[c]->descriptor = dcenters.row(c);
-//		node->childs[c]->variance = variance;
-//		node->childs[c]->mean_radius = mean_radius;
 		node->childs[c]->indices = NULL;
 		computeClustering(node->childs[c], indices + start, end - start,
 				branching, level + 1);
