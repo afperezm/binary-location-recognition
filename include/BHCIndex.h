@@ -98,15 +98,14 @@ private:
 		// Parent node id (undefined in case of root)
 		DBoW2::NodeId parent;
 		// The cluster center
-		cv::Mat descriptor;
-//		DistanceType* pivot;
+		DistanceType* pivot;
 		// Word id if the node is a word
 		DBoW2::WordId word_id;
 
 		KMeansNode() :
 				size(0), childs(new KMeansNode[0]), indices(new int[0]), level(
-						-1), id(0), weight(0.0), parent(-1), descriptor(
-						cv::Mat()), word_id(-1) {
+						-1), id(0), weight(0.0), parent(-1), pivot(
+						new DistanceType[0]), word_id(-1) {
 		}
 
 	};
@@ -894,7 +893,7 @@ void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
 template<typename Distance>
 void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 	save_value(stream, *node);
-//	save_value(stream, *(node->pivot), (int) veclen_);
+	save_value(stream, *(node->pivot), (int) veclen_);
 	if (node->childs == NULL) {
 		int indices_offset = (int) (node->indices - indices_);
 		save_value(stream, indices_offset);
@@ -911,8 +910,8 @@ template<typename Distance>
 void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 	node = pool_.allocate<KMeansNode>();
 	load_value(stream, *node);
-//	node->pivot = new DistanceType[veclen_];
-//	load_value(stream, *(node->pivot), (int) veclen_);
+	node->pivot = new DistanceType[veclen_];
+	load_value(stream, *(node->pivot), (int) veclen_);
 	if (node->childs == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
@@ -929,7 +928,7 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 
 template<typename Distance>
 void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
-//	delete[] node->pivot;
+	delete[] node->pivot;
 	if (node->childs != NULL) {
 		for (int k = 0; k < branching_; ++k) {
 			free_centers(node->childs[k]);
@@ -1154,7 +1153,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		}
 
 		node->childs[c] = pool_.allocate<KMeansNode>();
-		node->childs[c]->descriptor = dcenters.row(c);
+		node->childs[c]->pivot = centers[c];
 		node->childs[c]->indices = NULL;
 		computeClustering(node->childs[c], indices + start, end - start,
 				branching, level + 1);
