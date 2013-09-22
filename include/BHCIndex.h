@@ -88,7 +88,7 @@ private:
 		/**
 		 * The cluster center.
 		 */
-		DistanceType* pivot;
+//		DistanceType* pivot;
 //		/**
 //		 * The cluster radius.
 //		 */
@@ -122,14 +122,19 @@ private:
 		DBoW2::NodeId id;
 		// Weight if the node is a word
 		DBoW2::WordValue weight;
-		// Children
-//		vector<NodeId> children;
-		// Parent node (undefined in case of root)
+		// Parent node id (undefined in case of root)
 		DBoW2::NodeId parent;
-		// Node descriptor
+		// The cluster center
 		cv::Mat descriptor;
 		// Word id if the node is a word
 		DBoW2::WordId word_id;
+
+		KMeansNode() :
+				size(0), childs(new KMeansNode[0]), indices(new int[0]), level(
+						-1), id(0), weight(0.0), parent(-1), descriptor(
+						cv::Mat()), word_id(-1) {
+		}
+
 	};
 
 	typedef KMeansNode* KMeansNodePtr;
@@ -189,10 +194,8 @@ private:
 	DBoW2::ScoringType m_scoring;
 	// Object for computing scores
 	DBoW2::GeneralScoring* m_scoring_object;
-	// Tree nodes
-//	std::vector<DBoW2::Node> m_nodes;
 	// Words of the vocabulary, i.e. tree leaves (m_words[wid]->word_id == wid)
-//	std::vector<DBoW2::Node*> m_words;
+	std::vector<cv::Ptr<KMeansNode> > m_words;
 
 public:
 
@@ -218,6 +221,7 @@ public:
 		depth_ = get_param(params, "depth", 10);
 		m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
 		m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
+		m_words.clear();
 
 		if (iterations_ < 0) {
 			iterations_ = (std::numeric_limits<int>::max)();
@@ -930,7 +934,7 @@ void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
 template<typename Distance>
 void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 	save_value(stream, *node);
-	save_value(stream, *(node->pivot), (int) veclen_);
+//	save_value(stream, *(node->pivot), (int) veclen_);
 	if (node->childs == NULL) {
 		int indices_offset = (int) (node->indices - indices_);
 		save_value(stream, indices_offset);
@@ -947,8 +951,8 @@ template<typename Distance>
 void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 	node = pool_.allocate<KMeansNode>();
 	load_value(stream, *node);
-	node->pivot = new DistanceType[veclen_];
-	load_value(stream, *(node->pivot), (int) veclen_);
+//	node->pivot = new DistanceType[veclen_];
+//	load_value(stream, *(node->pivot), (int) veclen_);
 	if (node->childs == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
@@ -965,7 +969,7 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 
 template<typename Distance>
 void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
-	delete[] node->pivot;
+//	delete[] node->pivot;
 	if (node->childs != NULL) {
 		for (int k = 0; k < branching_; ++k) {
 			free_centers(node->childs[k]);
@@ -986,30 +990,7 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 
 	memset(mean, 0, veclen_ * sizeof(DistanceType));
 
-//		for (size_t i = 0; i < size_; ++i) {
-//			ElementType* vec = dataset_[indices[i]];
-//			for (size_t j = 0; j < veclen_; ++j) {
-//				mean[j] += vec[j];
-//			}
-//			variance += distance_(vec, ZeroIterator<ElementType>(), veclen_);
-//		}
-//		for (size_t j = 0; j < veclen_; ++j) {
-//			mean[j] /= size_;
-//		}
-//		variance /= size_;
-//		variance -= distance_(mean, ZeroIterator<ElementType>(), veclen_);
-//
-//		DistanceType tmp = 0;
-//		for (int i = 0; i < indices_length; ++i) {
-//			tmp = distance_(mean, dataset_[indices[i]], veclen_);
-//			if (tmp > radius) {
-//				radius = tmp;
-//			}
-//		}
-
-//	node->variance = variance;
-//	node->radius = radius;
-	node->pivot = mean;
+//	node->pivot = mean;
 }
 
 // --------------------------------------------------------------------------
@@ -1026,6 +1007,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->childs = NULL;
+		this->m_words.push_back(node);
 		return;
 	}
 
@@ -1043,6 +1025,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->childs = NULL;
+		this->m_words.push_back(node);
 		delete[] centers_idx;
 		return;
 	}
@@ -1082,9 +1065,6 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 				sq_dist = new_sq_dist;
 			}
 		}
-//			if (sq_dist > radiuses[belongs_to[i]]) {
-//				radiuses[belongs_to[i]] = sq_dist;
-//			}
 		count[belongs_to[i]]++;
 	}
 
@@ -1102,11 +1082,9 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		// Zeroing all the centroids dimensions
 		dcenters = cv::Scalar::all(0);
 
-//		printf("[BuildRecurse] (level %d): bitwise summing the data into each centroid\n", level);
 		// Bitwise summing the data into each centroid
 		for (unsigned int i = 0; (int) i < indices_length; i++) {
 			unsigned int j = belongs_to[i];
-//			printf("[BuildRecurse] (level %d): summing %d/%d transaction into %d cluster accumulator\n", level, i, indices_length, j);
 			// Finding all data assigned to jth clusther
 			uchar byte = 0;
 			for (int l = 0; l < bitwiseCount.cols; l++) {
@@ -1116,12 +1094,11 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 					byte = *(dataset_.row(i).col((int) l / 8).data);
 				}
 				// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
-				// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
+				// bit at lth position is mod(bitleftshift(byte,i),2) where lth position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
 				bitwiseCount.at<int>(j, l) += ((int) ((byte >> (7 - (l % 8)))
 						% 2));
 			}
 		}
-//			printf("[BuildRecurse] (level %d): bitwise majority voting\n", level);
 		// Bitwise majority voting
 		for (unsigned int j = 0; (int) j < branching; j++) {
 			// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
@@ -1144,7 +1121,6 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		}
 
 		// TODO quantize: reassign points to clusters
-//		printf("[BuildRecurse] (level %d): quantize - reassign points to clusters\n", level);
 		for (int i = 0; i < indices_length; ++i) {
 			DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
 					dcenters.row(0).data, veclen_);
@@ -1170,7 +1146,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			}
 		}
 
-//		printf("[BuildRecurse] (level %d): handling empty clusters\n", level);
+		// TODO handle empty clusters
 		for (int i = 0; i < branching; ++i) {
 			// if one cluster converges to an empty cluster,
 			// move an element into that cluster
@@ -1212,9 +1188,6 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	int end = start;
 	for (int c = 0; c < branching; ++c) {
 //			int s = count[c];
-
-		DistanceType variance = 0;
-		DistanceType mean_radius = 0;
 		// Re-order indices by chunks in clustering order
 		for (int i = 0; i < indices_length; ++i) {
 			if (belongs_to[i] == c) {
@@ -1234,7 +1207,8 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 //
 		node->childs[c] = pool_.allocate<KMeansNode>();
 //		node->childs[c]->radius = radiuses[c];
-		node->childs[c]->pivot = centers[c];
+//		node->childs[c]->pivot = centers[c];
+		node->childs[c]->descriptor = dcenters.row(c);
 //		node->childs[c]->variance = variance;
 //		node->childs[c]->mean_radius = mean_radius;
 		node->childs[c]->indices = NULL;
