@@ -90,7 +90,6 @@ private:
 		int* indices;
 		// Level
 		int level;
-
 		// Node id
 		DBoW2::NodeId id;
 		// Weight if the node is a word
@@ -101,13 +100,11 @@ private:
 		DistanceType* pivot;
 		// Word id if the node is a word
 		DBoW2::WordId word_id;
-
 		KMeansNode() :
 				size(0), childs(new KMeansNode[0]), indices(new int[0]), level(
 						-1), id(0), weight(0.0), parent(-1), pivot(
 						new DistanceType[0]), word_id(-1) {
 		}
-
 	};
 
 	typedef KMeansNode* KMeansNodePtr;
@@ -118,42 +115,30 @@ private:
 
 	// The function used for choosing the cluster centers
 	centersAlgFunction chooseCenters;
-
 	// The branching factor used in the hierarchical k-means clustering
 	int branching_;
-
 	// Maximum number of iterations to use when performing k-means clustering
 	int iterations_;
-
 	// Algorithm for choosing the cluster centers
 	flann_centers_init_t centers_init_;
-
 	// The dataset used by this index
 	const cv::Mat dataset_;
-
 	// Index parameters
 	IndexParams index_params_;
-
 	// Number of features in the dataset
 	size_t size_;
-
 	// Length of each feature.
 	size_t veclen_;
-
 	// The root node in the tree.
 	KMeansNodePtr root_;
 	//  Array of indices to vectors in the dataset
 	int* indices_;
-
 	// The distance
 	Distance distance_;
-
 	// Pooled memory allocator
 	PooledAllocator pool_;
-
 	// Memory occupied by the index
 	int memoryCounter_;
-
 	// Depth levels
 	int depth_;
 	// Weighting method
