@@ -157,47 +157,13 @@ public:
 	 *
 	 * @param inputData - Matrix with the data to be clustered
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
-	 * @param d
+	 * @param d - The distance measure to be used
 	 */
 	BHCIndex(const cv::Mat& inputData, const IndexParams& params =
-			BHCIndexParams(), Distance d = Distance()) :
-			dataset_(inputData), index_params_(params), root_(NULL), indices_(
-					NULL), distance_(d), m_scoring_object(NULL) {
-
-		// Attributes initialization
-		memoryCounter_ = 0;
-		size_ = dataset_.rows;
-		veclen_ = dataset_.cols;
-
-		branching_ = get_param(params, "branching", 6);
-		iterations_ = get_param(params, "iterations", 11);
-		depth_ = get_param(params, "depth", 10);
-		m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
-		m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
-		m_words.clear();
-
-		if (iterations_ < 0) {
-			iterations_ = (std::numeric_limits<int>::max)();
-		}
-		centers_init_ = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
-
-		if (centers_init_ == FLANN_CENTERS_RANDOM) {
-			chooseCenters = &BHCIndex::chooseCentersRandom;
-		} else if (centers_init_ == FLANN_CENTERS_GONZALES) {
-			chooseCenters = &BHCIndex::chooseCentersGonzales;
-		} else if (centers_init_ == FLANN_CENTERS_KMEANSPP) {
-			chooseCenters = &BHCIndex::chooseCentersKMeanspp;
-		} else {
-			throw std::runtime_error(
-					"Unknown algorithm for choosing initial centers.");
-		}
-
-	}
+			BHCIndexParams(), Distance d = Distance());
 
 	/**
-	 * Index destructor.
-	 *
-	 * Release the memory used by the index.
+	 * Index destructor, releases the memory used by the index.
 	 */
 	virtual ~BHCIndex();
 
@@ -206,8 +172,18 @@ public:
 	 */
 	void buildIndex();
 
+	/**
+	 * Saves the index to a stream.
+	 *
+	 * @param stream - The stream to save the index to
+	 */
 	void saveIndex(FILE* stream);
 
+	/**
+	 * Loads the index from a stream.
+	 *
+	 * @param stream - The stream from which the index is loaded
+	 */
 	void loadIndex(FILE* stream);
 
 	/**
@@ -329,8 +305,20 @@ private:
 	void chooseCentersKMeanspp(int k, int* indices, int indices_length,
 			int* centers, int& centers_length);
 
+	/**
+	 * Saves the vocabulary tree starting at a given node to a stream.
+	 *
+	 * @param stream - The stream to save the tree to
+	 * @param node - The node indicating the root of the tree to save
+	 */
 	void save_tree(FILE* stream, KMeansNodePtr node);
 
+	/**
+	 * Loads the vocabulary tree from a stream and stores into into a given node pointer.
+	 *
+	 * @param stream - The stream from which the vocabulary tree is loaded
+	 * @param node - The node where to store the loaded tree
+	 */
 	void load_tree(FILE* stream, KMeansNodePtr& node);
 
 	/**
@@ -732,6 +720,44 @@ void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
 	centers_length = centerCount;
 
 	delete[] closestDistSq;
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
+		const IndexParams& params, Distance d) :
+		dataset_(inputData), index_params_(params), root_(NULL), indices_(NULL), distance_(
+				d), m_scoring_object(NULL) {
+
+	// Attributes initialization
+	memoryCounter_ = 0;
+	size_ = dataset_.rows;
+	veclen_ = dataset_.cols;
+
+	branching_ = get_param(params, "branching", 6);
+	iterations_ = get_param(params, "iterations", 11);
+	depth_ = get_param(params, "depth", 10);
+	m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
+	m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
+	m_words.clear();
+
+	if (iterations_ < 0) {
+		iterations_ = (std::numeric_limits<int>::max)();
+	}
+	centers_init_ = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
+
+	if (centers_init_ == FLANN_CENTERS_RANDOM) {
+		chooseCenters = &BHCIndex::chooseCentersRandom;
+	} else if (centers_init_ == FLANN_CENTERS_GONZALES) {
+		chooseCenters = &BHCIndex::chooseCentersGonzales;
+	} else if (centers_init_ == FLANN_CENTERS_KMEANSPP) {
+		chooseCenters = &BHCIndex::chooseCentersKMeanspp;
+	} else {
+		throw std::runtime_error(
+				"Unknown algorithm for choosing initial centers.");
+	}
+
 }
 
 // --------------------------------------------------------------------------
