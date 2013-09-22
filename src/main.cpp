@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
 	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
 		indices[i] = int(i);
 	}
-	cv::Ptr<uint> labels;
+	cv::Mat labels;
 	cv::Mat centroids;
 //	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100, descriptors,
 //			indices, descriptors.rows);

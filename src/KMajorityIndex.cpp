@@ -39,9 +39,9 @@ KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
 }
 
 KMajorityIndex::~KMajorityIndex() {
-//	delete[] belongs_to;
-//	delete[] distance_to;
-//	delete[] cluster_counts;
+	delete[] belongs_to;
+	delete[] distance_to;
+	delete[] cluster_counts;
 }
 
 void KMajorityIndex::cluster() {
