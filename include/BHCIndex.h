@@ -84,8 +84,8 @@ private:
 	struct KMeansNode {
 		// The cluster size (number of points in the cluster)
 		int size;
-		// Child nodes (only for non-terminal nodes)
-		KMeansNode** childs;
+		// Children nodes (only for non-terminal nodes)
+		KMeansNode** children;
 		// Node points (only for terminal nodes)
 		int* indices;
 		// Level
@@ -98,10 +98,10 @@ private:
 		DBoW2::NodeId parent;
 		// The cluster center
 		DistanceType* pivot;
-		// Word id if the node is a word
+		// Word id (only for terminal nodes)
 		DBoW2::WordId word_id;
 		KMeansNode() :
-				size(0), childs(NULL), indices(NULL), level(-1), id(0), weight(
+				size(0), children(NULL), indices(NULL), level(-1), id(0), weight(
 						0.0), parent(-1), pivot(NULL), word_id(-1) {
 		}
 	};
@@ -231,6 +231,25 @@ public:
 	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
 			const SearchParams& searchParams);
 
+	/**
+	 * Quantizes a set of data into a BoW vector
+	 *
+	 * @param features - Matrix of data to quantize
+	 * @param v - BoW vector of weighted words
+	 */
+	void quantize(const cv::Mat& features, DBoW2::BowVector &v) const;
+
+	/**
+	 * Returns the score of two vectors.
+	 *
+	 * @param v1 - First BoW vector
+	 * @param v2 - Second BoW vector
+	 * @return the score between the two vectors
+	 * @note a and b must be already sorted and normalized if necessary
+	 */
+	inline double score(const DBoW2::BowVector &v1,
+			const DBoW2::BowVector &v2) const;
+
 //	/**
 //	 * Clustering function that takes a cut in the hierarchical k-means
 //	 * tree and return the clusters centers of that clustering.
@@ -359,23 +378,15 @@ private:
 	void setNodeWeights(const std::vector<cv::Mat>& training_data);
 
 	/**
-	 * Returns the word id associated to a feature
-	 * @param feature
-	 * @param id (out) word id
-	 * @param weight (out) word weight
-	 * @param nid (out) if given, id of the node "levelsup" levels up
-	 * @param levelsup
+	 * Quantizes a single data point into a word by traversing the whole tree
+	 * and stores the resulting word id and weight.
+	 *
+	 * @param feature - Row vector representing the feature vector to quantize
+	 * @param id - The id of the found word
+	 * @param weight - The weight of the found word
 	 */
-	void transform(const cv::Mat& feature, DBoW2::WordId &id,
-			DBoW2::WordValue &weight, DBoW2::NodeId* nid = NULL, int levelsup =
-					0) const;
-
-	/**
-	 * Transforms a set of descriptors into a bow vector
-	 * @param features
-	 * @param v (out) bow vector of weighted words
-	 */
-	void transform(const cv::Mat& features, DBoW2::BowVector &v) const;
+	void quantize(const cv::Mat& feature, DBoW2::WordId &id,
+			DBoW2::WordValue &weight) const;
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -413,7 +424,7 @@ private:
 //			}
 //		}
 //
-//		if (node->childs == NULL) {
+//		if (node->children == NULL) {
 //			if (checks >= maxChecks) {
 //				if (result.full())
 //					return;
@@ -429,13 +440,13 @@ private:
 //			int closest_center = exploreNodeBranches(node, vec,
 //					domain_distances, heap);
 //			delete[] domain_distances;
-//			findNN(node->childs[closest_center], result, vec, checks, maxChecks,
+//			findNN(node->children[closest_center], result, vec, checks, maxChecks,
 //					heap);
 //		}
 //	}
 //
 //	/**
-//	 * Helper function that computes the nearest childs of a node to a given query point.
+//	 * Helper function that computes the nearest children of a node to a given query point.
 //	 * Params:
 //	 *     node = the node
 //	 *     q = the query point
@@ -447,24 +458,24 @@ private:
 //
 //		int best_index = 0;
 //		domain_distances[best_index] = distance_(q,
-//				node->childs[best_index]->pivot, veclen_);
+//				node->children[best_index]->pivot, veclen_);
 //		for (int i = 1; i < branching_; ++i) {
-//			domain_distances[i] = distance_(q, node->childs[i]->pivot, veclen_);
+//			domain_distances[i] = distance_(q, node->children[i]->pivot, veclen_);
 //			if (domain_distances[i] < domain_distances[best_index]) {
 //				best_index = i;
 //			}
 //		}
 //
-//		//		float* best_center = node->childs[best_index]->pivot;
+//		//		float* best_center = node->children[best_index]->pivot;
 //		for (int i = 0; i < branching_; ++i) {
 //			if (i != best_index) {
-//				domain_distances[i] -= cb_index_ * node->childs[i]->variance;
+//				domain_distances[i] -= cb_index_ * node->children[i]->variance;
 //
-//				//				float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
+//				//				float dist_to_border = getDistanceToBorder(node.children[i].pivot,best_center,q);
 //				//				if (domain_distances[i]<dist_to_border) {
 //				//					domain_distances[i] = dist_to_border;
 //				//				}
-//				heap->insert(BranchSt(node->childs[i], domain_distances[i]));
+//				heap->insert(BranchSt(node->children[i], domain_distances[i]));
 //			}
 //		}
 //
@@ -491,7 +502,7 @@ private:
 //			}
 //		}
 //
-//		if (node->childs == NULL) {
+//		if (node->children == NULL) {
 //			for (int i = 0; i < node->size; ++i) {
 //				int index = node->indices[i];
 //				DistanceType dist = distance_(dataset_[index], vec, veclen_);
@@ -503,7 +514,7 @@ private:
 //			getCenterOrdering(node, vec, sort_indices);
 //
 //			for (int i = 0; i < branching_; ++i) {
-//				findExactNN(node->childs[sort_indices[i]], result, vec);
+//				findExactNN(node->children[sort_indices[i]], result, vec);
 //			}
 //
 //			delete[] sort_indices;
@@ -519,7 +530,7 @@ private:
 //			int* sort_indices) {
 //		DistanceType* domain_distances = new DistanceType[branching_];
 //		for (int i = 0; i < branching_; ++i) {
-//			DistanceType dist = distance_(q, node->childs[i]->pivot, veclen_);
+//			DistanceType dist = distance_(q, node->children[i]->pivot, veclen_);
 //
 //			int j = 0;
 //			while (domain_distances[j] < dist && j < i)
@@ -575,14 +586,14 @@ private:
 //			int splitIndex = -1;
 //
 //			for (int i = 0; i < clusterCount; ++i) {
-//				if (clusters[i]->childs != NULL) {
+//				if (clusters[i]->children != NULL) {
 //
 //					DistanceType variance = meanVariance
 //							- clusters[i]->variance * clusters[i]->size;
 //
 //					for (int j = 0; j < branching_; ++j) {
-//						variance += clusters[i]->childs[j]->variance
-//								* clusters[i]->childs[j]->size;
+//						variance += clusters[i]->children[j]->variance
+//								* clusters[i]->children[j]->size;
 //					}
 //					if (variance < minVariance) {
 //						minVariance = variance;
@@ -600,9 +611,9 @@ private:
 //
 //			// split node
 //			KMeansNodePtr toSplit = clusters[splitIndex];
-//			clusters[splitIndex] = toSplit->childs[0];
+//			clusters[splitIndex] = toSplit->children[0];
 //			for (int i = 1; i < branching_; ++i) {
-//				clusters[clusterCount++] = toSplit->childs[i];
+//				clusters[clusterCount++] = toSplit->children[i];
 //			}
 //		}
 //
@@ -939,12 +950,12 @@ template<typename Distance>
 void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 	save_value(stream, *node);
 	save_value(stream, *(node->pivot), (int) veclen_);
-	if (node->childs == NULL) {
+	if (node->children == NULL) {
 		int indices_offset = (int) (node->indices - indices_);
 		save_value(stream, indices_offset);
 	} else {
 		for (int i = 0; i < branching_; ++i) {
-			save_tree(stream, node->childs[i]);
+			save_tree(stream, node->children[i]);
 		}
 	}
 }
@@ -957,14 +968,14 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 	load_value(stream, *node);
 	node->pivot = new DistanceType[veclen_];
 	load_value(stream, *(node->pivot), (int) veclen_);
-	if (node->childs == NULL) {
+	if (node->children == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
 		node->indices = indices_ + indices_offset;
 	} else {
-		node->childs = pool_.allocate<KMeansNodePtr>(branching_);
+		node->children = pool_.allocate<KMeansNodePtr>(branching_);
 		for (int i = 0; i < branching_; ++i) {
-			load_tree(stream, node->childs[i]);
+			load_tree(stream, node->children[i]);
 		}
 	}
 }
@@ -974,9 +985,9 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 template<typename Distance>
 void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
 	delete[] node->pivot;
-	if (node->childs != NULL) {
+	if (node->children != NULL) {
 		for (int k = 0; k < branching_; ++k) {
-			free_centers(node->childs[k]);
+			free_centers(node->children[k]);
 		}
 	}
 }
@@ -994,6 +1005,7 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 
 	memset(mean, 0, veclen_ * sizeof(DistanceType));
 
+	// TODO Compute majority of all data
 //	node->pivot = mean;
 }
 
@@ -1010,7 +1022,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	if (level == depth_ - 1 || indices_length < branching) {
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
-		node->childs = NULL;
+		node->children = NULL;
 		this->m_words.push_back(node);
 		return;
 	}
@@ -1028,7 +1040,8 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	if (centers_length < branching) {
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
-		node->childs = NULL;
+		node->children = NULL;
+		node->word_id = m_words.size();
 		this->m_words.push_back(node);
 		delete[] centers_idx;
 		return;
@@ -1184,7 +1197,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	}
 
 	// compute kmeans clustering for each of the resulting clusters
-	node->childs = pool_.allocate<KMeansNodePtr>(branching);
+	node->children = pool_.allocate<KMeansNodePtr>(branching);
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < branching; ++c) {
@@ -1197,10 +1210,10 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			}
 		}
 
-		node->childs[c] = pool_.allocate<KMeansNode>();
-		node->childs[c]->pivot = centers[c];
-		node->childs[c]->indices = NULL;
-		computeClustering(node->childs[c], indices + start, end - start,
+		node->children[c] = pool_.allocate<KMeansNode>();
+		node->children[c]->pivot = centers[c];
+		node->children[c]->indices = NULL;
+		computeClustering(node->children[c], indices + start, end - start,
 				branching, level + 1);
 		start = end;
 	}
@@ -1230,14 +1243,19 @@ void BHCIndex<Distance>::setNodeWeights(
 		// Note: this actually calculates the IDF part of the TF-IDF score.
 		// The complete TF-IDF score is calculated in ::transform
 
+		// Ni: number of documents/images in which the ith words appears
+		// TODO When test see if this is the same as the inverted file length,
+		// for me it looks like it does
 		std::vector<uint> Ni(NWords, 0);
 		std::vector<bool> counted(NWords, false);
 
 		for (cv::Mat training_data : training_matrices) {
+			// Restart word count 'cause new image features matrix
 			std::fill(counted.begin(), counted.end(), false);
 			for (size_t i = 0; i < training_data.rows; i++) {
 				DBoW2::WordId word_id;
 //				transform(*fit, word_id);
+				// Count only once the appearance of the word in the image (training matrix)
 				if (!counted[word_id]) {
 					Ni[word_id]++;
 					counted[word_id] = true;
@@ -1258,13 +1276,33 @@ void BHCIndex<Distance>::setNodeWeights(
 // --------------------------------------------------------------------------
 
 template<typename Distance>
-void BHCIndex<Distance>::transform(const cv::Mat& features,
+void BHCIndex<Distance>::quantize(const cv::Mat& features,
 		DBoW2::BowVector &v) const {
+
+	if (features.type() != CV_8U) {
+		fprintf(stderr,
+				"BHCIndex::quantize: error, features matrix is not binary\n");
+		return;
+	}
+
+	if (features.cols == veclen_) {
+		fprintf(stderr,
+				"BHCIndex::quantize: error, features vectors must be %d bytes long, that is %d-dimensional\n",
+				veclen_, veclen_ * 8);
+		return;
+	}
+
+	if (features.rows > 0) {
+		fprintf(stderr,
+				"BHCIndex::quantize: error, need at least one feature vector to quantize\n");
+		return;
+	}
+
 	v.clear();
 
-//	if (empty()) {
-//		return;
-//	}
+	if (empty()) {
+		return;
+	}
 
 	// normalize
 	DBoW2::LNorm norm;
@@ -1276,7 +1314,7 @@ void BHCIndex<Distance>::transform(const cv::Mat& features,
 			DBoW2::WordValue w;
 			// w is the IDF value if TF_IDF, 1 if TF
 
-//			transform(features.row(i), id, w);
+			quantize(features.row(i), id, w);
 
 			// not stopped
 			if (w > 0) {
@@ -1293,13 +1331,13 @@ void BHCIndex<Distance>::transform(const cv::Mat& features,
 				vit->second /= nd;
 			}
 		}
-	} else // IDF || BINARY
+	} else // IDF or BINARY
 	{
 		for (size_t i = 0; i < features.rows; i++) {
 			DBoW2::WordId id;
 			DBoW2::WordValue w;
-			// w is idf if IDF, or 1 if BINARY
-//			transform(*fit, id, w);
+			// w is the inverse document frequency if IDF, or 1 if BINARY
+			quantize(features.row(i), id, w);
 			// not stopped
 			if (w > 0) {
 				v.addIfNotExist(id, w);
@@ -1315,46 +1353,34 @@ void BHCIndex<Distance>::transform(const cv::Mat& features,
 // --------------------------------------------------------------------------
 
 template<typename Distance>
-void BHCIndex<Distance>::transform(const cv::Mat &feature,
-		DBoW2::WordId &word_id, DBoW2::WordValue &weight, DBoW2::NodeId *nid,
-		int levelsup) const {
-	// Propagate the feature down the tree
-	root_->childs;
-//	vector<NodeId> nodes;
-//	typename vector<NodeId>::const_iterator nit;
-//
-//	// level at which the node must be stored in nid, if given
-//	const int nid_level = m_L - levelsup;
-//	if (nid_level <= 0 && nid != NULL)
-//		*nid = 0; // root
-//
-//	NodeId final_id = 0; // root
-//	int current_level = 0;
-//
-//	do {
-//		++current_level;
-//		nodes = m_nodes[final_id].children;
-//		final_id = nodes[0];
-//
-//		double best_d = F::distance(feature, m_nodes[final_id].descriptor);
-//
-//		for (nit = nodes.begin() + 1; nit != nodes.end(); ++nit) {
-//			NodeId id = *nit;
-//			double d = F::distance(feature, m_nodes[id].descriptor);
-//			if (d < best_d) {
-//				best_d = d;
-//				final_id = id;
-//			}
-//		}
-//
-//		if (nid != NULL && current_level == nid_level)
-//			*nid = final_id;
-//
-//	} while (!m_nodes[final_id].isLeaf());
-//
-//	// turn node id into word id
-//	word_id = m_nodes[final_id].word_id;
-//	weight = m_nodes[final_id].weight;
+void BHCIndex<Distance>::quantize(const cv::Mat &features,
+		DBoW2::WordId &word_id, DBoW2::WordValue &weight) const {
+
+	KMeansNode best_node;
+
+	// Arbitrarily assign to first child
+	for (size_t i = 0; i < features.rows; i++) {
+		best_node = root_;
+		DistanceType best_distance = distance_(features.row(i).data,
+				best_node->pivot, veclen_);
+		do {
+			KMeansNode node = best_node;
+			// Loop over the children of the so far found best child
+			// looking for a better child
+			for (size_t j = 0; j < this->branching_; j++) {
+				DistanceType d = distance_(features.row(i).data,
+						node->children[j]->pivot, veclen_);
+				if (d < best_distance) {
+					best_distance = d;
+					best_node = node->children[j];
+				}
+			}
+		} while (best_node->children != NULL);
+	}
+
+	// Turn node id into word id
+	word_id = best_node->word_id;
+	weight = best_node->weight;
 }
 
 // --------------------------------------------------------------------------
@@ -1365,6 +1391,12 @@ inline bool BHCIndex<Distance>::empty() const {
 }
 
 // --------------------------------------------------------------------------
+
+template<typename Distance>
+inline double BHCIndex<Distance>::score(const DBoW2::BowVector &v1,
+		const DBoW2::BowVector &v2) const {
+	return m_scoring_object->score(v1, v2);
+}
 
 } /* namespace cvflann */
 #endif /* BIN_HIERARCHICAL_CLUSTERING_INDEX_H_ */
