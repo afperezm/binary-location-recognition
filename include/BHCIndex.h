@@ -101,9 +101,8 @@ private:
 		// Word id if the node is a word
 		DBoW2::WordId word_id;
 		KMeansNode() :
-				size(0), childs(new KMeansNode[0]), indices(new int[0]), level(
-						-1), id(0), weight(0.0), parent(-1), pivot(
-						new DistanceType[0]), word_id(-1) {
+				size(0), childs(NULL), indices(NULL), level(-1), id(0), weight(
+						0.0), parent(-1), pivot(NULL), word_id(-1) {
 		}
 	};
 
@@ -349,6 +348,41 @@ private:
 	//TODO for 1-sized clusters don't store a cluster center (it's the same as the single cluster point)
 	void computeClustering(KMeansNodePtr node, int* indices, int indices_length,
 			int branching, int level);
+
+	/**
+	 * Sets the weight of the nodes of the tree according to the training data set.
+	 * Before calling this function, the nodes and the words must have been already
+	 * created (by calling computeClustering)
+	 *
+	 * @param training_data - Vector of matrices with training data
+	 */
+	void setNodeWeights(const std::vector<cv::Mat>& training_data);
+
+	/**
+	 * Returns the word id associated to a feature
+	 * @param feature
+	 * @param id (out) word id
+	 * @param weight (out) word weight
+	 * @param nid (out) if given, id of the node "levelsup" levels up
+	 * @param levelsup
+	 */
+	void transform(const cv::Mat& feature, DBoW2::WordId &id,
+			DBoW2::WordValue &weight, DBoW2::NodeId* nid = NULL, int levelsup =
+					0) const;
+
+	/**
+	 * Transforms a set of descriptors into a bow vector
+	 * @param features
+	 * @param v (out) bow vector of weighted words
+	 */
+	void transform(const cv::Mat& features, DBoW2::BowVector &v) const;
+
+	/**
+	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
+	 *
+	 * @return true iff the vocabulary is empty
+	 */
+	inline bool empty() const;
 
 //	/**
 //	 * Performs one descent in the hierarchical k-means tree. The branches not
@@ -1175,6 +1209,159 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	delete[] centers;
 	delete[] count;
 	delete[] belongs_to;
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+void BHCIndex<Distance>::setNodeWeights(
+		const std::vector<cv::Mat>& training_matrices) {
+	const uint NWords = m_words.size();
+	const uint NDocs = training_matrices.size();
+
+	if (m_weighting == DBoW2::TF || m_weighting == DBoW2::BINARY) {
+		// IDF part must be 1 always
+		for (size_t i = 0; i < NWords; i++) {
+			m_words[i]->weight = 1;
+		}
+	} else if (m_weighting == DBoW2::IDF || m_weighting == DBoW2::TF_IDF) {
+		// IDF and TF-IDF: we calculate the IDF path now
+
+		// Note: this actually calculates the IDF part of the TF-IDF score.
+		// The complete TF-IDF score is calculated in ::transform
+
+		std::vector<uint> Ni(NWords, 0);
+		std::vector<bool> counted(NWords, false);
+
+		for (cv::Mat training_data : training_matrices) {
+			std::fill(counted.begin(), counted.end(), false);
+			for (size_t i = 0; i < training_data.rows; i++) {
+				DBoW2::WordId word_id;
+//				transform(*fit, word_id);
+				if (!counted[word_id]) {
+					Ni[word_id]++;
+					counted[word_id] = true;
+				}
+			}
+		}
+
+		// Set ln(N/Ni)
+		for (size_t i = 0; i < NWords; i++) {
+			if (Ni[i] > 0) {
+				m_words[i]->weight = log((double) NDocs / (double) Ni[i]);
+			}
+			// TODO else: this cannot occur if using kmeans++
+		}
+	}
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+void BHCIndex<Distance>::transform(const cv::Mat& features,
+		DBoW2::BowVector &v) const {
+	v.clear();
+
+//	if (empty()) {
+//		return;
+//	}
+
+	// normalize
+	DBoW2::LNorm norm;
+	bool must = m_scoring_object->mustNormalize(norm);
+
+	if (m_weighting == DBoW2::TF || m_weighting == DBoW2::TF_IDF) {
+		for (size_t i = 0; i < features.rows; i++) {
+			DBoW2::WordId id;
+			DBoW2::WordValue w;
+			// w is the IDF value if TF_IDF, 1 if TF
+
+//			transform(features.row(i), id, w);
+
+			// not stopped
+			if (w > 0) {
+				v.addWeight(id, w);
+			}
+		}
+
+		if (!v.empty() && !must) {
+			// unnecessary when normalizing
+			const double nd = v.size();
+
+			for (DBoW2::BowVector::iterator vit = v.begin(); vit != v.end();
+					vit++) {
+				vit->second /= nd;
+			}
+		}
+	} else // IDF || BINARY
+	{
+		for (size_t i = 0; i < features.rows; i++) {
+			DBoW2::WordId id;
+			DBoW2::WordValue w;
+			// w is idf if IDF, or 1 if BINARY
+//			transform(*fit, id, w);
+			// not stopped
+			if (w > 0) {
+				v.addIfNotExist(id, w);
+			}
+		} // if add_features
+	} // if m_weighting == ...
+
+	if (must) {
+		v.normalize(norm);
+	}
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+void BHCIndex<Distance>::transform(const cv::Mat &feature,
+		DBoW2::WordId &word_id, DBoW2::WordValue &weight, DBoW2::NodeId *nid,
+		int levelsup) const {
+	// Propagate the feature down the tree
+	root_->childs;
+//	vector<NodeId> nodes;
+//	typename vector<NodeId>::const_iterator nit;
+//
+//	// level at which the node must be stored in nid, if given
+//	const int nid_level = m_L - levelsup;
+//	if (nid_level <= 0 && nid != NULL)
+//		*nid = 0; // root
+//
+//	NodeId final_id = 0; // root
+//	int current_level = 0;
+//
+//	do {
+//		++current_level;
+//		nodes = m_nodes[final_id].children;
+//		final_id = nodes[0];
+//
+//		double best_d = F::distance(feature, m_nodes[final_id].descriptor);
+//
+//		for (nit = nodes.begin() + 1; nit != nodes.end(); ++nit) {
+//			NodeId id = *nit;
+//			double d = F::distance(feature, m_nodes[id].descriptor);
+//			if (d < best_d) {
+//				best_d = d;
+//				final_id = id;
+//			}
+//		}
+//
+//		if (nid != NULL && current_level == nid_level)
+//			*nid = final_id;
+//
+//	} while (!m_nodes[final_id].isLeaf());
+//
+//	// turn node id into word id
+//	word_id = m_nodes[final_id].word_id;
+//	weight = m_nodes[final_id].weight;
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+inline bool BHCIndex<Distance>::empty() const {
+	return m_words.empty();
 }
 
 // --------------------------------------------------------------------------
