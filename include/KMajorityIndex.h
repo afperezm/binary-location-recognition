@@ -43,6 +43,24 @@ public:
 
 	int getNumberOfClusters() const;
 
+	/**
+	 * Decomposes data into bits and accumulates them into cumResult.
+	 *
+	 * @param data - Row vector containing the data to accumulate
+	 * @param accVector - Row oriented accumulator vector
+	 */
+	static void cumBitSum(const cv::Mat& data, cv::Mat& accVector);
+
+	/**
+	 * Component wise thresholding of accumulator vector.
+	 *
+	 * @param accVector - Row oriented accumulator vector
+	 * @param result - Row vector containing the thresholding result
+	 * @param threshold - Threshold value, typically the number of data points used to compute the accumulator vector
+	 */
+	static void majorityVoting(const cv::Mat& accVector, cv::Mat& result,
+			const uint& threshold);
+
 private:
 	// Number of clusters
 	uint k;

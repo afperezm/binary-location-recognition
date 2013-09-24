@@ -212,41 +212,76 @@ void KMajorityIndex::computeCentroids() {
 	// Bitwise summing the data into each centroid
 	for (size_t i = 0; i < this->n; i++) {
 		uint j = belongs_to[i];
-		// Finding all data assigned to jth clusther
-		uchar byte = 0;
-		for (int l = 0; l < bitwiseCount.cols; l++) {
-			// bit: 7-(l%8) col: (int)l/8 descriptor: i
-			// Load byte every 8 bits
-			if ((l % 8) == 0) {
-				byte = *(data.row(i).col((int) l / 8).data);
-			}
-			// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
-			// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
-			bitwiseCount.at<int>(j, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
-		}
+		cv::Mat b = bitwiseCount.row(j);
+		KMajorityIndex::cumBitSum(data.row(i), b);
 	}
 
 	// Bitwise majority voting
 	for (size_t j = 0; j < k; j++) {
-		// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
-		for (int l = 0; l < bitwiseCount.cols; l++) {
-			// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
-			// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
-			bool bit;
-			// There is a tie if the number of data assigned to jth cluster is even
-			// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
-			if (this->cluster_counts[j] % 2 == 1
-					&& 2 * bitwiseCount.at<int>(j, l)
-							== (int) this->cluster_counts[j]) {
-				bit = rand() % 2;
-			} else {
-				bit = 2 * bitwiseCount.at<int>(j, l)
-						> (int) (this->cluster_counts[j]);
-			}
-			centroids.at<unsigned char>(j,
-					(int) (bitwiseCount.cols - 1 - l) / 8) += (bit)
-					<< ((bitwiseCount.cols - 1 - l) % 8);
+		cv::Mat centroid = centroids.row(j);
+		KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
+				cluster_counts[j]);
+	}
+}
+
+void KMajorityIndex::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
+
+	// cumResult and data must be a row vectors
+	if (data.rows != 1 || accVector.rows != 1) {
+		fprintf(stderr,
+				"KMajorityIndex::cumBitSum: data and cumResult parameters must be row vectors\n");
+	}
+	// cumResult and data must be same length
+	if (data.cols * 8 != accVector.cols) {
+		fprintf(stderr,
+				"KMajorityIndex::cumBitSum: number of columns in cumResult must be that of data times 8\n");
+	}
+
+	uchar byte = 0;
+	for (int l = 0; l < accVector.cols; l++) {
+		// bit: 7-(l%8) col: (int)l/8 descriptor: i
+		// Load byte every 8 bits
+		if ((l % 8) == 0) {
+			byte = *(data.col((int) l / 8).data);
 		}
+		// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+		// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
+		accVector.at<int>(0, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
+	}
+
+}
+
+void KMajorityIndex::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
+		const uint& threshold) {
+
+	// cumResult and data must be a row vectors
+	if (accVector.rows != 1 || result.rows != 1) {
+		fprintf(stderr,
+				"KMajorityIndex::majorityVoting: `bitwiseCount` and `centroid` parameters must be row vectors\n");
+	}
+
+	// cumResult and data must be same length
+	if (result.cols * 8 != accVector.cols) {
+		fprintf(stderr,
+				"KMajorityIndex::majorityVoting: number of columns in `bitwiseCount` must be that of `data` times 8\n");
+	}
+
+	// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
+	for (size_t l = 0; (int) l < accVector.cols; l++) {
+		// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
+		// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
+		bool bit;
+		// There is a tie if the number of data assigned to jth cluster is even
+		// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
+		if (threshold % 2 == 1
+				&& 2 * accVector.at<int>(0, l) == (int) threshold) {
+			bit = rand() % 2;
+		} else {
+			bit = 2 * accVector.at<int>(0, l) > (int) (threshold);
+		}
+		// Stores the majority voting result from the LSB to the MSB
+		result.at<unsigned char>(0, (int) (accVector.cols - 1 - l) / 8) += (bit)
+				<< ((accVector.cols - 1 - l) % 8);
 	}
 }
 
