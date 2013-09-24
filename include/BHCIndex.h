@@ -147,7 +147,7 @@ private:
 	// Object for computing scores
 	DBoW2::GeneralScoring* m_scoring_object;
 	// Words of the vocabulary, i.e. tree leaves (m_words[wid]->word_id == wid)
-	std::vector<cv::Ptr<KMeansNode> > m_words;
+	std::vector<KMeansNode*> m_words;
 
 public:
 
@@ -526,7 +526,7 @@ BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 	depth_ = get_param(params, "depth", 10);
 	m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
 	m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
-	m_words.clear();
+//	m_words.clear();
 
 	if (iterations_ < 0) {
 		iterations_ = (std::numeric_limits<int>::max)();
@@ -759,6 +759,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
+		node->word_id = m_words.size();
 		this->m_words.push_back(node);
 		return;
 	}
