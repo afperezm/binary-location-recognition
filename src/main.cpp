@@ -166,12 +166,9 @@ int main(int argc, char **argv) {
 	}
 	cv::Mat labels;
 	cv::Mat centroids;
-//	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(16, 100, descriptors,
-//			indices, descriptors.rows);
 	mytime = cv::getTickCount();
 	clustering::kmajority(16, 100, descriptors, indices, descriptors.rows,
 			labels, centroids);
-//	kMajIdx->cluster();
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
@@ -184,16 +181,9 @@ int main(int argc, char **argv) {
 		printDescriptors(centroids.row(j));
 	}
 
-//	for (uint i = 0; (int) i < descriptors.rows; i++) {
-//		printf("[%4u]-->[%2u] ", i, kMajIdx->getClusterAssignments()[i]);
-//		if (i != 0 && (i + 1) % 10 == 0)
-//			printf("\n");
-//	}
-//	printf("\n");
+	// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
 
-// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
-
-// Transform descriptors to a suitable structure for DBoW2
+	// Transform descriptors to a suitable structure for DBoW2
 	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
 	vector<vector<DVision::BRIEF::bitset> > features;
 	features.resize(1);
@@ -246,7 +236,7 @@ int main(int argc, char **argv) {
 	typedef cv::flann::Hamming<uchar> Distance;
 	cvflann::BHCIndexParams params;
 	cvflann::BHCIndex<Distance> index(descriptors, params);
-//	index.buildIndex();
+	index.buildIndex();
 
 	return EXIT_SUCCESS;
 }
