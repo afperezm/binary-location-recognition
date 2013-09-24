@@ -82,33 +82,37 @@ private:
 	 * Structure representing a node in the hierarchical k-means tree.
 	 */
 	struct KMeansNode {
-		// The cluster size (number of points in the cluster)
+		// The cluster center
+		uchar* center;
+		// Cluster size
 		int size;
-		// Children nodes (only for non-terminal nodes)
-		KMeansNode** children;
-		// Node points (only for terminal nodes)
-		int* indices;
 		// Level
 		int level;
-		// Node id
-		DBoW2::NodeId id;
-		// Weight if the node is a word
-		DBoW2::WordValue weight;
-		// Parent node id (undefined in case of root)
-		DBoW2::NodeId parent;
-		// The cluster center
-		DistanceType* pivot;
+		// Children nodes (only for non-terminal nodes)
+		KMeansNode** children;
 		// Word id (only for terminal nodes)
-		DBoW2::WordId word_id;
+		int word_id;
+		// Weight (only for terminal nodes)
+		double weight;
+		// Assigned points (only for terminal nodes)
+		int* indices;
 		KMeansNode() :
-				size(0), children(NULL), indices(NULL), level(-1), id(0), weight(
-						0.0), parent(-1), pivot(NULL), word_id(-1) {
+				center(NULL), size(0), level(-1), children(NULL), word_id(-1), weight(
+						0.0), indices(NULL) {
+		}
+		KMeansNode& operator=(const KMeansNode& node) {
+			center = node.center;
+			size = node.size;
+			level = node.level;
+			children = node.children;
+			word_id = node.word_id;
+			weight = node.weight;
+			indices = node.indices;
+			return *this;
 		}
 	};
 
 	typedef KMeansNode* KMeansNodePtr;
-
-	typedef BranchStruct<KMeansNodePtr, DistanceType> BranchSt;
 
 private:
 
@@ -147,7 +151,7 @@ private:
 	// Object for computing scores
 	DBoW2::GeneralScoring* m_scoring_object;
 	// Words of the vocabulary, i.e. tree leaves (m_words[wid]->word_id == wid)
-	std::vector<KMeansNode*> m_words;
+	std::vector<KMeansNodePtr> m_words;
 
 public:
 
@@ -352,8 +356,7 @@ private:
 	 * @param id - The id of the found word
 	 * @param weight - The weight of the found word
 	 */
-	void quantize(const cv::Mat& feature, DBoW2::WordId &id,
-			DBoW2::WordValue &weight) const;
+	void quantize(const cv::Mat& feature, uint &id, double &weight) const;
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -362,6 +365,10 @@ private:
 	 */
 	inline bool empty() const;
 
+	/**
+	 * Creates an instance of the scoring object accoring to m_scoring
+	 */
+	void createScoringObject();
 };
 
 // --------------------------------------------------------------------------
@@ -526,7 +533,8 @@ BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 	depth_ = get_param(params, "depth", 10);
 	m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
 	m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
-//	m_words.clear();
+	createScoringObject();
+	m_words.clear();
 
 	if (iterations_ < 0) {
 		iterations_ = (std::numeric_limits<int>::max)();
@@ -672,7 +680,7 @@ void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
 template<typename Distance>
 void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 	save_value(stream, *node);
-	save_value(stream, *(node->pivot), (int) veclen_);
+	save_value(stream, *(node->center), (int) veclen_);
 	if (node->children == NULL) {
 		int indices_offset = (int) (node->indices - indices_);
 		save_value(stream, indices_offset);
@@ -689,8 +697,8 @@ template<typename Distance>
 void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 	node = pool_.allocate<KMeansNode>();
 	load_value(stream, *node);
-	node->pivot = new DistanceType[veclen_];
-	load_value(stream, *(node->pivot), (int) veclen_);
+	node->center = new uchar[veclen_];
+	load_value(stream, *(node->center), (int) veclen_);
 	if (node->children == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
@@ -707,7 +715,7 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 
 template<typename Distance>
 void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
-	delete[] node->pivot;
+	delete[] node->center;
 	if (node->children != NULL) {
 		for (int k = 0; k < branching_; ++k) {
 			free_centers(node->children[k]);
@@ -721,10 +729,9 @@ template<typename Distance>
 void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 		int indices_length) {
 
-	DistanceType* mean = new DistanceType[veclen_];
-	memoryCounter_ += int(veclen_ * sizeof(DistanceType));
+	uchar* center = new uchar[veclen_];
 
-	memset(mean, 0, veclen_ * sizeof(DistanceType));
+	memoryCounter_ += int(veclen_ * sizeof(uchar));
 
 	// Compute center using majority voting over all data
 	cv::Mat accVector(1, veclen_ * 8, cv::DataType<int>::type);
@@ -732,17 +739,14 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 	for (size_t i = 0; (int) i < indices_length; i++) {
 		KMajorityIndex::cumBitSum(dataset_.row(indices[i]), accVector);
 	}
-
 	cv::Mat centroid(1, veclen_, dataset_.type());
 	KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
 
-	DistanceType* center = new DistanceType[veclen_];
-	memoryCounter_ += (int) (veclen_ * sizeof(DistanceType));
 	for (size_t k = 0; k < veclen_; ++k) {
-		center[k] = (DistanceType) centroid.at<uchar>(0, k);
+		center[k] = centroid.at<uchar>(0, k);
 	}
 
-	node->pivot = mean;
+	node->center = center;
 }
 
 // --------------------------------------------------------------------------
@@ -898,13 +902,13 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	printf("[BuildRecurse] (level %d): Finished clustering\n", level);
 
-	DistanceType** centers = new DistanceType*[branching];
+	uchar** centers = new uchar*[branching];
 
 	for (int i = 0; i < branching; ++i) {
-		centers[i] = new DistanceType[veclen_];
-		memoryCounter_ += (int) (veclen_ * sizeof(DistanceType));
+		centers[i] = new uchar[veclen_];
+		memoryCounter_ += (int) (veclen_ * sizeof(uchar));
 		for (size_t k = 0; k < veclen_; ++k) {
-			centers[i][k] = (DistanceType) dcenters.at<uchar>(i, k);
+			centers[i][k] = dcenters.at<uchar>(i, k);
 		}
 	}
 
@@ -923,7 +927,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		}
 
 		node->children[c] = pool_.allocate<KMeansNode>();
-		node->children[c]->pivot = centers[c];
+		node->children[c]->center = centers[c];
 		node->children[c]->indices = NULL;
 		computeClustering(node->children[c], indices + start, end - start,
 				branching, level + 1);
@@ -965,7 +969,7 @@ void BHCIndex<Distance>::setNodeWeights(
 			// Restart word count 'cause new image features matrix
 			std::fill(counted.begin(), counted.end(), false);
 			for (size_t i = 0; i < training_data.rows; i++) {
-				DBoW2::WordId word_id;
+				uint word_id;
 //				transform(*fit, word_id);
 				// Count only once the appearance of the word in the image (training matrix)
 				if (!counted[word_id]) {
@@ -996,15 +1000,14 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 				"BHCIndex::quantize: error, features matrix is not binary\n");
 	}
 
-	if (features.cols == veclen_) {
-		char* msg;
-		sprintf(msg,
-				"BHCIndex::quantize: error, features vectors must be %d bytes long, that is %d-dimensional\n",
-				veclen_, veclen_ * 8);
-		throw std::runtime_error(msg);
+	if (features.cols != (int) veclen_) {
+		std::stringstream msg;
+		msg << "BHCIndex::quantize: error, features vectors must be " << veclen_
+				<< " bytes long, that is " << veclen_ * 8 << "-dimensional\n";
+		throw std::runtime_error(msg.str());
 	}
 
-	if (features.rows > 0) {
+	if (features.rows < 1) {
 		throw std::runtime_error(
 				"BHCIndex::quantize: error, need at least one feature vector to quantize\n");
 	}
@@ -1020,9 +1023,9 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 	bool must = m_scoring_object->mustNormalize(norm);
 
 	if (m_weighting == DBoW2::TF || m_weighting == DBoW2::TF_IDF) {
-		for (size_t i = 0; i < features.rows; i++) {
-			DBoW2::WordId id;
-			DBoW2::WordValue w;
+		for (size_t i = 0; (int) i < features.rows; i++) {
+			uint id;
+			double w;
 			// w is the IDF value if TF_IDF, 1 if TF
 
 			quantize(features.row(i), id, w);
@@ -1044,9 +1047,9 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 		}
 	} else // IDF or BINARY
 	{
-		for (size_t i = 0; i < features.rows; i++) {
-			DBoW2::WordId id;
-			DBoW2::WordValue w;
+		for (size_t i = 0; (int) i < features.rows; i++) {
+			uint id;
+			double w;
 			// w is the inverse document frequency if IDF, or 1 if BINARY
 			quantize(features.row(i), id, w);
 			// not stopped
@@ -1064,29 +1067,29 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 // --------------------------------------------------------------------------
 
 template<typename Distance>
-void BHCIndex<Distance>::quantize(const cv::Mat &features,
-		DBoW2::WordId &word_id, DBoW2::WordValue &weight) const {
+void BHCIndex<Distance>::quantize(const cv::Mat &features, uint &word_id,
+		double &weight) const {
 
-	KMeansNode best_node;
+	KMeansNodePtr best_node = root_;
 
-	// Arbitrarily assign to first child
-	for (size_t i = 0; i < features.rows; i++) {
-		best_node = root_;
-		DistanceType best_distance = distance_(features.row(i).data,
-				best_node->pivot, veclen_);
-		do {
-			KMeansNode node = best_node;
-			// Loop over the children of the so far found best child
-			// looking for a better child
-			for (size_t j = 0; j < this->branching_; j++) {
-				DistanceType d = distance_(features.row(i).data,
-						node->children[j]->pivot, veclen_);
-				if (d < best_distance) {
-					best_distance = d;
-					best_node = node->children[j];
-				}
+	while (best_node->children != NULL) {
+
+		KMeansNodePtr node = best_node;
+
+		// Arbitrarily assign to first child
+		best_node = node->children[0];
+		DistanceType best_distance = distance_(features.data, best_node->center,
+				veclen_);
+
+		// Looking for a better child
+		for (size_t j = 1; (int) j < this->branching_; j++) {
+			DistanceType d = distance_(features.data, node->children[j]->center,
+					veclen_);
+			if (d < best_distance) {
+				best_distance = d;
+				best_node = node->children[j];
 			}
-		} while (best_node->children != NULL);
+		}
 	}
 
 	// Turn node id into word id
@@ -1107,6 +1110,41 @@ template<typename Distance>
 inline double BHCIndex<Distance>::score(const DBoW2::BowVector &v1,
 		const DBoW2::BowVector &v2) const {
 	return m_scoring_object->score(v1, v2);
+}
+
+// --------------------------------------------------------------------------
+
+template<typename Distance>
+void BHCIndex<Distance>::createScoringObject() {
+	delete m_scoring_object;
+	m_scoring_object = NULL;
+
+	switch (m_scoring) {
+	case DBoW2::L1_NORM:
+		m_scoring_object = new DBoW2::L1Scoring;
+		break;
+
+	case DBoW2::L2_NORM:
+		m_scoring_object = new DBoW2::L2Scoring;
+		break;
+
+	case DBoW2::CHI_SQUARE:
+		m_scoring_object = new DBoW2::ChiSquareScoring;
+		break;
+
+	case DBoW2::KL:
+		m_scoring_object = new DBoW2::KLScoring;
+		break;
+
+	case DBoW2::BHATTACHARYYA:
+		m_scoring_object = new DBoW2::BhattacharyyaScoring;
+		break;
+
+	case DBoW2::DOT_PRODUCT:
+		m_scoring_object = new DBoW2::DotProductScoring;
+		break;
+
+	}
 }
 
 } /* namespace cvflann */

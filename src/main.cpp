@@ -21,7 +21,6 @@
 
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
-//#include <KMajorityIndex.h>
 #include <Clustering.h>
 #include <BHCIndex.h>
 
@@ -237,6 +236,12 @@ int main(int argc, char **argv) {
 	cvflann::BHCIndexParams params;
 	cvflann::BHCIndex<Distance> index(descriptors, params);
 	index.buildIndex();
+	DBoW2::BowVector v;
+	index.quantize(descriptors, v);
+
+	double matchScore = index.score(v, v);
+
+	std::cout << matchScore << std::endl;
 
 	return EXIT_SUCCESS;
 }
