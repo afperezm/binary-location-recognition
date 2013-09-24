@@ -839,12 +839,12 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		for (size_t i = 0; (int) i < indices_length; i++) {
 			uint j = belongs_to[i];
 			cv::Mat b = bitwiseCount.row(j);
-			KMajorityIndex::cumBitSum(data.row(i), b);
+			KMajorityIndex::cumBitSum(dataset_.row(indices[i]), b);
 		}
 		// Bitwise majority voting
 		for (size_t j = 0; (int) j < branching; j++) {
-			cv::Mat centroid = centroids.row(j);
-			KMajorityIndex::majorityVoting(bitwiseCount.row(j), dcenters,
+			cv::Mat centroid = dcenters.row(j);
+			KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
 					count[j]);
 		}
 
@@ -991,22 +991,21 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 		DBoW2::BowVector &v) const {
 
 	if (features.type() != CV_8U) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"BHCIndex::quantize: error, features matrix is not binary\n");
-		return;
 	}
 
 	if (features.cols == veclen_) {
-		fprintf(stderr,
+		char* msg;
+		sprintf(msg,
 				"BHCIndex::quantize: error, features vectors must be %d bytes long, that is %d-dimensional\n",
 				veclen_, veclen_ * 8);
-		return;
+		throw std::runtime_error(msg);
 	}
 
 	if (features.rows > 0) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"BHCIndex::quantize: error, need at least one feature vector to quantize\n");
-		return;
 	}
 
 	v.clear();
