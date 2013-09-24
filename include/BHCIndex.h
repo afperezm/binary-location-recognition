@@ -250,39 +250,6 @@ public:
 	inline double score(const DBoW2::BowVector &v1,
 			const DBoW2::BowVector &v2) const;
 
-//	/**
-//	 * Clustering function that takes a cut in the hierarchical k-means
-//	 * tree and return the clusters centers of that clustering.
-//	 * Params:
-//	 *     numClusters = number of clusters to have in the clustering computed
-//	 * Returns: number of cluster centers
-//	 */
-//	int getClusterCenters(Matrix<DistanceType>& centers) {
-//		int numClusters = centers.rows;
-//		if (numClusters < 1) {
-//			throw FLANNException("Number of clusters must be at least 1");
-//		}
-//
-//		DistanceType variance;
-//		KMeansNodePtr* clusters = new KMeansNodePtr[numClusters];
-//
-//		int clusterCount = getMinVarianceClusters(root_, clusters, numClusters,
-//				variance);
-//
-//		Logger::info("Clusters requested: %d, returning %d\n", numClusters,
-//				clusterCount);
-//
-//		for (int i = 0; i < clusterCount; ++i) {
-//			DistanceType* center = clusters[i]->pivot;
-//			for (size_t j = 0; j < veclen_; ++j) {
-//				centers[i][j] = center[j];
-//			}
-//		}
-//		delete[] clusters;
-//
-//		return clusterCount;
-//	}
-
 private:
 
 	/**
@@ -394,232 +361,6 @@ private:
 	 * @return true iff the vocabulary is empty
 	 */
 	inline bool empty() const;
-
-//	/**
-//	 * Performs one descent in the hierarchical k-means tree. The branches not
-//	 * visited are stored in a priority queue.
-//	 *
-//	 * Params:
-//	 *      node = node to explore
-//	 *      result = container for the k-nearest neighbors found
-//	 *      vec = query points
-//	 *      checks = how many points in the dataset have been checked so far
-//	 *      maxChecks = maximum dataset points to checks
-//	 */
-//	void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
-//			const ElementType* vec, int& checks, int maxChecks,
-//			Heap<BranchSt>* heap) {
-//		// Ignore those clusters that are too far away
-//		{
-//			DistanceType bsq = distance_(vec, node->pivot, veclen_);
-//			DistanceType rsq = node->radius;
-//			DistanceType wsq = result.worstDist();
-//
-//			DistanceType val = bsq - rsq - wsq;
-//			DistanceType val2 = val * val - 4 * rsq * wsq;
-//
-//			//if (val>0) {
-//			if ((val > 0) && (val2 > 0)) {
-//				return;
-//			}
-//		}
-//
-//		if (node->children == NULL) {
-//			if (checks >= maxChecks) {
-//				if (result.full())
-//					return;
-//			}
-//			checks += node->size;
-//			for (int i = 0; i < node->size; ++i) {
-//				int index = node->indices[i];
-//				DistanceType dist = distance_(dataset_[index], vec, veclen_);
-//				result.addPoint(dist, index);
-//			}
-//		} else {
-//			DistanceType* domain_distances = new DistanceType[branching_];
-//			int closest_center = exploreNodeBranches(node, vec,
-//					domain_distances, heap);
-//			delete[] domain_distances;
-//			findNN(node->children[closest_center], result, vec, checks, maxChecks,
-//					heap);
-//		}
-//	}
-//
-//	/**
-//	 * Helper function that computes the nearest children of a node to a given query point.
-//	 * Params:
-//	 *     node = the node
-//	 *     q = the query point
-//	 *     distances = array with the distances to each child node.
-//	 * Returns:
-//	 */
-//	int exploreNodeBranches(KMeansNodePtr node, const ElementType* q,
-//			DistanceType* domain_distances, Heap<BranchSt>* heap) {
-//
-//		int best_index = 0;
-//		domain_distances[best_index] = distance_(q,
-//				node->children[best_index]->pivot, veclen_);
-//		for (int i = 1; i < branching_; ++i) {
-//			domain_distances[i] = distance_(q, node->children[i]->pivot, veclen_);
-//			if (domain_distances[i] < domain_distances[best_index]) {
-//				best_index = i;
-//			}
-//		}
-//
-//		//		float* best_center = node->children[best_index]->pivot;
-//		for (int i = 0; i < branching_; ++i) {
-//			if (i != best_index) {
-//				domain_distances[i] -= cb_index_ * node->children[i]->variance;
-//
-//				//				float dist_to_border = getDistanceToBorder(node.children[i].pivot,best_center,q);
-//				//				if (domain_distances[i]<dist_to_border) {
-//				//					domain_distances[i] = dist_to_border;
-//				//				}
-//				heap->insert(BranchSt(node->children[i], domain_distances[i]));
-//			}
-//		}
-//
-//		return best_index;
-//	}
-//
-//	/**
-//	 * Function the performs exact nearest neighbor search by traversing the entire tree.
-//	 */
-//	void findExactNN(KMeansNodePtr node, ResultSet<DistanceType>& result,
-//			const ElementType* vec) {
-//		// Ignore those clusters that are too far away
-//		{
-//			DistanceType bsq = distance_(vec, node->pivot, veclen_);
-//			DistanceType rsq = node->radius;
-//			DistanceType wsq = result.worstDist();
-//
-//			DistanceType val = bsq - rsq - wsq;
-//			DistanceType val2 = val * val - 4 * rsq * wsq;
-//
-//			//                  if (val>0) {
-//			if ((val > 0) && (val2 > 0)) {
-//				return;
-//			}
-//		}
-//
-//		if (node->children == NULL) {
-//			for (int i = 0; i < node->size; ++i) {
-//				int index = node->indices[i];
-//				DistanceType dist = distance_(dataset_[index], vec, veclen_);
-//				result.addPoint(dist, index);
-//			}
-//		} else {
-//			int* sort_indices = new int[branching_];
-//
-//			getCenterOrdering(node, vec, sort_indices);
-//
-//			for (int i = 0; i < branching_; ++i) {
-//				findExactNN(node->children[sort_indices[i]], result, vec);
-//			}
-//
-//			delete[] sort_indices;
-//		}
-//	}
-//
-//	/**
-//	 * Helper function.
-//	 *
-//	 * I computes the order in which to traverse the child nodes of a particular node.
-//	 */
-//	void getCenterOrdering(KMeansNodePtr node, const ElementType* q,
-//			int* sort_indices) {
-//		DistanceType* domain_distances = new DistanceType[branching_];
-//		for (int i = 0; i < branching_; ++i) {
-//			DistanceType dist = distance_(q, node->children[i]->pivot, veclen_);
-//
-//			int j = 0;
-//			while (domain_distances[j] < dist && j < i)
-//				j++;
-//			for (int k = i; k > j; --k) {
-//				domain_distances[k] = domain_distances[k - 1];
-//				sort_indices[k] = sort_indices[k - 1];
-//			}
-//			domain_distances[j] = dist;
-//			sort_indices[j] = i;
-//		}
-//		delete[] domain_distances;
-//	}
-//
-//	/**
-//	 * Method that computes the squared distance from the query point q
-//	 * from inside region with center c to the border between this
-//	 * region and the region with center p
-//	 */
-//	DistanceType getDistanceToBorder(DistanceType* p, DistanceType* c,
-//			DistanceType* q) {
-//		DistanceType sum = 0;
-//		DistanceType sum2 = 0;
-//
-//		for (int i = 0; i < veclen_; ++i) {
-//			DistanceType t = c[i] - p[i];
-//			sum += t * (q[i] - (c[i] + p[i]) / 2);
-//			sum2 += t * t;
-//		}
-//
-//		return sum * sum / sum2;
-//	}
-//
-//	/**
-//	 * Helper function the descends in the hierarchical k-means tree by spliting those clusters that minimize
-//	 * the overall variance of the clustering.
-//	 * Params:
-//	 *     root = root node
-//	 *     clusters = array with clusters centers (return value)
-//	 *     varianceValue = variance of the clustering (return value)
-//	 * Returns:
-//	 */
-//	int getMinVarianceClusters(KMeansNodePtr root, KMeansNodePtr* clusters,
-//			int clusters_length, DistanceType& varianceValue) {
-//		int clusterCount = 1;
-//		clusters[0] = root;
-//
-//		DistanceType meanVariance = root->variance * root->size;
-//
-//		while (clusterCount < clusters_length) {
-//			DistanceType minVariance =
-//					(std::numeric_limits<DistanceType>::max)();
-//			int splitIndex = -1;
-//
-//			for (int i = 0; i < clusterCount; ++i) {
-//				if (clusters[i]->children != NULL) {
-//
-//					DistanceType variance = meanVariance
-//							- clusters[i]->variance * clusters[i]->size;
-//
-//					for (int j = 0; j < branching_; ++j) {
-//						variance += clusters[i]->children[j]->variance
-//								* clusters[i]->children[j]->size;
-//					}
-//					if (variance < minVariance) {
-//						minVariance = variance;
-//						splitIndex = i;
-//					}
-//				}
-//			}
-//
-//			if (splitIndex == -1)
-//				break;
-//			if ((branching_ + clusterCount - 1) > clusters_length)
-//				break;
-//
-//			meanVariance = minVariance;
-//
-//			// split node
-//			KMeansNodePtr toSplit = clusters[splitIndex];
-//			clusters[splitIndex] = toSplit->children[0];
-//			for (int i = 1; i < branching_; ++i) {
-//				clusters[clusterCount++] = toSplit->children[i];
-//			}
-//		}
-//
-//		varianceValue = meanVariance / root->size;
-//		return clusterCount;
-//	}
 
 };
 
@@ -921,26 +662,8 @@ template<typename Distance>
 void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
 		const ElementType* vec, const SearchParams& searchParams) {
 
-	int maxChecks = get_param(searchParams, "checks", 32);
-
-	if (maxChecks == FLANN_CHECKS_UNLIMITED) {
-//			findExactNN(root_, result, vec);
-	} else {
-		// Priority queue storing intermediate branches in the best-bin-first search
-		Heap<BranchSt>* heap = new Heap<BranchSt>((int) size_);
-
-		int checks = 0;
-//			findNN(root_, result, vec, checks, maxChecks, heap);
-
-		BranchSt branch;
-		while (heap->popMin(branch) && (checks < maxChecks || !result.full())) {
-			KMeansNodePtr node = branch.node;
-//				findNN(node, result, vec, checks, maxChecks, heap);
-		}
-		assert(result.full());
-
-		delete heap;
-	}
+	throw std::runtime_error(
+			"BHCIndex::findNeighbors: error, not yet implemented method\n");
 
 }
 
@@ -998,15 +721,28 @@ template<typename Distance>
 void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 		int indices_length) {
 
-	DistanceType radius = 0;
-	DistanceType variance = 0;
 	DistanceType* mean = new DistanceType[veclen_];
 	memoryCounter_ += int(veclen_ * sizeof(DistanceType));
 
 	memset(mean, 0, veclen_ * sizeof(DistanceType));
 
-	// TODO Compute majority of all data
-//	node->pivot = mean;
+	// Compute center using majority voting over all data
+	cv::Mat accVector(1, veclen_ * 8, cv::DataType<int>::type);
+	accVector = cv::Scalar::all(0);
+	for (size_t i = 0; (int) i < indices_length; i++) {
+		KMajorityIndex::cumBitSum(dataset_.row(indices[i]), accVector);
+	}
+
+	cv::Mat centroid(1, veclen_, dataset_.type());
+	KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
+
+	DistanceType* center = new DistanceType[veclen_];
+	memoryCounter_ += (int) (veclen_ * sizeof(DistanceType));
+	for (size_t k = 0; k < veclen_; ++k) {
+		center[k] = (DistanceType) centroid.at<uchar>(0, k);
+	}
+
+	node->pivot = mean;
 }
 
 // --------------------------------------------------------------------------
@@ -1100,41 +836,16 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		dcenters = cv::Scalar::all(0);
 
 		// Bitwise summing the data into each centroid
-		for (unsigned int i = 0; (int) i < indices_length; i++) {
-			unsigned int j = belongs_to[i];
-			// Finding all data assigned to jth clusther
-			uchar byte = 0;
-			for (int l = 0; l < bitwiseCount.cols; l++) {
-				// bit: 7-(l%8) col: (int)l/8 descriptor: i
-				// Load byte every 8 bits
-				if ((l % 8) == 0) {
-					byte = *(dataset_.row(i).col((int) l / 8).data);
-				}
-				// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
-				// bit at lth position is mod(bitleftshift(byte,i),2) where lth position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
-				bitwiseCount.at<int>(j, l) += ((int) ((byte >> (7 - (l % 8)))
-						% 2));
-			}
+		for (size_t i = 0; (int) i < indices_length; i++) {
+			uint j = belongs_to[i];
+			cv::Mat b = bitwiseCount.row(j);
+			KMajorityIndex::cumBitSum(data.row(i), b);
 		}
 		// Bitwise majority voting
-		for (unsigned int j = 0; (int) j < branching; j++) {
-			// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
-			for (int l = 0; l < bitwiseCount.cols; l++) {
-				// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
-				// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
-				bool bit;
-				// There is a tie if the number of data assigned to jth cluster is even
-				// AND the number of bits set to 1 in lth dimension is the half of the data assigned to jth cluster
-				if (count[j] % 2 == 1
-						&& 2 * bitwiseCount.at<int>(j, l) == (int) count[j]) {
-					bit = rand() % 2;
-				} else {
-					bit = 2 * bitwiseCount.at<int>(j, l) > (int) (count[j]);
-				}
-				dcenters.at<unsigned char>(j,
-						(int) (bitwiseCount.cols - 1 - l) / 8) += (bit)
-						<< ((bitwiseCount.cols - 1 - l) % 8);
-			}
+		for (size_t j = 0; (int) j < branching; j++) {
+			cv::Mat centroid = centroids.row(j);
+			KMajorityIndex::majorityVoting(bitwiseCount.row(j), dcenters,
+					count[j]);
 		}
 
 		// TODO quantize: reassign points to clusters
