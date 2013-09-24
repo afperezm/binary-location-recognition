@@ -45,16 +45,14 @@ KMajorityIndex::~KMajorityIndex() {
 }
 
 void KMajorityIndex::cluster() {
-
 	if (data.type() != CV_8U) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"KMajorityIndex::cluster: error, descriptors matrix is not binary");
-		return;
 	}
 
 	if (data.empty()) {
-		fprintf(stderr, "KMajorityIndex::cluster: error, descriptors is empty");
-		return;
+		throw std::runtime_error(
+				"KMajorityIndex::cluster: error, descriptors is empty");
 	}
 
 	// Trivial case: less data than clusters, assign one data point per cluster
@@ -228,12 +226,12 @@ void KMajorityIndex::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
 
 	// cumResult and data must be a row vectors
 	if (data.rows != 1 || accVector.rows != 1) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"KMajorityIndex::cumBitSum: data and cumResult parameters must be row vectors\n");
 	}
 	// cumResult and data must be same length
 	if (data.cols * 8 != accVector.cols) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"KMajorityIndex::cumBitSum: number of columns in cumResult must be that of data times 8\n");
 	}
 
@@ -256,13 +254,13 @@ void KMajorityIndex::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
 
 	// cumResult and data must be a row vectors
 	if (accVector.rows != 1 || result.rows != 1) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"KMajorityIndex::majorityVoting: `bitwiseCount` and `centroid` parameters must be row vectors\n");
 	}
 
 	// cumResult and data must be same length
 	if (result.cols * 8 != accVector.cols) {
-		fprintf(stderr,
+		throw std::runtime_error(
 				"KMajorityIndex::majorityVoting: number of columns in `bitwiseCount` must be that of `data` times 8\n");
 	}
 
