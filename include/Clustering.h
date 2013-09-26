@@ -23,21 +23,21 @@ namespace clustering {
  * @param centroids - Reference to a matrix of k d-dimensional centroids
  */
 void kmajority(int k, int max_iterations, const cv::Mat& data,
-		cv::Ptr<int>& indices, const int& indices_length, cv::Mat& labels,
-		cv::Mat& centroids) {
+		cv::Ptr<int>& indices, const int& indices_length, cv::Mat& centroids,
+		uint* labels = NULL) {
 
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(k, max_iterations,
-			data, indices, indices_length);
+			data, indices, indices_length, labels);
 
 	kMajIdx->cluster();
 
 	centroids = kMajIdx->getCentroids();
 
-	labels = cv::Mat();
-	labels.create(indices_length, 1, cv::DataType<uint>::type);
-	for (size_t i = 0; (int) i < indices_length; i++) {
-		labels.at<uint>(i, 1) = kMajIdx->getClusterAssignments()[i];
-	}
+//	labels = cv::Mat();
+//	labels.create(indices_length, 1, cv::DataType<uint>::type);
+//	for (size_t i = 0; (int) i < indices_length; i++) {
+//		labels.at<uint>(i, 1) = kMajIdx->getClusterAssignments()[i];
+//	}
 }
 
 }

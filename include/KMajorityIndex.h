@@ -14,17 +14,9 @@
 class KMajorityIndex {
 public:
 
-	/**
-	 *
-	 * @param _k
-	 * @param _max_iterations
-	 * @param _data
-	 * @param _indices
-	 * @param _indices_length
-	 */
-	KMajorityIndex(unsigned int _k, unsigned int _max_iterations,
-			const cv::Mat& _data, cv::Ptr<int>& _indices,
-			const int& _indices_length);
+	KMajorityIndex(uint _k, uint _max_iterations, const cv::Mat& _data,
+			cv::Ptr<int>& _indices, const int& _indices_length,
+			uint* _belongs_to = NULL);
 
 	~KMajorityIndex();
 
@@ -84,6 +76,8 @@ private:
 	uint* cluster_counts;
 	// Matrix of clusters centers
 	cv::Mat centroids;
+	// Flag indicating if belongs_to needs to be deleted in the class destructor
+	bool delete_belongs_to;
 
 	/**
 	 * Initializes cluster centers choosing among the data points indicated by indices.

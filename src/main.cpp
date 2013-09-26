@@ -163,11 +163,12 @@ int main(int argc, char **argv) {
 	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
 		indices[i] = int(i);
 	}
-	cv::Mat labels;
+//	cv::Mat labels;
+	uint* labels = new uint[0];
 	cv::Mat centroids;
 	mytime = cv::getTickCount();
 	clustering::kmajority(16, 100, descriptors, indices, descriptors.rows,
-			labels, centroids);
+			centroids, labels);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",

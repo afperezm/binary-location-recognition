@@ -21,11 +21,14 @@ typedef typename Distance::ResultType DistanceType;
 
 KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
 		const cv::Mat& _data, cv::Ptr<int>& _indices,
-		const int& _indices_length) :
+		const int& _indices_length, uint* _belongs_to) :
 		k(_k), max_iterations(_max_iterations), data(_data), indices(_indices), indices_length(
-				_indices_length), dim(_data.cols), n(_indices_length), belongs_to(
-				new uint[_indices_length]), distance_to(
+				_indices_length), dim(_data.cols), n(_indices_length), distance_to(
 				new uint[_indices_length]), cluster_counts(new uint[_k]) {
+
+	belongs_to = _belongs_to != NULL ? _belongs_to : new uint[_indices_length];
+	// Set the pointer belongs_to to be deleted
+	delete_belongs_to = _belongs_to == NULL;
 
 	// Initially all transactions belong to any cluster
 	std::fill_n(this->belongs_to, _indices_length, _k);
@@ -39,7 +42,9 @@ KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
 }
 
 KMajorityIndex::~KMajorityIndex() {
-	delete[] belongs_to;
+	if (delete_belongs_to == true) {
+		delete[] belongs_to;
+	}
 	delete[] distance_to;
 	delete[] cluster_counts;
 }
