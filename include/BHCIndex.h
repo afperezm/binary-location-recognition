@@ -49,26 +49,23 @@ struct BHCIndexParams: public IndexParams {
 			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
 			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
 			DBoW2::ScoringType scoring = DBoW2::L1_NORM, float cb_index = 0.2) {
-		(*this)["algorithm"] = FLANN_INDEX_KMEANS;
 		// branching factor
 		(*this)["branching"] = branching;
 		// max iterations to perform in one kmeans clustering (kmeans tree)
 		(*this)["iterations"] = iterations;
-		// algorithm used for picking the initial cluster centers for kmeans tree
-		(*this)["centers_init"] = centers_init;
-		// cluster boundary index. Used when searching the kmeans tree
-		(*this)["cb_index"] = cb_index;
 		// tree depth
 		(*this)["depth"] = depth;
 		// leafs weighting scheme
 		(*this)["weighting"] = weighting;
 		// BoW vectors scoring scheme
 		(*this)["scoring"] = scoring;
+		// algorithm used for picking the initial cluster centers for kmeans tree
+		(*this)["centers_init"] = centers_init;
 	}
 };
 
 template<typename Distance>
-class BHCIndex: public cvflann::NNIndex<Distance> {
+class BHCIndex {
 
 private:
 
@@ -117,40 +114,36 @@ private:
 private:
 
 	// The function used for choosing the cluster centers
-	centersAlgFunction chooseCenters;
+	centersAlgFunction m_chooseCenters;
 	// The branching factor used in the hierarchical k-means clustering
-	int branching_;
+	int m_branching;
 	// Maximum number of iterations to use when performing k-means clustering
-	int iterations_;
-	// Algorithm for choosing the cluster centers
-	flann_centers_init_t centers_init_;
+	int m_iterations;
 	// The dataset used by this index
-	const cv::Mat dataset_;
-	// Index parameters
-	IndexParams index_params_;
+	const cv::Mat m_dataset;
 	// Number of features in the dataset
-	size_t size_;
+	size_t m_size;
 	// Length of each feature.
-	size_t veclen_;
+	size_t m_veclen;
 	// The root node in the tree.
-	KMeansNodePtr root_;
+	KMeansNodePtr m_root;
 	//  Array of indices to vectors in the dataset
-	int* indices_;
+	int* m_indices;
 	// The distance
-	Distance distance_;
+	Distance m_distance;
 	// Pooled memory allocator
-	PooledAllocator pool_;
+	PooledAllocator m_pool;
 	// Memory occupied by the index
-	int memoryCounter_;
+	int m_memoryCounter;
 	// Depth levels
-	int depth_;
+	int m_depth;
 	// Weighting method
 	DBoW2::WeightingType m_weighting;
 	// Scoring method
 	DBoW2::ScoringType m_scoring;
 	// Object for computing scores
 	DBoW2::GeneralScoring* m_scoring_object;
-	// Words of the vocabulary, i.e. tree leaves (m_words[wid]->word_id == wid)
+	// Words of the vocabulary
 	std::vector<KMeansNodePtr> m_words;
 
 public:
@@ -190,50 +183,11 @@ public:
 	void loadIndex(FILE* stream);
 
 	/**
-	 * Returns the number of features in this index.
-	 *
-	 * @return the index size
-	 */
-	size_t size() const;
-
-	/**
-	 * Returns the dimensionality of the features in this index.
-	 *
-	 * @return the index features length
-	 */
-	size_t veclen() const;
-
-	/**
 	 * Returns the amount of memory (in bytes) used by the index.
 	 *
 	 * @return the memory used by the index
 	 */
 	int usedMemory() const;
-
-	/**
-	 * Returns the index type (kdtree, kmeans,...)
-	 *
-	 * @return kmeans index type
-	 */
-	flann_algorithm_t getType() const;
-
-	/**
-	 * The index parameters.
-	 *
-	 * @return the index parameters
-	 */
-	IndexParams getParameters() const;
-
-	/**
-	 * Finds the nearest-neighbors to a given features vector and stores the result
-	 * inside a result object.
-	 *
-	 * @param result - The result object in which the indices of the nearest neighbors are stored
-	 * @param vec - The vector for which to search the nearest neighbors
-	 * @param searchParams - Parameters than influence the search algorithm
-	 */
-	void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
-			const SearchParams& searchParams);
 
 	/**
 	 * Quantizes a set of data into a BoW vector
@@ -335,7 +289,6 @@ private:
 	 * @param branching - The branching factor to use in the clustering
 	 * @param level
 	 */
-	//TODO for 1-sized clusters don't store a cluster center (it's the same as the single cluster point)
 	void computeClustering(KMeansNodePtr node, int* indices, int indices_length,
 			int branching, int level);
 
@@ -361,12 +314,12 @@ private:
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
 	 *
-	 * @return true iff the vocabulary is empty
+	 * @return true only if the vocabulary is empty
 	 */
 	inline bool empty() const;
 
 	/**
-	 * Creates an instance of the scoring object accoring to m_scoring
+	 * Creates an instance of the scoring object according to m_scoring
 	 */
 	void createScoringObject();
 };
@@ -393,8 +346,8 @@ void BHCIndex<Distance>::chooseCentersRandom(int k, int* indices,
 			centers[index] = indices[rnd];
 
 			for (int j = 0; j < index; ++j) {
-				DistanceType sq = distance_(dataset_.row(centers[index]).data,
-						dataset_.row(centers[j]).data, dataset_.cols);
+				DistanceType sq = m_distance(m_dataset.row(centers[index]).data,
+						m_dataset.row(centers[j]).data, m_dataset.cols);
 				if (sq < 1e-16) {
 					duplicate = true;
 				}
@@ -421,11 +374,12 @@ void BHCIndex<Distance>::chooseCentersGonzales(int k, int* indices,
 		int best_index = -1;
 		DistanceType best_val = 0;
 		for (int j = 0; j < n; ++j) {
-			DistanceType dist = distance_(dataset_.row(centers[0]).data,
-					dataset_.row(indices[j]).data, dataset_.cols);
+			DistanceType dist = m_distance(m_dataset.row(centers[0]).data,
+					m_dataset.row(indices[j]).data, m_dataset.cols);
 			for (int i = 1; i < index; ++i) {
-				DistanceType tmp_dist = distance_(dataset_.row(centers[i]).data,
-						dataset_.row(indices[j]).data, dataset_.cols);
+				DistanceType tmp_dist = m_distance(
+						m_dataset.row(centers[i]).data,
+						m_dataset.row(indices[j]).data, m_dataset.cols);
 				if (tmp_dist < dist) {
 					dist = tmp_dist;
 				}
@@ -459,8 +413,8 @@ void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
 	centers[0] = indices[index];
 
 	for (int i = 0; i < n; i++) {
-		closestDistSq[i] = distance_(dataset_.row(indices[i]).data,
-				dataset_.row(indices[index]).data, dataset_.cols);
+		closestDistSq[i] = m_distance(m_dataset.row(indices[i]).data,
+				m_dataset.row(indices[index]).data, m_dataset.cols);
 		currentPot += closestDistSq[i];
 	}
 
@@ -489,9 +443,9 @@ void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
 			double newPot = 0;
 			for (int i = 0; i < n; i++)
 				newPot += std::min(
-						distance_(dataset_.row(indices[i]).data,
-								dataset_.row(indices[index]).data,
-								dataset_.cols), closestDistSq[i]);
+						m_distance(m_dataset.row(indices[i]).data,
+								m_dataset.row(indices[index]).data,
+								m_dataset.cols), closestDistSq[i]);
 
 			// Store the best result
 			if ((bestNewPot < 0) || (newPot < bestNewPot)) {
@@ -505,9 +459,9 @@ void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
 		currentPot = bestNewPot;
 		for (int i = 0; i < n; i++)
 			closestDistSq[i] = std::min(
-					distance_(dataset_.row(indices[i]).data,
-							dataset_.row(indices[bestNewIndex]).data,
-							dataset_.cols), closestDistSq[i]);
+					m_distance(m_dataset.row(indices[i]).data,
+							m_dataset.row(indices[bestNewIndex]).data,
+							m_dataset.cols), closestDistSq[i]);
 	}
 
 	centers_length = centerCount;
@@ -520,33 +474,34 @@ void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
 template<typename Distance>
 BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 		const IndexParams& params, Distance d) :
-		dataset_(inputData), index_params_(params), root_(NULL), indices_(NULL), distance_(
-				d), m_scoring_object(NULL) {
+		m_dataset(inputData), m_root(NULL), m_indices(NULL), m_distance(d), m_scoring_object(
+				NULL) {
 
 	// Attributes initialization
-	memoryCounter_ = 0;
-	size_ = dataset_.rows;
-	veclen_ = dataset_.cols;
+	m_memoryCounter = 0;
+	m_size = m_dataset.rows;
+	m_veclen = m_dataset.cols;
 
-	branching_ = get_param(params, "branching", 6);
-	iterations_ = get_param(params, "iterations", 11);
-	depth_ = get_param(params, "depth", 10);
+	m_branching = get_param(params, "branching", 6);
+	m_iterations = get_param(params, "iterations", 11);
+	m_depth = get_param(params, "depth", 10);
 	m_weighting = get_param(params, "weighting", DBoW2::TF_IDF);
 	m_scoring = get_param(params, "scoring", DBoW2::L1_NORM);
 	createScoringObject();
 	m_words.clear();
 
-	if (iterations_ < 0) {
-		iterations_ = (std::numeric_limits<int>::max)();
+	if (m_iterations < 0) {
+		m_iterations = (std::numeric_limits<int>::max)();
 	}
-	centers_init_ = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
+	flann_centers_init_t centers_init_ = get_param(params, "centers_init",
+			FLANN_CENTERS_RANDOM);
 
 	if (centers_init_ == FLANN_CENTERS_RANDOM) {
-		chooseCenters = &BHCIndex::chooseCentersRandom;
+		m_chooseCenters = &BHCIndex::chooseCentersRandom;
 	} else if (centers_init_ == FLANN_CENTERS_GONZALES) {
-		chooseCenters = &BHCIndex::chooseCentersGonzales;
+		m_chooseCenters = &BHCIndex::chooseCentersGonzales;
 	} else if (centers_init_ == FLANN_CENTERS_KMEANSPP) {
-		chooseCenters = &BHCIndex::chooseCentersKMeanspp;
+		m_chooseCenters = &BHCIndex::chooseCentersKMeanspp;
 	} else {
 		throw std::runtime_error(
 				"Unknown algorithm for choosing initial centers.");
@@ -558,11 +513,11 @@ BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 
 template<typename Distance>
 BHCIndex<Distance>::~BHCIndex() {
-	if (root_ != NULL) {
-		free_centers(root_);
+	if (m_root != NULL) {
+		free_centers(m_root);
 	}
-	if (indices_ != NULL) {
-		delete[] indices_;
+	if (m_indices != NULL) {
+		delete[] m_indices;
 	}
 }
 
@@ -570,24 +525,24 @@ BHCIndex<Distance>::~BHCIndex() {
 
 template<typename Distance>
 void BHCIndex<Distance>::buildIndex() {
-	if (branching_ < 2) {
+	if (m_branching < 2) {
 		throw std::runtime_error("Branching factor must be at least 2");
 	}
 
-	indices_ = new int[size_];
-	for (size_t i = 0; i < size_; ++i) {
-		indices_[i] = int(i);
+	m_indices = new int[m_size];
+	for (size_t i = 0; i < m_size; ++i) {
+		m_indices[i] = int(i);
 	}
 
 	printf("[BHCIndex::buildIndex] Building tree from %d features\n",
-			(int) size_);
+			(int) m_size);
 	printf("[BHCIndex::buildIndex]   with depth %d, branching factor %d\n",
-			depth_, branching_);
-	printf("[BHCIndex::buildIndex]   and restarts %d\n", iterations_);
+			m_depth, m_branching);
+	printf("[BHCIndex::buildIndex]   and restarts %d\n", m_iterations);
 
-	root_ = pool_.allocate<KMeansNode>();
-	computeNodeStatistics(root_, indices_, (int) size_);
-	computeClustering(root_, indices_, (int) size_, branching_, 0);
+	m_root = m_pool.allocate<KMeansNode>();
+	computeNodeStatistics(m_root, m_indices, (int) m_size);
+	computeClustering(m_root, m_indices, (int) m_size, m_branching, 0);
 }
 
 // --------------------------------------------------------------------------
@@ -595,12 +550,12 @@ void BHCIndex<Distance>::buildIndex() {
 template<typename Distance>
 void BHCIndex<Distance>::saveIndex(FILE* stream) {
 	// TODO Check other values to save
-	save_value(stream, branching_);
-	save_value(stream, iterations_);
-	save_value(stream, memoryCounter_);
-	save_value(stream, *indices_, (int) size_);
+	save_value(stream, m_branching);
+	save_value(stream, m_iterations);
+	save_value(stream, m_memoryCounter);
+	save_value(stream, *m_indices, (int) m_size);
 
-	save_tree(stream, root_);
+	save_tree(stream, m_root);
 }
 
 // --------------------------------------------------------------------------
@@ -608,71 +563,26 @@ void BHCIndex<Distance>::saveIndex(FILE* stream) {
 template<typename Distance>
 void BHCIndex<Distance>::loadIndex(FILE* stream) {
 	// TODO Check other values to load
-	load_value(stream, branching_);
-	load_value(stream, iterations_);
-	load_value(stream, memoryCounter_);
-	if (indices_ != NULL) {
-		delete[] indices_;
+	load_value(stream, m_branching);
+	load_value(stream, m_iterations);
+	load_value(stream, m_memoryCounter);
+	if (m_indices != NULL) {
+		delete[] m_indices;
 	}
-	indices_ = new int[size_];
-	load_value(stream, *indices_, size_);
+	m_indices = new int[m_size];
+	load_value(stream, *m_indices, m_size);
 
-	if (root_ != NULL) {
-		free_centers(root_);
+	if (m_root != NULL) {
+		free_centers(m_root);
 	}
-	load_tree(stream, root_);
-
-	index_params_["algorithm"] = getType();
-	index_params_["branching"] = branching_;
-	index_params_["iterations"] = iterations_;
-	index_params_["centers_init"] = centers_init_;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-size_t BHCIndex<Distance>::size() const {
-	return size_;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-size_t BHCIndex<Distance>::veclen() const {
-	return veclen_;
+	load_tree(stream, m_root);
 }
 
 // --------------------------------------------------------------------------
 
 template<typename Distance>
 int BHCIndex<Distance>::usedMemory() const {
-	return pool_.usedMemory + pool_.wastedMemory + memoryCounter_;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-flann_algorithm_t BHCIndex<Distance>::getType() const {
-	// TODO Return the right type, clue: I stored one in the params struct
-	return FLANN_INDEX_KMEANS;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-IndexParams BHCIndex<Distance>::getParameters() const {
-	return index_params_;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
-		const ElementType* vec, const SearchParams& searchParams) {
-
-	throw std::runtime_error(
-			"BHCIndex::findNeighbors: error, not yet implemented method\n");
-
+	return m_pool.usedMemory + m_pool.wastedMemory + m_memoryCounter;
 }
 
 // --------------------------------------------------------------------------
@@ -680,12 +590,12 @@ void BHCIndex<Distance>::findNeighbors(ResultSet<DistanceType>& result,
 template<typename Distance>
 void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 	save_value(stream, *node);
-	save_value(stream, *(node->center), (int) veclen_);
+	save_value(stream, *(node->center), (int) m_veclen);
 	if (node->children == NULL) {
-		int indices_offset = (int) (node->indices - indices_);
+		int indices_offset = (int) (node->indices - m_indices);
 		save_value(stream, indices_offset);
 	} else {
-		for (int i = 0; i < branching_; ++i) {
+		for (int i = 0; i < m_branching; ++i) {
 			save_tree(stream, node->children[i]);
 		}
 	}
@@ -695,17 +605,17 @@ void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 
 template<typename Distance>
 void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
-	node = pool_.allocate<KMeansNode>();
+	node = m_pool.allocate<KMeansNode>();
 	load_value(stream, *node);
-	node->center = new uchar[veclen_];
-	load_value(stream, *(node->center), (int) veclen_);
+	node->center = new uchar[m_veclen];
+	load_value(stream, *(node->center), (int) m_veclen);
 	if (node->children == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
-		node->indices = indices_ + indices_offset;
+		node->indices = m_indices + indices_offset;
 	} else {
-		node->children = pool_.allocate<KMeansNodePtr>(branching_);
-		for (int i = 0; i < branching_; ++i) {
+		node->children = m_pool.allocate<KMeansNodePtr>(m_branching);
+		for (int i = 0; i < m_branching; ++i) {
 			load_tree(stream, node->children[i]);
 		}
 	}
@@ -717,7 +627,7 @@ template<typename Distance>
 void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
 	delete[] node->center;
 	if (node->children != NULL) {
-		for (int k = 0; k < branching_; ++k) {
+		for (int k = 0; k < m_branching; ++k) {
 			free_centers(node->children[k]);
 		}
 	}
@@ -729,20 +639,20 @@ template<typename Distance>
 void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 		int indices_length) {
 
-	uchar* center = new uchar[veclen_];
+	uchar* center = new uchar[m_veclen];
 
-	memoryCounter_ += int(veclen_ * sizeof(uchar));
+	m_memoryCounter += int(m_veclen * sizeof(uchar));
 
 	// Compute center using majority voting over all data
-	cv::Mat accVector(1, veclen_ * 8, cv::DataType<int>::type);
+	cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
 	accVector = cv::Scalar::all(0);
 	for (size_t i = 0; (int) i < indices_length; i++) {
-		KMajorityIndex::cumBitSum(dataset_.row(indices[i]), accVector);
+		KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
 	}
-	cv::Mat centroid(1, veclen_, dataset_.type());
+	cv::Mat centroid(1, m_veclen, m_dataset.type());
 	KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
 
-	for (size_t k = 0; k < veclen_; ++k) {
+	for (size_t k = 0; k < m_veclen; ++k) {
 		center[k] = centroid.at<uchar>(0, k);
 	}
 
@@ -759,7 +669,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	// Recursion base case: done when the last level is reached
 	// or when there are less data than clusters
-	if (level == depth_ - 1 || indices_length < branching) {
+	if (level == m_depth - 1 || indices_length < branching) {
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
@@ -773,7 +683,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	int* centers_idx = new int[branching];
 	int centers_length;
-	(this->*chooseCenters)(branching, indices, indices_length, centers_idx,
+	(this->*m_chooseCenters)(branching, indices, indices_length, centers_idx,
 			centers_length);
 
 	// Recursion base case: done as well if by case got
@@ -794,10 +704,10 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			"[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n",
 			level);
 
-	cv::Mat dcenters(branching, veclen_, dataset_.type());
+	cv::Mat dcenters(branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
-		dataset_.row(centers_idx[i]).copyTo(
-				dcenters(cv::Range(i, i + 1), cv::Range(0, veclen_)));
+		m_dataset.row(centers_idx[i]).copyTo(
+				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
 	delete[] centers_idx;
 
@@ -812,12 +722,13 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
 
-		DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
-				dcenters.row(0).data, veclen_);
+		DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
+				dcenters.row(0).data, m_veclen);
 		belongs_to[i] = 0;
 		for (int j = 1; j < branching; ++j) {
-			DistanceType new_sq_dist = distance_(dataset_.row(indices[i]).data,
-					dcenters.row(j).data, veclen_);
+			DistanceType new_sq_dist = m_distance(
+					m_dataset.row(indices[i]).data, dcenters.row(j).data,
+					m_veclen);
 			if (sq_dist > new_sq_dist) {
 				belongs_to[i] = j;
 				sq_dist = new_sq_dist;
@@ -828,13 +739,13 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	bool converged = false;
 	int iteration = 0;
-	while (!converged && iteration < iterations_) {
+	while (!converged && iteration < m_iterations) {
 		converged = true;
 		iteration++;
 
 		//TODO: computeCentroids compute the new cluster centers
 		// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
-		cv::Mat bitwiseCount(branching, veclen_ * 8, cv::DataType<int>::type);
+		cv::Mat bitwiseCount(branching, m_veclen * 8, cv::DataType<int>::type);
 		// Zeroing matrix of cumulative bits
 		bitwiseCount = cv::Scalar::all(0);
 		// Zeroing all the centroids dimensions
@@ -844,7 +755,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		for (size_t i = 0; (int) i < indices_length; i++) {
 			uint j = belongs_to[i];
 			cv::Mat b = bitwiseCount.row(j);
-			KMajorityIndex::cumBitSum(dataset_.row(indices[i]), b);
+			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
 		}
 		// Bitwise majority voting
 		for (size_t j = 0; (int) j < branching; j++) {
@@ -855,13 +766,13 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 		// TODO quantize: reassign points to clusters
 		for (int i = 0; i < indices_length; ++i) {
-			DistanceType sq_dist = distance_(dataset_.row(indices[i]).data,
-					dcenters.row(0).data, veclen_);
+			DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
+					dcenters.row(0).data, m_veclen);
 			int new_centroid = 0;
 			for (int j = 1; j < branching; ++j) {
-				DistanceType new_sq_dist = distance_(
-						dataset_.row(indices[i]).data, dcenters.row(j).data,
-						veclen_);
+				DistanceType new_sq_dist = m_distance(
+						m_dataset.row(indices[i]).data, dcenters.row(j).data,
+						m_veclen);
 				if (sq_dist > new_sq_dist) {
 					new_centroid = j;
 					sq_dist = new_sq_dist;
@@ -905,15 +816,15 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	uchar** centers = new uchar*[branching];
 
 	for (int i = 0; i < branching; ++i) {
-		centers[i] = new uchar[veclen_];
-		memoryCounter_ += (int) (veclen_ * sizeof(uchar));
-		for (size_t k = 0; k < veclen_; ++k) {
+		centers[i] = new uchar[m_veclen];
+		m_memoryCounter += (int) (m_veclen * sizeof(uchar));
+		for (size_t k = 0; k < m_veclen; ++k) {
 			centers[i][k] = dcenters.at<uchar>(i, k);
 		}
 	}
 
 	// compute kmeans clustering for each of the resulting clusters
-	node->children = pool_.allocate<KMeansNodePtr>(branching);
+	node->children = m_pool.allocate<KMeansNodePtr>(branching);
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < branching; ++c) {
@@ -926,7 +837,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			}
 		}
 
-		node->children[c] = pool_.allocate<KMeansNode>();
+		node->children[c] = m_pool.allocate<KMeansNode>();
 		node->children[c]->center = centers[c];
 		node->children[c]->indices = NULL;
 		computeClustering(node->children[c], indices + start, end - start,
@@ -1000,10 +911,11 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 				"BHCIndex::quantize: error, features matrix is not binary\n");
 	}
 
-	if (features.cols != (int) veclen_) {
+	if (features.cols != (int) m_veclen) {
 		std::stringstream msg;
-		msg << "BHCIndex::quantize: error, features vectors must be " << veclen_
-				<< " bytes long, that is " << veclen_ * 8 << "-dimensional\n";
+		msg << "BHCIndex::quantize: error, features vectors must be "
+				<< m_veclen << " bytes long, that is " << m_veclen * 8
+				<< "-dimensional\n";
 		throw std::runtime_error(msg.str());
 	}
 
@@ -1070,7 +982,7 @@ template<typename Distance>
 void BHCIndex<Distance>::quantize(const cv::Mat &features, uint &word_id,
 		double &weight) const {
 
-	KMeansNodePtr best_node = root_;
+	KMeansNodePtr best_node = m_root;
 
 	while (best_node->children != NULL) {
 
@@ -1078,13 +990,13 @@ void BHCIndex<Distance>::quantize(const cv::Mat &features, uint &word_id,
 
 		// Arbitrarily assign to first child
 		best_node = node->children[0];
-		DistanceType best_distance = distance_(features.data, best_node->center,
-				veclen_);
+		DistanceType best_distance = m_distance(features.data,
+				best_node->center, m_veclen);
 
 		// Looking for a better child
-		for (size_t j = 1; (int) j < this->branching_; j++) {
-			DistanceType d = distance_(features.data, node->children[j]->center,
-					veclen_);
+		for (size_t j = 1; (int) j < this->m_branching; j++) {
+			DistanceType d = m_distance(features.data,
+					node->children[j]->center, m_veclen);
 			if (d < best_distance) {
 				best_distance = d;
 				best_node = node->children[j];
