@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
 			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
-	// Step 5c/5: Cluster descriptors Binary Hierarchical Clustering
+	// Step 5c/5: Cluster descriptors using Binary Hierarchical Clustering
 
 	typedef cv::flann::Hamming<uchar> Distance;
 	cvflann::BHCIndexParams params;
@@ -242,7 +242,9 @@ int main(int argc, char **argv) {
 
 	double matchScore = index.score(v, v);
 
-	std::cout << matchScore << std::endl;
+	printf("Match score between an image and itself: %f\n", matchScore);
+
+	// Step 5d/5:
 
 	return EXIT_SUCCESS;
 }
