@@ -397,6 +397,7 @@ void BHCIndex<Distance>::chooseCentersGonzales(int k, int* indices,
 	}
 	centers_length = index;
 }
+
 // --------------------------------------------------------------------------
 
 template<typename Distance>
