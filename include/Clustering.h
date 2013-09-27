@@ -22,7 +22,7 @@ namespace clustering {
  * @param labels - Reference to an integer array with the assignment of data to clusters
  * @param centroids - Reference to a matrix of k d-dimensional centroids
  */
-void kmajority(int k, int max_iterations, const cv::Mat& data,
+inline void kmajority(int k, int max_iterations, const cv::Mat& data,
 		cv::Ptr<int>& indices, const int& indices_length, cv::Mat& centroids,
 		uint* labels = NULL) {
 
