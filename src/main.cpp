@@ -233,18 +233,18 @@ int main(int argc, char **argv) {
 
 	// Step 5c/5: Cluster descriptors using Binary Hierarchical Clustering
 
-	typedef cv::flann::Hamming<uchar> Distance;
-	cvflann::BHCIndexParams params;
-	cvflann::BHCIndex<Distance> index(descriptors, params);
-	index.buildIndex();
+	cvflann::VocabTreeParams params;
+	cvflann::VocabTree tree(descriptors, params);
+	tree.build();
 	DBoW2::BowVector v;
-	index.quantize(descriptors, v);
+	tree.quantize(descriptors, v);
 
-	double matchScore = index.score(v, v);
+	double matchScore = tree.score(v, v);
 
 	printf("Match score between an image and itself: %f\n", matchScore);
 
-	// Step 5d/5:
+// Step 5d/5:
+//	cv::BOWKmajorityTrainer bowTrainer(10,);
 
 	return EXIT_SUCCESS;
 }

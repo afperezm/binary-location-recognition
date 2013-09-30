@@ -45,8 +45,8 @@
 
 namespace cvflann {
 
-struct BHCIndexParams: public IndexParams {
-	BHCIndexParams(int branching = 6, int depth = 10, int iterations = 11,
+struct VocabTreeParams: public IndexParams {
+	VocabTreeParams(int branching = 6, int depth = 10, int iterations = 11,
 			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
 			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
 			DBoW2::ScoringType scoring = DBoW2::L1_NORM, float cb_index = 0.2) {
@@ -65,40 +65,40 @@ struct BHCIndexParams: public IndexParams {
 	}
 };
 
-template<typename Distance>
-class BHCIndex {
+class VocabTree {
 
 private:
+
+	typedef uchar TDescriptor;
+	typedef cv::flann::Hamming<TDescriptor> Distance;
 
 	typedef typename Distance::ElementType ElementType;
 
 	typedef typename Distance::ResultType DistanceType;
 
-//	typedef void (BHCIndex::*centersAlgFunction)(int, int*, int, int*, int&);
-
 	/**
 	 * Structure representing a node in the hierarchical k-means tree.
 	 */
-	struct KMeansNode {
+	struct VocabTreeNode {
 		// The cluster center
-		uchar* center;
+		TDescriptor* center;
 		// Cluster size
 		int size;
 		// Level
 		int level;
 		// Children nodes (only for non-terminal nodes)
-		KMeansNode** children;
+		VocabTreeNode** children;
 		// Word id (only for terminal nodes)
 		int word_id;
 		// Weight (only for terminal nodes)
 		double weight;
 		// Assigned points (only for terminal nodes)
 		int* indices;
-		KMeansNode() :
+		VocabTreeNode() :
 				center(NULL), size(0), level(-1), children(NULL), word_id(-1), weight(
 						0.0), indices(NULL) {
 		}
-		KMeansNode& operator=(const KMeansNode& node) {
+		VocabTreeNode& operator=(const VocabTreeNode& node) {
 			center = node.center;
 			size = node.size;
 			level = node.level;
@@ -110,7 +110,7 @@ private:
 		}
 	};
 
-	typedef KMeansNode* KMeansNodePtr;
+	typedef VocabTreeNode* VocabTreeNodePtr;
 
 private:
 
@@ -127,7 +127,7 @@ private:
 	// Length of each feature.
 	size_t m_veclen;
 	// The root node in the tree.
-	KMeansNodePtr m_root;
+	VocabTreeNodePtr m_root;
 	//  Array of indices to vectors in the dataset
 	int* m_indices;
 	// The distance
@@ -145,7 +145,7 @@ private:
 	// Object for computing scores
 	DBoW2::GeneralScoring* m_scoring_object;
 	// Words of the vocabulary
-	std::vector<KMeansNodePtr> m_words;
+	std::vector<VocabTreeNodePtr> m_words;
 
 public:
 
@@ -156,18 +156,18 @@ public:
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 * @param d - The distance measure to be used
 	 */
-	BHCIndex(const cv::Mat& inputData, const IndexParams& params =
-			BHCIndexParams(), Distance d = Distance());
+	VocabTree(const cv::Mat& inputData, const IndexParams& params =
+			VocabTreeParams(), Distance d = Distance());
 
 	/**
 	 * Index destructor, releases the memory used by the index.
 	 */
-	virtual ~BHCIndex();
+	virtual ~VocabTree();
 
 	/**
 	 * Builds the index
 	 */
-	void buildIndex();
+	void build();
 
 	/**
 	 * Saves the index to a stream.
@@ -217,7 +217,7 @@ private:
 	 * @param stream - The stream to save the tree to
 	 * @param node - The node indicating the root of the tree to save
 	 */
-	void save_tree(FILE* stream, KMeansNodePtr node);
+	void save_tree(FILE* stream, VocabTreeNodePtr node);
 
 	/**
 	 * Loads the vocabulary tree from a stream and stores into into a given node pointer.
@@ -225,12 +225,12 @@ private:
 	 * @param stream - The stream from which the vocabulary tree is loaded
 	 * @param node - The node where to store the loaded tree
 	 */
-	void load_tree(FILE* stream, KMeansNodePtr& node);
+	void load_tree(FILE* stream, VocabTreeNodePtr& node);
 
 	/**
 	 * Helper function
 	 */
-	void free_centers(KMeansNodePtr node);
+	void free_centers(VocabTreeNodePtr node);
 
 	/**
 	 * Computes the statistics of a node (mean, radius, variance).
@@ -239,7 +239,7 @@ private:
 	 * @param indices - The array of indices of the points belonging to the node
 	 * @param indices_length - The number of indices in the array of indices
 	 */
-	void computeNodeStatistics(KMeansNodePtr node, int* indices,
+	void computeNodeStatistics(VocabTreeNodePtr node, int* indices,
 			int indices_length);
 
 	/**
@@ -251,8 +251,8 @@ private:
 	 * @param indices_length
 	 * @param level
 	 */
-	void computeClustering(KMeansNodePtr node, int* indices, int indices_length,
-			int level);
+	void computeClustering(VocabTreeNodePtr node, int* indices,
+			int indices_length, int level);
 
 	/**
 	 * Sets the weight of the nodes of the tree according to the training data set.
@@ -288,9 +288,8 @@ private:
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
-		const IndexParams& params, Distance d) :
+VocabTree::VocabTree(const cv::Mat& inputData, const IndexParams& params,
+		Distance d) :
 		m_dataset(inputData), m_root(NULL), m_indices(NULL), m_distance(d), m_scoring_object(
 				NULL) {
 
@@ -320,8 +319,7 @@ BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-BHCIndex<Distance>::~BHCIndex() {
+VocabTree::~VocabTree() {
 	if (m_root != NULL) {
 		free_centers(m_root);
 	}
@@ -332,8 +330,7 @@ BHCIndex<Distance>::~BHCIndex() {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::buildIndex() {
+void VocabTree::build() {
 	if (m_branching < 2) {
 		throw std::runtime_error("Branching factor must be at least 2");
 	}
@@ -349,15 +346,14 @@ void BHCIndex<Distance>::buildIndex() {
 			m_depth, m_branching);
 	printf("[BHCIndex::buildIndex]   and restarts %d\n", m_iterations);
 
-	m_root = m_pool.allocate<KMeansNode>();
+	m_root = m_pool.allocate<VocabTreeNode>();
 	computeNodeStatistics(m_root, m_indices, (int) m_size);
 	computeClustering(m_root, m_indices, (int) m_size, 0);
 }
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::saveIndex(FILE* stream) {
+void VocabTree::saveIndex(FILE* stream) {
 	// TODO Check other values to save
 	save_value(stream, m_branching);
 	save_value(stream, m_iterations);
@@ -369,8 +365,7 @@ void BHCIndex<Distance>::saveIndex(FILE* stream) {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::loadIndex(FILE* stream) {
+void VocabTree::loadIndex(FILE* stream) {
 	// TODO Check other values to load
 	load_value(stream, m_branching);
 	load_value(stream, m_iterations);
@@ -389,15 +384,13 @@ void BHCIndex<Distance>::loadIndex(FILE* stream) {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-int BHCIndex<Distance>::usedMemory() const {
+int VocabTree::usedMemory() const {
 	return m_pool.usedMemory + m_pool.wastedMemory + m_memoryCounter;
 }
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
+void VocabTree::save_tree(FILE* stream, VocabTreeNodePtr node) {
 	save_value(stream, *node);
 	save_value(stream, *(node->center), (int) m_veclen);
 	if (node->children == NULL) {
@@ -412,18 +405,17 @@ void BHCIndex<Distance>::save_tree(FILE* stream, KMeansNodePtr node) {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
-	node = m_pool.allocate<KMeansNode>();
+void VocabTree::load_tree(FILE* stream, VocabTreeNodePtr& node) {
+	node = m_pool.allocate<VocabTreeNode>();
 	load_value(stream, *node);
-	node->center = new uchar[m_veclen];
+	node->center = new TDescriptor[m_veclen];
 	load_value(stream, *(node->center), (int) m_veclen);
 	if (node->children == NULL) {
 		int indices_offset;
 		load_value(stream, indices_offset);
 		node->indices = m_indices + indices_offset;
 	} else {
-		node->children = m_pool.allocate<KMeansNodePtr>(m_branching);
+		node->children = m_pool.allocate<VocabTreeNodePtr>(m_branching);
 		for (int i = 0; i < m_branching; ++i) {
 			load_tree(stream, node->children[i]);
 		}
@@ -432,8 +424,7 @@ void BHCIndex<Distance>::load_tree(FILE* stream, KMeansNodePtr& node) {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
+void VocabTree::free_centers(VocabTreeNodePtr node) {
 	delete[] node->center;
 	if (node->children != NULL) {
 		for (int k = 0; k < m_branching; ++k) {
@@ -444,13 +435,12 @@ void BHCIndex<Distance>::free_centers(KMeansNodePtr node) {
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
+void VocabTree::computeNodeStatistics(VocabTreeNodePtr node, int* indices,
 		int indices_length) {
 
-	uchar* center = new uchar[m_veclen];
+	TDescriptor* center = new TDescriptor[m_veclen];
 
-	m_memoryCounter += int(m_veclen * sizeof(uchar));
+	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
 
 	// Compute center using majority voting over all data
 	cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
@@ -462,7 +452,7 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 	KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
 
 	for (size_t k = 0; k < m_veclen; ++k) {
-		center[k] = centroid.at<uchar>(0, k);
+		center[k] = centroid.at<TDescriptor>(0, k);
 	}
 
 	node->center = center;
@@ -470,8 +460,7 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
+void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		int indices_length, int level) {
 	node->size = indices_length;
 	node->level = level;
@@ -624,18 +613,18 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	printf("[BuildRecurse] (level %d): Finished clustering\n", level);
 
-	uchar** centers = new uchar*[m_branching];
+	TDescriptor** centers = new TDescriptor*[m_branching];
 
 	for (int i = 0; i < m_branching; ++i) {
-		centers[i] = new uchar[m_veclen];
-		m_memoryCounter += (int) (m_veclen * sizeof(uchar));
+		centers[i] = new TDescriptor[m_veclen];
+		m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
 		for (size_t k = 0; k < m_veclen; ++k) {
-			centers[i][k] = dcenters.at<uchar>(i, k);
+			centers[i][k] = dcenters.at<TDescriptor>(i, k);
 		}
 	}
 
 	// compute kmeans clustering for each of the resulting clusters
-	node->children = m_pool.allocate<KMeansNodePtr>(m_branching);
+	node->children = m_pool.allocate<VocabTreeNodePtr>(m_branching);
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < m_branching; ++c) {
@@ -648,7 +637,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			}
 		}
 
-		node->children[c] = m_pool.allocate<KMeansNode>();
+		node->children[c] = m_pool.allocate<VocabTreeNode>();
 		node->children[c]->center = centers[c];
 		node->children[c]->indices = NULL;
 		computeClustering(node->children[c], indices + start, end - start,
@@ -664,9 +653,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::setNodeWeights(
-		const std::vector<cv::Mat>& training_matrices) {
+void VocabTree::setNodeWeights(const std::vector<cv::Mat>& training_matrices) {
 	const uint NWords = m_words.size();
 	const uint NDocs = training_matrices.size();
 
@@ -690,9 +677,10 @@ void BHCIndex<Distance>::setNodeWeights(
 		for (cv::Mat training_data : training_matrices) {
 			// Restart word count 'cause new image features matrix
 			std::fill(counted.begin(), counted.end(), false);
-			for (size_t i = 0; i < training_data.rows; i++) {
+			for (size_t i = 0; (int) i < training_data.rows; i++) {
 				uint word_id;
-//				transform(*fit, word_id);
+				double weight;
+				quantize(training_data.row(i), word_id, weight);
 				// Count only once the appearance of the word in the image (training matrix)
 				if (!counted[word_id]) {
 					Ni[word_id]++;
@@ -713,9 +701,7 @@ void BHCIndex<Distance>::setNodeWeights(
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::quantize(const cv::Mat& features,
-		DBoW2::BowVector &v) const {
+void VocabTree::quantize(const cv::Mat& features, DBoW2::BowVector &v) const {
 
 	if (features.type() != CV_8U) {
 		throw std::runtime_error(
@@ -789,15 +775,14 @@ void BHCIndex<Distance>::quantize(const cv::Mat& features,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::quantize(const cv::Mat &features, uint &word_id,
+void VocabTree::quantize(const cv::Mat &features, uint &word_id,
 		double &weight) const {
 
-	KMeansNodePtr best_node = m_root;
+	VocabTreeNodePtr best_node = m_root;
 
 	while (best_node->children != NULL) {
 
-		KMeansNodePtr node = best_node;
+		VocabTreeNodePtr node = best_node;
 
 		// Arbitrarily assign to first child
 		best_node = node->children[0];
@@ -822,23 +807,20 @@ void BHCIndex<Distance>::quantize(const cv::Mat &features, uint &word_id,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-inline bool BHCIndex<Distance>::empty() const {
+inline bool VocabTree::empty() const {
 	return m_words.empty();
 }
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-inline double BHCIndex<Distance>::score(const DBoW2::BowVector &v1,
+inline double VocabTree::score(const DBoW2::BowVector &v1,
 		const DBoW2::BowVector &v2) const {
 	return m_scoring_object->score(v1, v2);
 }
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void BHCIndex<Distance>::createScoringObject() {
+void VocabTree::createScoringObject() {
 	delete m_scoring_object;
 	m_scoring_object = NULL;
 
