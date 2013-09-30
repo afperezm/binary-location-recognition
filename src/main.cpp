@@ -22,7 +22,7 @@
 #include <AgastFeatureDetector.h>
 #include <DBriefDescriptorExtractor.h>
 #include <Clustering.h>
-#include <BHCIndex.h>
+#include <VocabTree.h>
 
 // DBoW2
 #include <DBoW2.h>
