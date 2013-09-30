@@ -41,6 +41,7 @@
 
 #include <opencv2/flann/flann.hpp>
 #include <ScoringObject.h>
+#include <CentersChooser.h>
 
 namespace cvflann {
 
@@ -73,7 +74,7 @@ private:
 
 	typedef typename Distance::ResultType DistanceType;
 
-	typedef void (BHCIndex::*centersAlgFunction)(int, int*, int, int*, int&);
+//	typedef void (BHCIndex::*centersAlgFunction)(int, int*, int, int*, int&);
 
 	/**
 	 * Structure representing a node in the hierarchical k-means tree.
@@ -114,7 +115,7 @@ private:
 private:
 
 	// The function used for choosing the cluster centers
-	centersAlgFunction m_chooseCenters;
+	cv::Ptr<CentersChooser<Distance> > m_chooseCenters;
 	// The branching factor used in the hierarchical k-means clustering
 	int m_branching;
 	// Maximum number of iterations to use when performing k-means clustering
@@ -211,44 +212,6 @@ public:
 private:
 
 	/**
-	 * Chooses the initial centers in the k-means clustering in a random manner.
-	 *
-	 * @param k - Number of centers
-	 * @param indices - Vector of indices in the dataset
-	 * @param indices_length - Length of indices vector
-	 * @param centers - Vector of cluster centers
-	 * @param centers_length - Length of centers vectors
-	 */
-	void chooseCentersRandom(int k, int* indices, int indices_length,
-			int* centers, int& centers_length);
-
-	/**
-	 * Chooses the initial centers in the k-means using Gonzalez algorithm
-	 * so that the centers are spaced apart from each other.
-	 *
-	 * @param k - Number of centers
-	 * @param indices - Vector of indices in the dataset
-	 * @param indices_length - Length of indices vector
-	 * @param centers - Vector of cluster centers
-	 * @param centers_length - Length of centers vectors
-	 */
-	void chooseCentersGonzales(int k, int* indices, int indices_length,
-			int* centers, int& centers_length);
-
-	/**
-	 * Chooses the initial centers in the k-means using the k-means++ seeding
-	 * algorithm proposed by Arthur and Vassilvitskii.
-	 *
-	 * @param k - Number of centers
-	 * @param indices - Vector of indices in the dataset
-	 * @param indices_length - Length of indices vector
-	 * @param centers - Vector of cluster centers
-	 * @param centers_length - Length of centers vectors
-	 */
-	void chooseCentersKMeanspp(int k, int* indices, int indices_length,
-			int* centers, int& centers_length);
-
-	/**
 	 * Saves the vocabulary tree starting at a given node to a stream.
 	 *
 	 * @param stream - The stream to save the tree to
@@ -286,11 +249,10 @@ private:
 	 * @param node - The node to cluster
 	 * @param indices - Indices of the points belonging to the current node
 	 * @param indices_length
-	 * @param branching - The branching factor to use in the clustering
 	 * @param level
 	 */
 	void computeClustering(KMeansNodePtr node, int* indices, int indices_length,
-			int branching, int level);
+			int level);
 
 	/**
 	 * Sets the weight of the nodes of the tree according to the training data set.
@@ -327,152 +289,6 @@ private:
 // --------------------------------------------------------------------------
 
 template<typename Distance>
-void BHCIndex<Distance>::chooseCentersRandom(int k, int* indices,
-		int indices_length, int* centers, int& centers_length) {
-	UniqueRandom r(indices_length);
-
-	int index;
-	for (index = 0; index < k; ++index) {
-		bool duplicate = true;
-		int rnd;
-		while (duplicate) {
-			duplicate = false;
-			rnd = r.next();
-			if (rnd < 0) {
-				centers_length = index;
-				return;
-			}
-
-			centers[index] = indices[rnd];
-
-			for (int j = 0; j < index; ++j) {
-				DistanceType sq = m_distance(m_dataset.row(centers[index]).data,
-						m_dataset.row(centers[j]).data, m_dataset.cols);
-				if (sq < 1e-16) {
-					duplicate = true;
-				}
-			}
-		}
-	}
-	centers_length = index;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-void BHCIndex<Distance>::chooseCentersGonzales(int k, int* indices,
-		int indices_length, int* centers, int& centers_length) {
-	int n = indices_length;
-
-	int rnd = rand_int(n);
-	assert(rnd >= 0 && rnd < n);
-
-	centers[0] = indices[rnd];
-
-	int index;
-	for (index = 1; index < k; ++index) {
-		int best_index = -1;
-		DistanceType best_val = 0;
-		for (int j = 0; j < n; ++j) {
-			DistanceType dist = m_distance(m_dataset.row(centers[0]).data,
-					m_dataset.row(indices[j]).data, m_dataset.cols);
-			for (int i = 1; i < index; ++i) {
-				DistanceType tmp_dist = m_distance(
-						m_dataset.row(centers[i]).data,
-						m_dataset.row(indices[j]).data, m_dataset.cols);
-				if (tmp_dist < dist) {
-					dist = tmp_dist;
-				}
-			}
-			if (dist > best_val) {
-				best_val = dist;
-				best_index = j;
-			}
-		}
-		if (best_index != -1) {
-			centers[index] = indices[best_index];
-		} else {
-			break;
-		}
-	}
-	centers_length = index;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
-void BHCIndex<Distance>::chooseCentersKMeanspp(int k, int* indices,
-		int indices_length, int* centers, int& centers_length) {
-	int n = indices_length;
-
-	double currentPot = 0;
-	DistanceType* closestDistSq = new DistanceType[n];
-
-	// Choose one random center and set the closestDistSq values
-	int index = rand_int(n);
-	assert(index >= 0 && index < n);
-	centers[0] = indices[index];
-
-	for (int i = 0; i < n; i++) {
-		closestDistSq[i] = m_distance(m_dataset.row(indices[i]).data,
-				m_dataset.row(indices[index]).data, m_dataset.cols);
-		currentPot += closestDistSq[i];
-	}
-
-	const int numLocalTries = 1;
-
-	// Choose each center
-	int centerCount;
-	for (centerCount = 1; centerCount < k; centerCount++) {
-
-		// Repeat several trials
-		double bestNewPot = -1;
-		int bestNewIndex = -1;
-		for (int localTrial = 0; localTrial < numLocalTries; localTrial++) {
-
-			// Choose our center - have to be slightly careful to return a valid answer even accounting
-			// for possible rounding errors
-			double randVal = rand_double(currentPot);
-			for (index = 0; index < n - 1; index++) {
-				if (randVal <= closestDistSq[index])
-					break;
-				else
-					randVal -= closestDistSq[index];
-			}
-
-			// Compute the new potential
-			double newPot = 0;
-			for (int i = 0; i < n; i++)
-				newPot += std::min(
-						m_distance(m_dataset.row(indices[i]).data,
-								m_dataset.row(indices[index]).data,
-								m_dataset.cols), closestDistSq[i]);
-
-			// Store the best result
-			if ((bestNewPot < 0) || (newPot < bestNewPot)) {
-				bestNewPot = newPot;
-				bestNewIndex = index;
-			}
-		}
-
-		// Add the appropriate center
-		centers[centerCount] = indices[bestNewIndex];
-		currentPot = bestNewPot;
-		for (int i = 0; i < n; i++)
-			closestDistSq[i] = std::min(
-					m_distance(m_dataset.row(indices[i]).data,
-							m_dataset.row(indices[bestNewIndex]).data,
-							m_dataset.cols), closestDistSq[i]);
-	}
-
-	centers_length = centerCount;
-
-	delete[] closestDistSq;
-}
-
-// --------------------------------------------------------------------------
-
-template<typename Distance>
 BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 		const IndexParams& params, Distance d) :
 		m_dataset(inputData), m_root(NULL), m_indices(NULL), m_distance(d), m_scoring_object(
@@ -494,19 +310,11 @@ BHCIndex<Distance>::BHCIndex(const cv::Mat& inputData,
 	if (m_iterations < 0) {
 		m_iterations = (std::numeric_limits<int>::max)();
 	}
-	flann_centers_init_t centers_init_ = get_param(params, "centers_init",
+
+	flann_centers_init_t centers_init = get_param(params, "centers_init",
 			FLANN_CENTERS_RANDOM);
 
-	if (centers_init_ == FLANN_CENTERS_RANDOM) {
-		m_chooseCenters = &BHCIndex::chooseCentersRandom;
-	} else if (centers_init_ == FLANN_CENTERS_GONZALES) {
-		m_chooseCenters = &BHCIndex::chooseCentersGonzales;
-	} else if (centers_init_ == FLANN_CENTERS_KMEANSPP) {
-		m_chooseCenters = &BHCIndex::chooseCentersKMeanspp;
-	} else {
-		throw std::runtime_error(
-				"Unknown algorithm for choosing initial centers.");
-	}
+	m_chooseCenters = CentersChooser<Distance>::create(centers_init);
 
 }
 
@@ -543,7 +351,7 @@ void BHCIndex<Distance>::buildIndex() {
 
 	m_root = m_pool.allocate<KMeansNode>();
 	computeNodeStatistics(m_root, m_indices, (int) m_size);
-	computeClustering(m_root, m_indices, (int) m_size, m_branching, 0);
+	computeClustering(m_root, m_indices, (int) m_size, 0);
 }
 
 // --------------------------------------------------------------------------
@@ -664,13 +472,13 @@ void BHCIndex<Distance>::computeNodeStatistics(KMeansNodePtr node, int* indices,
 
 template<typename Distance>
 void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
-		int indices_length, int branching, int level) {
+		int indices_length, int level) {
 	node->size = indices_length;
 	node->level = level;
 
 	// Recursion base case: done when the last level is reached
 	// or when there are less data than clusters
-	if (level == m_depth - 1 || indices_length < branching) {
+	if (level == m_depth - 1 || indices_length < m_branching) {
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
@@ -682,14 +490,15 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	printf("[BuildRecurse] (level %d): Running k-means (%d features)\n", level,
 			indices_length);
 
-	int* centers_idx = new int[branching];
+	int* centers_idx = new int[m_branching];
 	int centers_length;
-	(this->*m_chooseCenters)(branching, indices, indices_length, centers_idx,
-			centers_length);
+
+	m_chooseCenters->chooseCenters(m_branching, indices, indices_length,
+			centers_idx, centers_length, m_dataset);
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
-	if (centers_length < branching) {
+	if (centers_length < m_branching) {
 		node->indices = indices;
 		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
@@ -705,16 +514,16 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			"[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n",
 			level);
 
-	cv::Mat dcenters(branching, m_veclen, m_dataset.type());
+	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
 		m_dataset.row(centers_idx[i]).copyTo(
 				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
 	delete[] centers_idx;
 
-	std::vector<DistanceType> radiuses(branching);
-	int* count = new int[branching];
-	for (int i = 0; i < branching; ++i) {
+	std::vector<DistanceType> radiuses(m_branching);
+	int* count = new int[m_branching];
+	for (int i = 0; i < m_branching; ++i) {
 		radiuses[i] = 0;
 		count[i] = 0;
 	}
@@ -726,7 +535,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
 				dcenters.row(0).data, m_veclen);
 		belongs_to[i] = 0;
-		for (int j = 1; j < branching; ++j) {
+		for (int j = 1; j < m_branching; ++j) {
 			DistanceType new_sq_dist = m_distance(
 					m_dataset.row(indices[i]).data, dcenters.row(j).data,
 					m_veclen);
@@ -746,7 +555,8 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 		//TODO: computeCentroids compute the new cluster centers
 		// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
-		cv::Mat bitwiseCount(branching, m_veclen * 8, cv::DataType<int>::type);
+		cv::Mat bitwiseCount(m_branching, m_veclen * 8,
+				cv::DataType<int>::type);
 		// Zeroing matrix of cumulative bits
 		bitwiseCount = cv::Scalar::all(0);
 		// Zeroing all the centroids dimensions
@@ -759,7 +569,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
 		}
 		// Bitwise majority voting
-		for (size_t j = 0; (int) j < branching; j++) {
+		for (size_t j = 0; (int) j < m_branching; j++) {
 			cv::Mat centroid = dcenters.row(j);
 			KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
 					count[j]);
@@ -770,7 +580,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 			DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
 					dcenters.row(0).data, m_veclen);
 			int new_centroid = 0;
-			for (int j = 1; j < branching; ++j) {
+			for (int j = 1; j < m_branching; ++j) {
 				DistanceType new_sq_dist = m_distance(
 						m_dataset.row(indices[i]).data, dcenters.row(j).data,
 						m_veclen);
@@ -789,13 +599,13 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		}
 
 		// TODO handle empty clusters
-		for (int i = 0; i < branching; ++i) {
+		for (int i = 0; i < m_branching; ++i) {
 			// if one cluster converges to an empty cluster,
 			// move an element into that cluster
 			if (count[i] == 0) {
-				int j = (i + 1) % branching;
+				int j = (i + 1) % m_branching;
 				while (count[j] <= 1) {
-					j = (j + 1) % branching;
+					j = (j + 1) % m_branching;
 				}
 
 				for (int k = 0; k < indices_length; ++k) {
@@ -814,9 +624,9 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 
 	printf("[BuildRecurse] (level %d): Finished clustering\n", level);
 
-	uchar** centers = new uchar*[branching];
+	uchar** centers = new uchar*[m_branching];
 
-	for (int i = 0; i < branching; ++i) {
+	for (int i = 0; i < m_branching; ++i) {
 		centers[i] = new uchar[m_veclen];
 		m_memoryCounter += (int) (m_veclen * sizeof(uchar));
 		for (size_t k = 0; k < m_veclen; ++k) {
@@ -825,10 +635,10 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 	}
 
 	// compute kmeans clustering for each of the resulting clusters
-	node->children = m_pool.allocate<KMeansNodePtr>(branching);
+	node->children = m_pool.allocate<KMeansNodePtr>(m_branching);
 	int start = 0;
 	int end = start;
-	for (int c = 0; c < branching; ++c) {
+	for (int c = 0; c < m_branching; ++c) {
 		// Re-order indices by chunks in clustering order
 		for (int i = 0; i < indices_length; ++i) {
 			if (belongs_to[i] == c) {
@@ -842,7 +652,7 @@ void BHCIndex<Distance>::computeClustering(KMeansNodePtr node, int* indices,
 		node->children[c]->center = centers[c];
 		node->children[c]->indices = NULL;
 		computeClustering(node->children[c], indices + start, end - start,
-				branching, level + 1);
+				level + 1);
 		start = end;
 	}
 
