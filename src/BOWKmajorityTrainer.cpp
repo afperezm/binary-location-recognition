@@ -11,9 +11,9 @@
 namespace cv {
 
 BOWKmajorityTrainer::BOWKmajorityTrainer(int clusterCount, int maxIterations,
-		int flags) :
-		m_clusterCount(clusterCount), m_maxIterations(maxIterations), m_flags(
-				flags) {
+		cvflann::flann_centers_init_t centers_init) :
+		m_clusterCount(clusterCount), m_maxIterations(maxIterations), m_centers_init(
+				centers_init) {
 }
 
 BOWKmajorityTrainer::~BOWKmajorityTrainer() {
@@ -53,8 +53,9 @@ Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const {
 		indices[i] = int(i);
 	}
 	uint* labels = new uint[0];
+
 	clustering::kmajority(m_clusterCount, m_maxIterations, descriptors, indices,
-			descriptors.rows, vocabulary, labels);
+			descriptors.rows, vocabulary, labels, m_centers_init);
 
 	return vocabulary;
 }

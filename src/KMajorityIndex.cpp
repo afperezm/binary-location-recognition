@@ -6,6 +6,7 @@
  */
 
 #include <KMajorityIndex.h>
+#include <CentersChooser.h>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -21,9 +22,11 @@ typedef typename Distance::ResultType DistanceType;
 
 KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
 		const cv::Mat& _data, cv::Ptr<int>& _indices,
-		const int& _indices_length, uint* _belongs_to) :
-		k(_k), max_iterations(_max_iterations), data(_data), indices(_indices), indices_length(
-				_indices_length), dim(_data.cols), n(_indices_length), distance_to(
+		const int& _indices_length, uint* _belongs_to,
+		cvflann::flann_centers_init_t centers_init) :
+		k(_k), max_iterations(_max_iterations), m_centers_init(centers_init), data(
+				_data), indices(_indices), indices_length(_indices_length), dim(
+				_data.cols), n(_indices_length), distance_to(
 				new uint[_indices_length]), cluster_counts(new uint[_k]) {
 
 	belongs_to = _belongs_to != NULL ? _belongs_to : new uint[_indices_length];
@@ -116,37 +119,6 @@ void KMajorityIndex::cluster() {
 
 }
 
-void chooseCentersRandom(int k, int* indices, int indices_length, int* centers,
-		int& centers_length) {
-	cvflann::UniqueRandom r(indices_length);
-
-	int index;
-	for (index = 0; index < k; ++index) {
-		bool duplicate = true;
-		int rnd;
-		while (duplicate) {
-			duplicate = false;
-			rnd = r.next();
-			if (rnd < 0) {
-				centers_length = index;
-				return;
-			}
-
-			centers[index] = indices[rnd];
-
-//			for (int j = 0; j < index; ++j) {
-//				DistanceType sq = distance_(dataset_[centers[index]],
-//						dataset_[centers[j]], dataset_.cols);
-//				if (sq < 1e-16) {
-//					duplicate = true;
-//				}
-//			}
-		}
-	}
-
-	centers_length = index;
-}
-
 void KMajorityIndex::initCentroids() {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
@@ -154,7 +126,8 @@ void KMajorityIndex::initCentroids() {
 	int centers_length;
 
 	// Randomly chose centers
-	chooseCentersRandom(k, indices, n, centers_idx, centers_length);
+	CentersChooser<cv::flann::Hamming<uchar> >::create(m_centers_init)->chooseCenters(
+			k, indices, n, centers_idx, centers_length, this->data);
 
 	// Assign centers based on the chosen indexes
 	centroids.create(centers_length, dim, data.type());

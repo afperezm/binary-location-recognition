@@ -24,10 +24,11 @@ namespace clustering {
  */
 inline void kmajority(int k, int max_iterations, const cv::Mat& data,
 		cv::Ptr<int>& indices, const int& indices_length, cv::Mat& centroids,
-		uint* labels = NULL) {
+		uint* labels = NULL, cvflann::flann_centers_init_t centers_init =
+				cvflann::FLANN_CENTERS_RANDOM) {
 
 	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(k, max_iterations,
-			data, indices, indices_length, labels);
+			data, indices, indices_length, labels, centers_init);
 
 	kMajIdx->cluster();
 

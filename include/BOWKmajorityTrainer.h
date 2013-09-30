@@ -15,8 +15,9 @@ namespace cv {
 class BOWKmajorityTrainer: public BOWTrainer {
 
 public:
-	BOWKmajorityTrainer(int clusterCount, int _maxIterations, int flags =
-			KMEANS_PP_CENTERS);
+	BOWKmajorityTrainer(int clusterCount, int maxIterations,
+			cvflann::flann_centers_init_t centers_init =
+					cvflann::FLANN_CENTERS_RANDOM);
 	virtual ~BOWKmajorityTrainer();
 	virtual Mat cluster() const;
 	virtual Mat cluster(const Mat& descriptors) const;
@@ -24,7 +25,7 @@ public:
 protected:
 	int m_clusterCount;
 	int m_maxIterations;
-	int m_flags;
+	cvflann::flann_centers_init_t m_centers_init;
 };
 
 } /* namespace cv */

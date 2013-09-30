@@ -16,7 +16,9 @@ public:
 
 	KMajorityIndex(uint _k, uint _max_iterations, const cv::Mat& _data,
 			cv::Ptr<int>& _indices, const int& _indices_length,
-			uint* _belongs_to = NULL);
+			uint* _belongs_to = NULL,
+			cvflann::flann_centers_init_t centers_init =
+					cvflann::FLANN_CENTERS_RANDOM);
 
 	~KMajorityIndex();
 
@@ -58,6 +60,7 @@ private:
 	uint k;
 	// Maximum number of iterations
 	uint max_iterations;
+	cvflann::flann_centers_init_t m_centers_init;
 	// Reference to the matrix with data to cluster
 	const cv::Mat& data;
 	// Array of indices indicating data points involved in the clustering process
