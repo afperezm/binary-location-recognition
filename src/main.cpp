@@ -23,6 +23,7 @@
 #include <DBriefDescriptorExtractor.h>
 #include <Clustering.h>
 #include <VocabTree.h>
+#include <BOWKmajorityTrainer.h>
 
 // DBoW2
 #include <DBoW2.h>
@@ -156,31 +157,6 @@ int main(int argc, char **argv) {
 	save("test.xml.gz", keypoints_1, descriptors);
 	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors);
 
-	// Step 5a/5: Cluster descriptors using k-majority
-
-//	std::srand(unsigned(std::time(0)));
-	cv::Ptr<int> indices = new int[descriptors.rows];
-	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
-		indices[i] = int(i);
-	}
-//	cv::Mat labels;
-	uint* labels = new uint[0];
-	cv::Mat centroids;
-	mytime = cv::getTickCount();
-	clustering::kmajority(16, 100, descriptors, indices, descriptors.rows,
-			centroids, labels);
-	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-			* 1000;
-	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-			keypoints_1.size(), centroids.rows, mytime);
-
-	for (size_t j = 0; (int) j < centroids.rows; j++) {
-//		printf("   Cluster %u has %u transactions assigned\n", j + 1,
-//				kMajIdx->getClusterCounts()[j]);
-		printf("   Cluster %lu:\n", j + 1);
-		printDescriptors(centroids.row(j));
-	}
-
 	// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
 
 	// Transform descriptors to a suitable structure for DBoW2
@@ -231,7 +207,7 @@ int main(int argc, char **argv) {
 			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
-	// Step 5c/5: Cluster descriptors using Binary Hierarchical Clustering
+	// Step 5c/5: Cluster descriptors using Vocabulary Tree
 
 	cvflann::VocabTreeParams params;
 	cvflann::VocabTree tree(descriptors, params);
@@ -243,8 +219,7 @@ int main(int argc, char **argv) {
 
 	printf("Match score between an image and itself: %f\n", matchScore);
 
-// Step 5d/5:
-//	cv::BOWKmajorityTrainer bowTrainer(10,);
+	// Step 5d/5: Compute BoW vectors using k-majority
 
 	return EXIT_SUCCESS;
 }
