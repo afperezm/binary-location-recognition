@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 	save("test.xml.gz", keypoints_1, descriptors);
 	writeFeaturesToFile("test_descriptors", keypoints_1, descriptors);
 
-	// Step 5b/5: Cluster descriptors using binary vocabulary tree aided by k-means
+	// Step 5/5: Cluster descriptors using binary vocabulary tree aided by k-means
 
 	// Transform descriptors to a suitable structure for DBoW2
 	printf("-- Transforming descriptors to a suitable structure for DBoW2\n");
@@ -207,19 +207,36 @@ int main(int argc, char **argv) {
 			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
-	// Step 5c/5: Cluster descriptors using Vocabulary Tree
-
+	// Step 5/5: Cluster descriptors using Vocabulary Tree
 	cvflann::VocabTreeParams params;
 	cvflann::VocabTree tree(descriptors, params);
+
+	// Step 5a/d: Build tree
 	tree.build();
-	DBoW2::BowVector v;
-	tree.quantize(descriptors, v);
+	tree.save("tree.out");
 
-	double matchScore = tree.score(v, v);
+	// Step 5b/d: Quantize training data (several image descriptor matrices)
+	tree.clearDatabase();
+	tree.addImageToDatabase(0, descriptors);
 
-	printf("Match score between an image and itself: %f\n", matchScore);
+	// Step 5c/d: Compute words weights and normalize DB
+	tree.computeWordsWeights(descriptors.rows, DBoW2::TF_IDF);
+	tree.createDatabase();
+	tree.normalizeDatabase(1, cv::NORM_L1);
 
-	// Step 5d/5: Compute BoW vectors using k-majority
+	// Step 5d/d: Quantize testing/query data and obtain BoW representation, then score them against DB bow vectors
+	std::vector<cv::Mat> queriesDescriptors;
+
+	for (cv::Mat queryDescriptors : queriesDescriptors) {
+		cv::Mat scores;
+		tree.scoreQuery(queryDescriptors, scores, 1, DBoW2::L1_NORM);
+
+		for (int j = 0; j < scores.rows; j++) {
+			printf(
+					"Match score between 0th query image and %dth DB image: %f\n",
+					j, scores.at<float>(1, j));
+		}
+	}
 
 	return EXIT_SUCCESS;
 }

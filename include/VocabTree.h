@@ -59,6 +59,21 @@ struct VocabTreeParams: public IndexParams {
 	}
 };
 
+class ImageCount {
+public:
+	ImageCount() :
+			m_index(0), m_count(0.0) {
+	}
+	ImageCount(unsigned int index, float count) :
+			m_index(index), m_count(count) {
+	}
+
+	// Index of the database image this entry corresponds to
+	unsigned int m_index;
+	// (Weighted, normalized) Count of how many times this feature appears
+	float m_count;
+};
+
 class VocabTree {
 
 private:
@@ -74,22 +89,23 @@ private:
 	struct VocabTreeNode {
 		// The cluster center
 		TDescriptor* center;
-		// Cluster size
-//		int size;
 		// Children nodes (only for non-terminal nodes)
+		// Note: no need to store how many children does it has because
+		// this is a k-ary tree, where 'k' is the branch factor, that is has k children or none
 		VocabTreeNode** children;
 		// Word id (only for terminal nodes)
+		// TODO Check if this attribute is truly necessary
 		int word_id;
 		// Weight (only for terminal nodes)
 		double weight;
-		// Assigned points (only for terminal nodes)
-//		int* indices;
+		// Inverse document/image list (only for terminal nodes)
+		std::vector<ImageCount> image_list;
 		VocabTreeNode() :
 				center(NULL), children(NULL), word_id(-1), weight(0.0) {
+			image_list.clear();
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
 			center = node.center;
-//			size = node.size;
 			children = node.children;
 			word_id = node.word_id;
 			weight = node.weight;
@@ -109,6 +125,7 @@ protected:
 	// The dataset used by this index
 	const cv::Mat& m_dataset;
 
+	/* Attributes useful for describing the tree */
 	// The branching factor used in the hierarchical k-means clustering
 	int m_branching;
 	// Depth levels
@@ -116,23 +133,24 @@ protected:
 	// Length of each feature.
 	size_t m_veclen;
 
+	/* Attributes actually holding the tree */
 	// The root node in the tree.
 	VocabTreeNodePtr m_root;
 	// Pooled memory allocator
 	PooledAllocator m_pool;
+	// Words of the vocabulary
+	std::vector<VocabTreeNodePtr> m_words;
 
+	/* Attributes used by several methods */
 	// The distance
 	Distance m_distance;
 	// Memory occupied by the index
 	int m_memoryCounter;
 
-	// Words of the vocabulary
-	std::vector<VocabTreeNodePtr> m_words;
-
 public:
 
 	/**
-	 * Index constructor
+	 * Tree constructor
 	 *
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 */
@@ -140,14 +158,19 @@ public:
 			VocabTreeParams());
 
 	/**
-	 * Index destructor, releases the memory used by the index.
+	 * Tree destructor, releases the memory used by the tree.
 	 */
 	virtual ~VocabTree();
 
 	/**
-	 * Builds the index
+	 * Builds the tree.
 	 *
 	 * @param inputData - Matrix with the data to be clustered
+	 *
+	 * @note After this method is executed m_root holds a pointer to the tree,
+	 *		 while m_words holds pointers to the leaf nodes.
+	 * @note Interior nodes have only 'center' and 'children' information,
+	 * 		 while leaf nodes have only 'center' and 'word_id', all weights are zero
 	 */
 	void build();
 
@@ -156,83 +179,127 @@ public:
 	 *
 	 * @param stream - The stream to save the tree to
 	 */
-	void save(FILE* stream) const;
+	void save(const std::string& filename) const;
 
 	/**
 	 * Loads the tree from a stream.
 	 *
 	 * @param stream - The stream from which the tree is loaded
 	 */
-	void load(FILE* stream);
+	void load(const std::string& filename);
 
 	/**
-	 * Returns the amount of memory (in bytes) used by the index.
+	 * Returns the amount of memory (in bytes) used by the tree.
 	 *
-	 * @return the memory used by the index
+	 * @return the memory used by the tree
 	 */
 	int usedMemory() const;
 
-	/**
-	 * Quantizes a set of data into a BoW vector
-	 *
-	 * @param features - Matrix of data to quantize
-	 * @param v - BoW vector of weighted words
-	 * @param weighting - Weighting method
-	 * @param scoring - Scoring method
-	 */
-	void quantize(const cv::Mat& features, DBoW2::BowVector &v,
-			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
-			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+//	/**
+//	 * Quantizes a set of data (representing a single image) into a BoW vector
+//	 *
+//	 * @param features - Matrix of data to quantize
+//	 * @param v - BoW vector of weighted words
+//	 * @param weighting - Weighting method
+//	 * @param scoring - Scoring method
+//	 */
+//	void transform(const cv::Mat& features, DBoW2::BowVector &v,
+//			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
+//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+
+//	/**
+//	 * Returns the score of two vectors.
+//	 *
+//	 * @param v1 - First BoW vector
+//	 * @param v2 - Second BoW vector
+//	 * @param scoring - Scoring method
+//	 *
+//	 * @return the score between the two vectors
+//	 * @note v1 and v2 must be already sorted and normalized if necessary
+//	 */
+//	double score(const DBoW2::BowVector &v1, const DBoW2::BowVector &v2,
+//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+
+//	/**
+//	 * Sets the weight of the nodes of the tree according to the training data set.
+//	 * Before calling this function, the nodes and the words must have been already
+//	 * created (by calling computeClustering)
+//	 *
+//	 * @param training_data - Vector of matrices with training data
+//	 * @param weighting - Weighting method
+//	 */
+//	void setNodeWeights(const std::vector<cv::Mat>& training_data,
+//			DBoW2::WeightingType weighting = DBoW2::TF_IDF);
 
 	/**
-	 * Returns the score of two vectors.
+	 * Pushes DB image features down the tree until a leaf node,
+	 * once reached updates the inverted file.
 	 *
-	 * @param v1 - First BoW vector
-	 * @param v2 - Second BoW vector
-	 * @param scoring - Scoring method
-	 *
-	 * @return the score between the two vectors
-	 * @note v1 and v2 must be already sorted and normalized if necessary
+	 * @param imgIdx - The id of the image
+	 * @param imgFeatures - Matrix of features representing the image
 	 */
-	double score(const DBoW2::BowVector &v1, const DBoW2::BowVector &v2,
-			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+	void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures);
 
 	/**
-	 * Sets the weight of the nodes of the tree according to the training data set.
-	 * Before calling this function, the nodes and the words must have been already
-	 * created (by calling computeClustering)
+	 * Using the pre-loaded inverted files assigns words weights
+	 * according to the chosen weighting scheme.
 	 *
-	 * @param training_data - Vector of matrices with training data
-	 * @param weighting - Weighting method
+	 * @param NWords
+	 * @param weighting - The weighting scheme to apply
 	 */
-	void setNodeWeights(const std::vector<cv::Mat>& training_data,
+	void computeWordsWeights(const uint numDbWords,
 			DBoW2::WeightingType weighting = DBoW2::TF_IDF);
+
+	/**
+	 * Computes the DB BoW vectors by applying the words weights
+	 * to the image counts in the inverted files.
+	 *
+	 * @note Might be better not computing the DB BoW vectors in advance
+	 *		 but simply holding the histogram counts and obtaining
+	 *		 the score by component-wise weighting and scoring (DRY way)
+	 */
+	void createDatabase();
+
+	/**
+	 * Normalizes the DB BoW vectors by dividing the weighted counts
+	 * stored in the inverted files.
+	 *
+	 * @param numDbImages
+	 * @param normType
+	 */
+	void normalizeDatabase(const uint numDbImages, int normType = cv::NORM_L1);
+
+	/**
+	 * Clears the inverted files from the leaf nodes
+	 */
+	void clearDatabase();
+
+	/**
+	 * Computes the query BoW vector of an image by pushing down the tree the query image
+	 * features and applying the words weights, followed by efficiently scoring it against
+	 * the pre-computed DB BoW vectors.
+	 *
+	 * @param queryImgFeatures - Matrix containing the features of the query image
+	 * @param numDbImages - Number of DB images, used for creating the scores matrix
+	 * @param scores - Row matrix of size [1 x n] where n is the number DB images
+	 * @param scoringMethod - normalization method used for scoring BoW vectors
+	 *
+	 * @note DB BoW vectors must be normalized beforehand
+	 */
+	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
+			const uint numDbImages, const int normType = cv::NORM_L2) const;
 
 private:
 
 	/**
-	 * Saves the vocabulary tree starting at a given node to a stream.
+	 * Recursively releases the memory allocated to store the tree node centers.
 	 *
-	 * @param stream - The stream to save the tree to
-	 * @param node - The node indicating the root of the tree to save
-	 */
-	void save_tree(FILE* stream, VocabTreeNodePtr node) const;
-
-	/**
-	 * Loads the vocabulary tree from a stream and stores into into a given node pointer.
-	 *
-	 * @param stream - The stream from which the vocabulary tree is loaded
-	 * @param node - The node where to store the loaded tree
-	 */
-	void load_tree(FILE* stream, VocabTreeNodePtr& node);
-
-	/**
-	 * Helper function
+	 * @param node - A pointer to a node in the tree where to start the releasing
 	 */
 	void free_centers(VocabTreeNodePtr node);
 
 	/**
-	 * Computes the statistics of a node (mean, radius, variance).
+	 * Computes the centroid of a node. (Only for the root node)
 	 *
 	 * @param node - The node to use
 	 * @param indices - The array of indices of the points belonging to the node
@@ -242,8 +309,7 @@ private:
 			int indices_length);
 
 	/**
-	 * The method responsible with actually doing the recursive hierarchical
-	 * clustering.
+	 * The method responsible with actually doing the recursive hierarchical clustering.
 	 *
 	 * @param node - The node to cluster
 	 * @param indices - Indices of the points belonging to the current node
@@ -253,7 +319,23 @@ private:
 			int indices_length, int level);
 
 	/**
-	 * Quantizes a single data point into a word by traversing the whole tree
+	 * Saves the vocabulary tree starting at a given node to a stream.
+	 *
+	 * @param fs - A reference to the file storage pointing to the file where to save the tree
+	 * @param node - The node indicating the root of the tree to save
+	 */
+	void save_tree(cv::FileStorage& fs, VocabTreeNodePtr node) const;
+
+	/**
+	 * Loads the vocabulary tree from a stream and stores into into a given node pointer.
+	 *
+	 * @param filename - A reference to the file storage where to read node parameters
+	 * @param node - The node where to store the loaded tree
+	 */
+	void load_tree(cv::FileNode& fs, VocabTreeNodePtr& node);
+
+	/**
+	 * Quantizes a single feature vector into a word. Traverses the whole tree,
 	 * and stores the resulting word id and weight.
 	 *
 	 * @param feature - Row vector representing the feature vector to quantize
@@ -265,18 +347,30 @@ private:
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
 	 *
-	 * @return true only if the vocabulary is empty
+	 * @return true if and only if the vocabulary is empty
 	 */
 	bool empty() const;
 
+//	/**
+//	 * Creates an instance of the scoring object according to m_scoring
+//	 *
+//	 * @param scoring - Scoring method
+//	 *
+//	 * @return Object for computing scores
+//	 */
+//	cv::Ptr<DBoW2::GeneralScoring> createScoringObject(
+//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+
 	/**
-	 * Creates an instance of the scoring object according to m_scoring
+	 * Updates the inverted file of the given word by adding the image indicated
+	 * by the given imgIdx.
 	 *
-	 * @param scoring - Scoring method
-	 * @return object for computing scores
+	 * @param wordIdx - The id of the word whose inverted file to update
+	 * @param imgIdx - The id of the image to add to the inverted file
+	 *
+	 * @note Images are added in sequence
 	 */
-	cv::Ptr<DBoW2::GeneralScoring> createScoringObject(
-			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
+	void addFeatureToInvertedFile(uint wordIdx, uint imgIdx);
 
 };
 
