@@ -40,6 +40,23 @@ VocabTree::~VocabTree() {
 
 // --------------------------------------------------------------------------
 
+void VocabTree::free_centers(VocabTreeNodePtr node) {
+	delete[] node->center;
+	if (node->children != NULL) {
+		for (int k = 0; k < m_branching; ++k) {
+			free_centers(node->children[k]);
+		}
+	}
+}
+
+// --------------------------------------------------------------------------
+
+size_t VocabTree::size() {
+	return m_words.size();
+}
+
+// --------------------------------------------------------------------------
+
 void VocabTree::build() {
 
 	if (m_branching < 2) {
@@ -56,14 +73,16 @@ void VocabTree::build() {
 		indices[i] = int(i);
 	}
 
-	printf("[VocabTree::build] Building tree from %d features\n", (int) size);
-	printf("[VocabTree::build]   with depth %d, branching factor %d\n", m_depth,
-			m_branching);
-	printf("[VocabTree::build]   and restarts %d\n", m_iterations);
+//	printf("[VocabTree::build] Building tree from %d features\n", (int) size);
+//	printf("[VocabTree::build]   with depth %d, branching factor %d\n", m_depth, m_branching);
+//	printf("[VocabTree::build]   and restarts %d\n", m_iterations);
 
-	m_root = m_pool.allocate<VocabTreeNode>();
+	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
 	computeClustering(m_root, indices, (int) size, 0);
+
+//	printf("[VocabTree::BuildRecurse] Finished clustering\n");
+
 }
 
 // --------------------------------------------------------------------------
@@ -78,16 +97,17 @@ void VocabTree::save(const std::string& filename) const {
 						+ " for writing");
 	}
 
-//	fs << "centersInit" << m_centers_init;
 	fs << "iterations" << m_iterations;
 	fs << "branching" << m_branching;
 	fs << "depth" << m_depth;
 	fs << "vectorLength" << (int) m_veclen;
 	fs << "memoryCounter" << m_memoryCounter;
 
-	fs << "root";
+	fs << "nodes" << "{";
 
 	save_tree(fs, m_root);
+
+	fs << "}";
 
 	fs.release();
 }
@@ -97,16 +117,21 @@ void VocabTree::save(const std::string& filename) const {
 void VocabTree::save_tree(cv::FileStorage& fs, VocabTreeNodePtr node) const {
 
 	// WriteNode
-	fs << "{";
+	fs << "node" << "{";
 	fs << "center" << cv::Mat(1, m_veclen, m_dataset.type(), node->center);
 	fs << "weight" << node->weight;
 	fs << "wordId" << node->word_id;
+
+	if (node->children != NULL) {
+		// Node has no children then it's a leaf node
+	} else {
+		// Node has children then it's an interior node
+	}
+
 	fs << "imageList" << "[";
 	for (ImageCount img : node->image_list) {
-		fs << "{:";
-		fs << "m_index" << (int) img.m_index;
-		fs << "m_count" << img.m_count;
-		fs << "}";
+		fs << "{:" << "m_index" << (int) img.m_index << "m_count" << img.m_count
+				<< "}";
 	}
 	fs << "]";
 	fs << "children" << "[";
@@ -138,7 +163,7 @@ void VocabTree::load(const std::string& filename) {
 	m_memoryCounter = (int) fs["memoryCounter"];
 
 	cv::FileNode root = fs["root"];
-	m_root = m_pool.allocate<VocabTreeNode>();
+	m_root = new VocabTreeNode();
 	load_tree(root, m_root);
 
 	fs.release();
@@ -174,34 +199,17 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 		}
 	} else {
 		// Node has children then it's an interior node
-		node->children = m_pool.allocate<VocabTreeNodePtr>(m_branching);
+		node->children = new VocabTreeNodePtr[m_branching];
 		cv::FileNodeIterator it = children.begin();
 
 		for (size_t c = 0; (int) c < m_branching; ++c) {
-			node->children[c] = m_pool.allocate<VocabTreeNode>();
+			node->children[c] = new VocabTreeNode();
 			cv::FileNode child = *it;
 			load_tree(child, node->children[c]);
 			it++;
 		}
 	}
 
-}
-
-// --------------------------------------------------------------------------
-
-int VocabTree::usedMemory() const {
-	return m_pool.usedMemory + m_pool.wastedMemory + m_memoryCounter;
-}
-
-// --------------------------------------------------------------------------
-
-void VocabTree::free_centers(VocabTreeNodePtr node) {
-	delete[] node->center;
-	if (node->children != NULL) {
-		for (int k = 0; k < m_branching; ++k) {
-			free_centers(node->children[k]);
-		}
-	}
 }
 
 // --------------------------------------------------------------------------
@@ -213,7 +221,7 @@ void VocabTree::computeNodeStatistics(VocabTreeNodePtr node, int* indices,
 
 	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
 
-// Compute center using majority voting over all data
+	// Compute center using majority voting over all data
 	cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
 	accVector = cv::Scalar::all(0);
 	for (size_t i = 0; (int) i < indices_length; i++) {
@@ -234,18 +242,18 @@ void VocabTree::computeNodeStatistics(VocabTreeNodePtr node, int* indices,
 void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		int indices_length, int level) {
 
-// Recursion base case: done when the last level is reached
-// or when there are less data than clusters
+	// Recursion base case: done when the last level is reached
+	// or when there are less data than clusters
 	if (level == m_depth - 1 || indices_length < m_branching) {
 //		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
 		node->word_id = m_words.size();
+		node->weight = 1.0;
 		this->m_words.push_back(node);
 		return;
 	}
 
-	printf("[BuildRecurse] (level %d): Running k-means (%d features)\n", level,
-			indices_length);
+//	printf("[VocabTree::BuildRecurse] (level %d): Running k-means (%d features)\n", level, indices_length);
 
 	int* centers_idx = new int[m_branching];
 	int centers_length;
@@ -253,22 +261,21 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 	CentersChooser<Distance>::create(m_centers_init)->chooseCenters(m_branching,
 			indices, indices_length, centers_idx, centers_length, m_dataset);
 
-// Recursion base case: done as well if by case got
-// less cluster indices than clusters
+	// Recursion base case: done as well if by case got
+	// less cluster indices than clusters
 	if (centers_length < m_branching) {
 //		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
 		node->word_id = m_words.size();
+		node->weight = 1.0;
 		this->m_words.push_back(node);
 		delete[] centers_idx;
 		return;
 	}
 
-// TODO initCentroids: assign centers based on the chosen indexes
+	// TODO initCentroids: assign centers based on the chosen indexes
 
-	printf(
-			"[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n",
-			level);
+//	printf("[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n", level);
 
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
@@ -284,7 +291,8 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		count[i] = 0;
 	}
 
-//TODO quantize: assign points to clusters
+	//TODO quantize: assign points to clusters
+
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
 
@@ -309,8 +317,9 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		converged = true;
 		iteration++;
 
-		//TODO: computeCentroids compute the new cluster centers
-		// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
+		// TODO: computeCentroids compute the new cluster centers
+		// Warning: using matrix of integers, there might be
+		// an overflow when summing too much descriptors
 		cv::Mat bitwiseCount(m_branching, m_veclen * 8,
 				cv::DataType<int>::type);
 		// Zeroing matrix of cumulative bits
@@ -378,8 +387,6 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 
 	}
 
-	printf("[BuildRecurse] (level %d): Finished clustering\n", level);
-
 	TDescriptor** centers = new TDescriptor*[m_branching];
 
 	for (int i = 0; i < m_branching; ++i) {
@@ -390,8 +397,8 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		}
 	}
 
-// compute k-means clustering for each of the resulting clusters
-	node->children = m_pool.allocate<VocabTreeNodePtr>(m_branching);
+	// Compute k-means clustering for each of the resulting clusters
+	node->children = new VocabTreeNodePtr[m_branching];
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < m_branching; ++c) {
@@ -404,7 +411,7 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 			}
 		}
 
-		node->children[c] = m_pool.allocate<VocabTreeNode>();
+		node->children[c] = new VocabTreeNode();
 		node->children[c]->center = centers[c];
 		computeClustering(node->children[c], indices + start, end - start,
 				level + 1);
@@ -417,122 +424,56 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 	delete[] belongs_to;
 }
 
-// --------------------------------------------------------------------------
+void VocabTree::transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
+		const int& normType) const {
 
-//void VocabTree::setNodeWeights(const std::vector<cv::Mat>& training_matrices,
-//		DBoW2::WeightingType weighting) {
-//	const uint NWords = m_words.size();
-//	const uint NDocs = training_matrices.size();
-//
-//	if (weighting == DBoW2::TF || weighting == DBoW2::BINARY) {
-//		// IDF part must be 1 always
-//		for (size_t i = 0; i < NWords; i++) {
-//			m_words[i]->weight = 1;
-//		}
-//	} else if (weighting == DBoW2::IDF || weighting == DBoW2::TF_IDF) {
-//		// IDF and TF-IDF: we calculate the IDF path now
-//
-//		// Note: this actually calculates the IDF part of the TF-IDF score.
-//		// The complete TF-IDF score is calculated in ::transform
-//
-//		// TODO When test see if this is the same as the inverted file length,
-//		// for me it looks like it does
-//
-//		// Ni: number of documents/images in which the ith words appears
-//		std::vector<uint> Ni(NWords, 0);
-//		std::vector<bool> counted(NWords, false);
-//
-//		for (cv::Mat training_data : training_matrices) {
-//			// Restart word count 'cause new image features matrix
-//			std::fill(counted.begin(), counted.end(), false);
-//			for (size_t i = 0; (int) i < training_data.rows; i++) {
-//				uint word_id;
-//				// Obtaining id of the word where ith feature vector is quantized
-//				double weight;
-//				quantize(training_data.row(i), word_id, weight);
-//				// Count only once the appearance of the word in the image (training matrix)
-//				if (!counted[word_id]) {
-//					Ni[word_id]++;
-//					counted[word_id] = true;
-//				}
-//			}
-//		}
-//
-//		// Set ln(N/Ni)
-//		for (size_t i = 0; i < NWords; i++) {
-//			if (Ni[i] > 0) {
-//				m_words[i]->weight = log((double) NDocs / (double) Ni[i]);
-//			}
-//			// TODO else: this cannot occur if using kmeans++
-//		}
-//	}
-//}
-
-// --------------------------------------------------------------------------
-
-//void VocabTree::transform(const cv::Mat& features, DBoW2::BowVector& v,
-//		DBoW2::WeightingType weighting, DBoW2::ScoringType scoring) const {
-//
-//	if (features.type() != CV_8U) {
+//	if (queryImgFeatures.type() != CV_8U) {
 //		throw std::runtime_error(
-//				"[VocabTree::quantize] Features matrix is not binary");
+//				"[VocabTree::scoreQueryFeatures] Features matrix is not binary");
 //	}
 //
-//	if (features.cols != (int) m_veclen) {
+//	if (queryImgFeatures.cols != (int) m_veclen) {
 //		std::stringstream ss;
-//		ss << "[VocabTree::quantize] Features vectors must be " << m_veclen
-//				<< " bytes long, i.e. " << m_veclen * 8 << "-dimensional";
+//		ss << "[VocabTree::scoreQueryFeatures] Features vectors must be "
+//				<< m_veclen << " bytes long, i.e. " << m_veclen * 8
+//				<< "-dimensional";
 //		throw std::runtime_error(ss.str());
 //	}
 //
-//	if (features.rows < 1) {
+//	if (queryImgFeatures.rows < 1) {
 //		throw std::runtime_error(
-//				"[VocabTree::quantize] At least one feature vector is needed");
+//				"[VocabTree::scoreQueryFeatures] At least one feature vector is needed");
 //	}
-//
-//	v.clear();
 //
 //	if (empty()) {
-//		return;
+//		throw std::runtime_error(
+//				"[VocabTree::scoreQueryFeatures] Vocabulary is empty");
 //	}
-//
-//	for (size_t i = 0; (int) i < features.rows; i++) {
-//		uint id;
-//		double w;
-//		// w is the IDF value if TF_IDF, 1 if TF
-//		// w is the inverse document frequency if IDF, or 1 if BINARY
-//		quantize(features.row(i), id, w);
-//		// not stopped
-//		if (w > 0) {
-//			if (weighting == DBoW2::TF || weighting == DBoW2::TF_IDF) {
-//				// TF or TF-IDF
-//				v.addWeight(id, w);
-//			} else {
-//				// IDF or BINARY
-//				v.addIfNotExist(id, w);
-//			}
-//		}
-//	}
-//
-//	// Flag indicating normalization
-//	DBoW2::LNorm norm;
-//	bool must = createScoringObject(scoring)->mustNormalize(norm);
-//
-//	// Normalizing vector by its length when using TF or TF-IDF for weighting
-//	if ((weighting == DBoW2::TF || weighting == DBoW2::TF_IDF)
-//			&& (!v.empty() && !must)) {
-//		const double nd = v.size();
-//
-//		for (DBoW2::BowVector::iterator vit = v.begin(); vit != v.end();
-//				vit++) {
-//			vit->second /= nd;
-//		}
-//	}
-//
-//	if (must) {
-//		v.normalize(norm);
-//	}
-//}
+
+	// Initialize query BoW vector
+	bowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
+
+//	printf("[VocabTree::scoreQuery] Quantizing query feature vector into BoW vector\n");
+
+	// Quantize each query image feature vector
+	for (size_t i = 0; (int) i < featuresVector.rows; i++) {
+		uint wordIdx;
+		double wordWeight;
+		quantize(featuresVector.row(i), wordIdx, wordWeight);
+//		printf("[VocabTree::scoreQuery] feature (%d) quantized into (%d/%d) word, weight %f\n", (int) i, (int) wordIdx, (int) m_words.size(), wordWeight);
+
+		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
+			throw std::runtime_error(
+					"[VocabTree::scoreQuery] Feature quantized into a non-existent word");
+		}
+
+		bowVector.at<float>(0, wordIdx) += (float) wordWeight;
+	}
+
+//	printf("[VocabTree::scoreQuery] Normalizing query BoW vector\n");
+
+	cv::normalize(bowVector, bowVector, 1, 0, normType);
+}
 
 // --------------------------------------------------------------------------
 
@@ -572,13 +513,13 @@ void VocabTree::computeWordsWeights(const uint numDbWords,
 		DBoW2::WeightingType weighting) {
 	if (weighting == DBoW2::TF || weighting == DBoW2::BINARY) {
 		// Setting constant weight equal to 1
-		for (VocabTreeNodePtr word : m_words) {
+		for (VocabTreeNodePtr& word : m_words) {
 			word->weight = 1;
 		}
 	} else if (weighting == DBoW2::IDF || weighting == DBoW2::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
-		for (VocabTreeNodePtr word : m_words) {
+		for (VocabTreeNodePtr& word : m_words) {
 			int len = (int) word->image_list.size();
 			if (len > 0) {
 				word->weight = log((double) numDbWords / (double) len);
@@ -594,9 +535,9 @@ void VocabTree::computeWordsWeights(const uint numDbWords,
 void VocabTree::createDatabase() {
 
 	// Loop over words
-	for (VocabTreeNodePtr word : m_words) {
+	for (VocabTreeNodePtr& word : m_words) {
 		// Apply word weight to the image count
-		for (ImageCount image : word->image_list) {
+		for (ImageCount& image : word->image_list) {
 			image.m_count *= word->weight;
 		}
 	}
@@ -606,7 +547,7 @@ void VocabTree::createDatabase() {
 // --------------------------------------------------------------------------
 
 void VocabTree::clearDatabase() {
-	for (VocabTreeNodePtr word : m_words) {
+	for (VocabTreeNodePtr& word : m_words) {
 		word->image_list.clear();
 	}
 }
@@ -627,45 +568,6 @@ bool VocabTree::empty() const {
 //
 //	return m_scoring_object->score(v1, v2);
 //}
-
-// --------------------------------------------------------------------------
-
-//cv::Ptr<DBoW2::GeneralScoring> VocabTree::createScoringObject(
-//		DBoW2::ScoringType scoring) const {
-//
-//	cv::Ptr<DBoW2::GeneralScoring> m_scoring_object = NULL;
-//
-//	switch (scoring) {
-//	case DBoW2::L1_NORM:
-//		m_scoring_object = new DBoW2::L1Scoring;
-//		break;
-//
-//	case DBoW2::L2_NORM:
-//		m_scoring_object = new DBoW2::L2Scoring;
-//		break;
-//
-//	case DBoW2::CHI_SQUARE:
-//		m_scoring_object = new DBoW2::ChiSquareScoring;
-//		break;
-//
-//	case DBoW2::KL:
-//		m_scoring_object = new DBoW2::KLScoring;
-//		break;
-//
-//	case DBoW2::BHATTACHARYYA:
-//		m_scoring_object = new DBoW2::BhattacharyyaScoring;
-//		break;
-//
-//	case DBoW2::DOT_PRODUCT:
-//		m_scoring_object = new DBoW2::DotProductScoring;
-//		break;
-//
-//	}
-//
-//	return m_scoring_object;
-//}
-
-// --------------------------------------------------------------------------
 
 void VocabTree::addImageToDatabase(uint imgIdx, cv::Mat imgFeatures) {
 
@@ -734,12 +636,13 @@ void VocabTree::normalizeDatabase(const uint num_db_images, int normType) {
 
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
-	std::vector<float> mags;
-	mags.resize(num_db_images);
+	std::vector<float> mags(num_db_images, 0.0);
 
-	// Loop over words
-	for (VocabTreeNodePtr word : m_words) {
-		for (ImageCount image : word->image_list) {
+	// Computing DB BoW vectors magnitude
+
+	// Summing vector elements
+	for (VocabTreeNodePtr& word : m_words) {
+		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
 			double dim = image.m_count;
 
@@ -756,17 +659,23 @@ void VocabTree::normalizeDatabase(const uint num_db_images, int normType) {
 		}
 	}
 
-	// Print magnitudes
-	for (size_t i = 0; i < num_db_images; i++) {
-		if (normType == cv::NORM_L2) {
+	// Applying power over sum result
+	if (normType == cv::NORM_L2) {
+		for (size_t i = 0; i < num_db_images; i++) {
 			mags[i] = sqrt(mags[i]);
 		}
-//		printf("[VocabTree::normalizeDatabase] Vector %d has magnitude %0.3f\n", i, mags[i]);
 	}
 
+	// Print magnitudes
+//	for (size_t i = 0; i < num_db_images; i++) {
+//		printf(
+//				"[VocabTree::normalizeDatabase] Vector %lu has magnitude %0.3f\n",
+//				i, mags[i]);
+//	}
+
 	// Normalizing database
-	for (VocabTreeNodePtr word : m_words) {
-		for (ImageCount image : word->image_list) {
+	for (VocabTreeNodePtr& word : m_words) {
+		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
 			assert(index < mags.size());
 			if (mags[index] > 0.0) {
@@ -805,42 +714,65 @@ void VocabTree::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 				"[VocabTree::scoreQueryFeatures] Vocabulary is empty");
 	}
 
-	scores = cv::Mat();
-	scores = cv::Mat(1, numDbImages, cv::DataType<float>::type, 0);
-	cv::Mat queryBowVector(1, m_words.size(), cv::DataType<float>::type, 0);
-
-	// Quantize each query image feature vector
-	for (size_t i = 0; (int) i < queryImgFeatures.rows; i++) {
-		uint wordIdx;
-		double wordWeight;
-		quantize(queryImgFeatures.row(i), wordIdx, wordWeight);
-
-		queryBowVector.at<float>(1, wordIdx) += wordWeight;
+	if (normType != cv::NORM_L1 && normType != cv::NORM_L2) {
+		throw std::runtime_error(
+				"[VocabTree::scoreQuery] Unknown scoring method");
 	}
 
-	cv::normalize(queryBowVector, queryBowVector, 0, 1, cv::NORM_L1);
+	scores = cv::Mat::zeros(1, numDbImages, cv::DataType<float>::type);
+
+	cv::Mat queryBowVector;
+	transform(queryImgFeatures, queryBowVector, normType);
+//	= cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
+//	printf("[VocabTree::scoreQuery] Quantizing query feature vector into BoW vector\n");
+	// Quantize each query image feature vector
+//	for (size_t i = 0; (int) i < queryImgFeatures.rows; i++) {
+//		uint wordIdx;
+//		double wordWeight;
+//		quantize(queryImgFeatures.row(i), wordIdx, wordWeight);
+//		printf("[VocabTree::scoreQuery] feature (%d) quantized into (%d/%d) word, weight %f\n", (int) i, (int) wordIdx, (int) m_words.size(), wordWeight);
+//		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
+//			throw std::runtime_error("[VocabTree::scoreQuery] Feature quantized into a non-existent word");
+//		}
+//		queryBowVector.at<float>(0, wordIdx) += (float) wordWeight;
+//	}
+//	printf("[VocabTree::scoreQuery] Normalizing query BoW vector\n");
+//	cv::normalize(queryBowVector, queryBowVector, 1, 0, cv::NORM_L1);
 
 	// ||v - w||_{L1} = 2 + Sum(|v_i - w_i| - |v_i| - |w_i|)
 	// ||v - w||_{L2} = sqrt( 2 - 2 * Sum(v_i * w_i) )
 
+//	printf("[VocabTree::scoreQuery] Efficient scoring query BoW vector against all DB BoW vectors\n");
+
 	// Calculating sum part of the efficient score implementation
 	for (VocabTreeNodePtr word : m_words) {
+		float qi = queryBowVector.at<float>(0, word->word_id);
+
 		// Early exit
-		if (queryBowVector.at<float>(1, word->word_id) == 0.0) {
+		if (qi == 0.0) {
 			continue;
 		}
 
-		for (ImageCount image : word->image_list) {
-			double vi = queryBowVector.at<float>(1, word->word_id);
-			double wi = image.m_count;
+		// The inverted file of a word contains all images counts quantized into that word
+		// i.e. if they are there its because their count di is not zero
+
+		// In addition its fair computing qi against di without further verification
+		// since the inverted files contain not null counts
+
+		for (ImageCount& image : word->image_list) {
+			float di = image.m_count;
+//			printf("Word id: %d, image id: %d qi=%f di=%f\n", word->word_id, image.m_index, qi, di);
+
+			// Normalized BoW vector counts hence (0, 1]
+			CV_Assert(qi > 0.0 && qi <= 1.0);
+			CV_Assert(di > 0.0 && di <= 1.0);
+
 			if (normType == cv::NORM_L1) {
-				scores.at<float>(1, image.m_index) += fabs(vi - wi) - fabs(vi)
-						- fabs(wi);
+//				printf("img=%u qi=%f di=%f\n", image.m_index, qi, di);
+				scores.at<float>(0, image.m_index) += (float) (fabs(qi - di)
+						- fabs(qi) - fabs(di));
 			} else if (normType == cv::NORM_L2) {
-				scores.at<float>(1, image.m_index) += vi * wi;
-			} else {
-				throw std::runtime_error(
-						"[VocabTree::scoreQuery] Unknown scoring method");
+				scores.at<float>(0, image.m_index) += (float) qi * di;
 			}
 		}
 	}
@@ -848,13 +780,12 @@ void VocabTree::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 	// Completing efficient score implementation
 	for (int i = 0; i < scores.cols; i++) {
 		if (normType == cv::NORM_L1) {
-			scores.at<float>(1, i) = 2 + scores.at<float>(1, i);
+			scores.at<float>(0, i) = (float) (-scores.at<float>(0, i) / 2.0);
 		} else if (normType == cv::NORM_L2) {
-			scores.at<float>(1, i) = 2 - 2 * scores.at<float>(1, i);
-		} else {
-			throw std::runtime_error(
-					"[VocabTree::scoreQuery] Unknown scoring method");
+			scores.at<float>(0, i) =
+					(float) (2.0 - 2.0 * scores.at<float>(0, i));
 		}
+		// else, not possible since normType was validated before
 	}
 
 }

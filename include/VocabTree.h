@@ -136,8 +136,6 @@ protected:
 	/* Attributes actually holding the tree */
 	// The root node in the tree.
 	VocabTreeNodePtr m_root;
-	// Pooled memory allocator
-	PooledAllocator m_pool;
 	// Words of the vocabulary
 	std::vector<VocabTreeNodePtr> m_words;
 
@@ -163,6 +161,13 @@ public:
 	virtual ~VocabTree();
 
 	/**
+	 * Returns the size of the tree.
+	 *
+	 * @return number of leaf nodes in the tree
+	 */
+	size_t size();
+
+	/**
 	 * Builds the tree.
 	 *
 	 * @param inputData - Matrix with the data to be clustered
@@ -170,7 +175,8 @@ public:
 	 * @note After this method is executed m_root holds a pointer to the tree,
 	 *		 while m_words holds pointers to the leaf nodes.
 	 * @note Interior nodes have only 'center' and 'children' information,
-	 * 		 while leaf nodes have only 'center' and 'word_id', all weights are zero
+	 * 		 while leaf nodes have only 'center' and 'word_id', all weights for
+	 * 		 interior nodes are 0 while weights for leaf nodes are 1.
 	 */
 	void build();
 
@@ -187,25 +193,6 @@ public:
 	 * @param stream - The stream from which the tree is loaded
 	 */
 	void load(const std::string& filename);
-
-	/**
-	 * Returns the amount of memory (in bytes) used by the tree.
-	 *
-	 * @return the memory used by the tree
-	 */
-	int usedMemory() const;
-
-//	/**
-//	 * Quantizes a set of data (representing a single image) into a BoW vector
-//	 *
-//	 * @param features - Matrix of data to quantize
-//	 * @param v - BoW vector of weighted words
-//	 * @param weighting - Weighting method
-//	 * @param scoring - Scoring method
-//	 */
-//	void transform(const cv::Mat& features, DBoW2::BowVector &v,
-//			DBoW2::WeightingType weighting = DBoW2::TF_IDF,
-//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
 
 //	/**
 //	 * Returns the score of two vectors.
@@ -351,16 +338,6 @@ private:
 	 */
 	bool empty() const;
 
-//	/**
-//	 * Creates an instance of the scoring object according to m_scoring
-//	 *
-//	 * @param scoring - Scoring method
-//	 *
-//	 * @return Object for computing scores
-//	 */
-//	cv::Ptr<DBoW2::GeneralScoring> createScoringObject(
-//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
-
 	/**
 	 * Updates the inverted file of the given word by adding the image indicated
 	 * by the given imgIdx.
@@ -371,6 +348,16 @@ private:
 	 * @note Images are added in sequence
 	 */
 	void addFeatureToInvertedFile(uint wordIdx, uint imgIdx);
+
+	/**
+	 * Transforms a set of data (representing a single image) into a BoW vector.
+	 *
+	 * @param featuresVector - Matrix of data to quantize
+	 * @param bowVector - BoW vector of weighted words
+	 * @param normType - Norm used to normalize the output query BoW vector
+	 */
+	void transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
+			const int& normType) const;
 
 };
 

@@ -212,29 +212,78 @@ int main(int argc, char **argv) {
 	cvflann::VocabTree tree(descriptors, params);
 
 	// Step 5a/d: Build tree
+	printf(
+			"-- Creating vocabulary tree using [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers init algorithm [%s]\n",
+			descriptors.rows, params["branching"].cast<int>(),
+			params["iterations"].cast<int>(), params["depth"].cast<int>(),
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_RANDOM ? "random" :
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_GONZALES ? "gonzalez" :
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_KMEANSPP ?
+					"k-means++" : "unknown");
+
+	mytime = cv::getTickCount();
 	tree.build();
-	tree.save("tree.out");
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("   Vocabulary created in [%lf] ms with [%lu] words\n", mytime,
+			tree.size());
+
+	std::string treeOut = "tree.yaml.gz";
+	printf("   Saving tree to [%s]\n", treeOut.c_str());
+	tree.save(treeOut);
 
 	// Step 5b/d: Quantize training data (several image descriptor matrices)
+	std::vector<cv::Mat> images;
+	images.push_back(descriptors);
+	printf("-- Creating vocabulary database with [%lu] images\n",
+			images.size());
 	tree.clearDatabase();
-	tree.addImageToDatabase(0, descriptors);
+	printf("   Clearing Inverted Files\n");
+	for (size_t imgIdx = 0; imgIdx < images.size(); imgIdx++) {
+		printf("   Adding image [%lu] to database\n", imgIdx);
+		tree.addImageToDatabase(imgIdx, images[imgIdx]);
+	}
 
 	// Step 5c/d: Compute words weights and normalize DB
-	tree.computeWordsWeights(descriptors.rows, DBoW2::TF_IDF);
+	const DBoW2::WeightingType weightingScheme = DBoW2::TF_IDF;
+	printf("   Computing words weights using a [%s] weighting scheme\n",
+			weightingScheme == DBoW2::TF_IDF ? "TF-IDF" :
+			weightingScheme == DBoW2::TF ? "TF" :
+			weightingScheme == DBoW2::IDF ? "IDF" :
+			weightingScheme == DBoW2::BINARY ? "BINARY" : "UNKNOWN");
+	tree.computeWordsWeights(descriptors.rows, weightingScheme);
+	printf("   Applying words weights to the DB BoW vectors counts\n");
 	tree.createDatabase();
-	tree.normalizeDatabase(1, cv::NORM_L1);
+	int normType = cv::NORM_L1;
+	printf("   Normalizing DB BoW vectors using [%s]\n",
+			normType == cv::NORM_L1 ? "L1-norm" :
+			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+	tree.normalizeDatabase(1, normType);
+
+	std::string dbOut = "db.yaml.gz";
+	printf("   Saving DB to [%s]\n", dbOut.c_str());
+	tree.save(dbOut);
 
 	// Step 5d/d: Quantize testing/query data and obtain BoW representation, then score them against DB bow vectors
 	std::vector<cv::Mat> queriesDescriptors;
+	queriesDescriptors.push_back(descriptors);
 
-	for (cv::Mat queryDescriptors : queriesDescriptors) {
+	printf("-- Scoring [%lu] query images against [%lu] DB images using [%s]\n",
+			queriesDescriptors.size(), images.size(),
+			normType == cv::NORM_L1 ? "L1-norm" :
+			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+
+	for (size_t i = 0; i < queriesDescriptors.size(); i++) {
 		cv::Mat scores;
-		tree.scoreQuery(queryDescriptors, scores, 1, DBoW2::L1_NORM);
+		tree.scoreQuery(queriesDescriptors[i], scores, 1, cv::NORM_L1);
 
-		for (int j = 0; j < scores.rows; j++) {
+		for (size_t j = 0; (int) j < scores.rows; j++) {
 			printf(
-					"Match score between 0th query image and %dth DB image: %f\n",
-					j, scores.at<float>(1, j));
+					"   Match score between [%lu] query image and [%lu] DB image: %f\n",
+					i, j, scores.at<float>(0, j));
 		}
 	}
 
