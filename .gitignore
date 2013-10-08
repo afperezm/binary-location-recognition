@@ -16,4 +16,5 @@ main
 *.la
 *.a
 /test_descriptors
-/test.xml.gz
+*.xml.gz
+*.yaml.gz
