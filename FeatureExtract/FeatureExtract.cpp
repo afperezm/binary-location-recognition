@@ -7,18 +7,17 @@
 
 #include <dirent.h>
 #include <fstream>
+#include <stdexcept>
 #include <stdlib.h>
 #include <string>
 #include <vector>
 
 #include <opencv2/core/internal.hpp>
+#include <opencv2/extensions/features2d.hpp>
 #include <opencv2/flann/logger.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
-
-#include <AgastFeatureDetector.h>
-#include <DBriefDescriptorExtractor.h>
 
 void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
@@ -46,22 +45,9 @@ void save(const std::string &filename,
 
 double mytime;
 
-namespace cv {
-
-CV_INIT_ALGORITHM(AgastFeatureDetector, "Feature2D.AGAST",
-		obj.info()->addParam(obj, "threshold", obj.threshold); obj.info()->addParam(obj, "nonmaxsuppression", obj.nonmaxsuppression); obj.info()->addParam(obj, "type", obj.type))
-;
-
-CV_INIT_ALGORITHM(DBriefDescriptorExtractor, "Feature2D.DBRIEF", obj.info())
-;
-
-}
-
 int main(int argc, char **argv) {
 
-	// Calling method in order to ignore unused warning
-	cv::AgastFeatureDetector_info_auto.name();
-	cv::DBriefDescriptorExtractor_info_auto.name();
+	cv::initModule_features2d_extensions();
 
 	if (argc != 3) {
 		printf("\nUsage:\n"

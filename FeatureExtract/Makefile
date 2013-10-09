@@ -25,6 +25,7 @@ LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
 
 SOURCES = FeatureExtract.cpp
 OBJS = $(SOURCES:.cpp=.o)
+OBJS += ../src/features2d_extensions.o
 OBJS += ../src/AgastFeatureDetector.o
 OBJS += ../src/DBriefDescriptorExtractor.o
 

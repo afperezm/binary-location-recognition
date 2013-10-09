@@ -6,6 +6,7 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 
+#include <bitset>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -13,14 +14,13 @@
 #include <fstream>
 #include <ctime>
 
-#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/internal.hpp>
+#include <opencv2/extensions/features2d.hpp>
+#include <opencv2/flann/flann.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
-#include <opencv2/flann/flann.hpp>
 
-#include <AgastFeatureDetector.h>
-#include <DBriefDescriptorExtractor.h>
 #include <Clustering.h>
 #include <VocabTree.h>
 #include <BOWKmajorityTrainer.h>
@@ -79,22 +79,7 @@ int BinToDec(const cv::Mat& binRow);
 
 double mytime;
 
-namespace cv {
-
-CV_INIT_ALGORITHM(AgastFeatureDetector, "Feature2D.AGAST",
-		obj.info()->addParam(obj, "threshold", obj.threshold); obj.info()->addParam(obj, "nonmaxsuppression", obj.nonmaxsuppression); obj.info()->addParam(obj, "type", obj.type))
-;
-
-CV_INIT_ALGORITHM(DBriefDescriptorExtractor, "Feature2D.DBRIEF", obj.info())
-;
-
-}
-
 int main(int argc, char **argv) {
-
-	// Calling method in order to ignore unused warning
-	cv::AgastFeatureDetector_info_auto.name();
-	cv::DBriefDescriptorExtractor_info_auto.name();
 
 	if (argc != 2) {
 		printf("\n");
@@ -103,7 +88,7 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	// Initiating nonfree module, it's necessary for using SIFT and SURF
+	// Initiating non-free module, it's necessary for using SIFT and SURF
 	cv::initModule_nonfree();
 
 	printf("-- Loading image [%s]\n", argv[1]);
