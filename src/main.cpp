@@ -54,10 +54,12 @@ void printDescriptors(const Mat& descriptors);
 void printParams(cv::Ptr<cv::Algorithm> algorithm);
 
 /**
+ * Saves a set of features (keypoints and descriptors) onto a plain text
+ * file using OpenCV FileStorage API.
  *
- * @param filename
- * @param keypoints vector of keypoints
- * @param descriptors matrix of descriptors
+ * @param filename - The path to the file where to save the features
+ * @param keypoints - The keypoints to be saved
+ * @param descriptors - The descriptors to be saved
  */
 void save(const std::string &filename,
 		const std::vector<cv::KeyPoint>& keypoints, const Mat& descriptors);
@@ -90,6 +92,7 @@ CV_INIT_ALGORITHM(DBriefDescriptorExtractor, "Feature2D.DBRIEF", obj.info())
 
 int main(int argc, char **argv) {
 
+	// Calling method in order to ignore unused warning
 	cv::AgastFeatureDetector_info_auto.name();
 	cv::DBriefDescriptorExtractor_info_auto.name();
 
