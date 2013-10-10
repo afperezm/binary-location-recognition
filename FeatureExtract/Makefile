@@ -14,7 +14,8 @@ CXXFLAGS += -I../../agast_lib
 LDFLAGS += -L../../agast_lib/lib -lagast
 
 # AgastFeatureDetector
-CXXFLAGS += -I../include
+CXXFLAGS += -I../lib/opencv2_extensions/include
+LDFLAGS += -L../lib/ -lopencv_extensions
 
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`
@@ -22,12 +23,13 @@ LDFLAGS += `pkg-config opencv --libs`
 
 LDFLAGS += -Wl,-rpath=../../agast_lib/lib
 LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
+LDFLAGS += -Wl,-rpath=../lib/
 
 SOURCES = FeatureExtract.cpp
 OBJS = $(SOURCES:.cpp=.o)
-OBJS += ../src/features2d_extensions.o
-OBJS += ../src/AgastFeatureDetector.o
-OBJS += ../src/DBriefDescriptorExtractor.o
+#OBJS += ../src/features2d_extensions.o
+#OBJS += ../src/AgastFeatureDetector.o
+#OBJS += ../src/DBriefDescriptorExtractor.o
 
 BIN = FeatureExtract
 

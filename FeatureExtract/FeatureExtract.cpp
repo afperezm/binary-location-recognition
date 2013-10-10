@@ -149,11 +149,11 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat& descriptors) {
 
-	cv::Mat img = cv::imread(imgPath + imgName, CV_LOAD_IMAGE_GRAYSCALE);
+	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName, CV_LOAD_IMAGE_GRAYSCALE);
 
 	if (!img.data) {
 		std::stringstream ss;
-		ss << "Error reading image [" << imgPath + imgName << "]";
+		ss << "Error reading image [" << imgPath + std::string("/") + imgName << "]";
 		throw std::runtime_error(ss.str());
 	} else {
 		// Create smart pointer for feature detector
