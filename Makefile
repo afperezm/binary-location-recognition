@@ -1,55 +1,27 @@
-CXX = g++
+# Top-level Makefile
 
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -I./include/
-LDFLAGS =
+all: default
 
-# DBrief
-CXXFLAGS += -I../dbrief_lib
-LDFLAGS += -L../dbrief_lib/lib -ldbrief
-
-# Agast
-CXXFLAGS += -I../agast_lib
-LDFLAGS += -L../agast_lib/lib -lagast
-
-# DBow
-CXXFLAGS += -I../DBoW2/DUtils -I../DBoW2/DUtilsCV -I../DBoW2/DVision -I../DBoW2/DBoW2
-LDFLAGS += -L../DBoW2/lib -lDBoW2 -lDUtils -lDUtilsCV -lDVision -lstdc++
-
-# OpenCV (this goes last: beware of the linking order)
-CXXFLAGS += `pkg-config opencv --cflags`
-LDFLAGS += `pkg-config opencv --libs`
-
-LDFLAGS += -Wl,-rpath=/opt/ros/groovy/lib
-LDFLAGS += -Wl,-rpath=../agast_lib/lib
-LDFLAGS += -Wl,-rpath=../dbrief_lib/lib
-LDFLAGS += -Wl,-rpath=../DBoW2/lib
-
-SOURCES=$(wildcard src/*.cpp)
-
-OBJS += $(SOURCES:.cpp=.o)
-
-BINLIB = ./lib
-
-LIBRARY = libkmaj
-
-TARGET = main
-
-all: $(TARGET)
-
-$(LIBRARY).so: 
-	mkdir -p $(BINLIB)
-	$(CXX) -c $(CXXFLAGS) -fPIC src/KMajorityIndex.cpp -o src/KMajorityIndex_shared.o
-	$(CXX) -shared src/KMajorityIndex_shared.o -o $(BINLIB)/$@ $(LDFLAGS)
-
-$(TARGET): $(OBJS)
-	$(CXX) -o $(TARGET) $(OBJS) $(LDFLAGS)
-
-.cpp.o:
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+default:
+# Make libraries
+	cd OpenCVExtensions; $(MAKE)
+	cd Common; $(MAKE)
+	cd KMajorityLib; $(MAKE)
+	cd VocabLib; $(MAKE)
+# Make program
+	cd FeatureExtract; $(MAKE)
+	cd VocabLearn; $(MAKE)
+#	cd VocabBuildDB; $(MAKE)
+#	cd VocabMatch; $(MAKE)
 
 clean:
-	rm -rf $(OBJS) $(TARGET) *~
-
-cleanObjs:
-#	find ./ -name "*.o" | xargs -I {} rm -f {}
-	rm $(OBJS) src/KMajorityIndex_shared.o
+# Clean libraries
+	cd OpenCVExtensions; $(MAKE) clean
+	cd Common; $(MAKE) clean
+	cd KMajorityLib; $(MAKE) clean
+	cd VocabLib; $(MAKE) clean
+# Clean program
+	cd FeatureExtract; $(MAKE) clean
+	cd VocabLearn; $(MAKE) clean
+#	cd VocabBuildDB; $(MAKE) clean
+#	cd VocabMatch; $(MAKE) clean

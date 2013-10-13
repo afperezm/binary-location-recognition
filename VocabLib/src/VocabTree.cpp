@@ -11,6 +11,7 @@
 namespace cvflann {
 
 // --------------------------------------------------------------------------
+
 VocabTree::VocabTree(const cv::Mat& inputData = cv::Mat(),
 		const IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(

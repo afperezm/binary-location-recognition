@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include <FileUtils.hpp>
+
 #include <opencv2/core/internal.hpp>
 #include <opencv2/extensions/features2d.hpp>
 #include <opencv2/flann/logger.h>
@@ -22,26 +24,6 @@
 void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat& descriptors);
-
-/**
- * Opens a directory and saves all the files names onto a vector of strings, it
- * returns a status flag for reporting any error during the opening of the folder.
- *
- * @param folderPath - Path to the folder to be opened
- * @param files - Reference to a vector where all the files names will be saved
- */
-void readFolder(const char* folderfolderPath, std::vector<std::string>& files);
-
-/**
- * Saves a set of features (keypoints and descriptors) onto a plain text
- * file using OpenCV FileStorage API.
- *
- * @param filename - The path to the file where to save the features
- * @param keypoints - The keypoints to be saved
- * @param descriptors - The descriptors to be saved
- */
-void save(const std::string &filename,
-		const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors);
 
 double mytime;
 
@@ -65,7 +47,7 @@ int main(int argc, char **argv) {
 
 	std::vector<std::string> imgFolderFiles;
 	try {
-		readFolder(imgsFolder, imgFolderFiles);
+		FileUtils::readFolder(imgsFolder, imgFolderFiles);
 	} catch (const std::runtime_error& error) {
 		fprintf(stderr, "%s\n", error.what());
 		return EXIT_FAILURE;
@@ -81,7 +63,7 @@ int main(int argc, char **argv) {
 	// Load files in keys folder
 	std::vector<std::string> keyFiles;
 	try {
-		readFolder(keysFolder, keyFiles);
+		FileUtils::readFolder(keysFolder, keyFiles);
 	} catch (const std::runtime_error& error) {
 		fprintf(stderr, "%s\n", error.what());
 		return EXIT_FAILURE;
@@ -118,6 +100,7 @@ int main(int argc, char **argv) {
 			std::vector<cv::KeyPoint> keypoints;
 			cv::Mat descriptors;
 			try {
+				// Notice that number of keypoints might be reduced due to border effect
 				detectAndDescribeFeatures(imgsFolder, (*image), keypoints,
 						descriptors);
 				CV_Assert((int )keypoints.size() == descriptors.rows);
@@ -134,7 +117,8 @@ int main(int argc, char **argv) {
 					descriptorFileName.c_str());
 
 			try {
-				save(descriptorFileName, keypoints, descriptors);
+				FileUtils::saveFeatures(descriptorFileName, keypoints,
+						descriptors);
 			} catch (const std::runtime_error& error) {
 				fprintf(stderr, "%s\n", error.what());
 				return EXIT_FAILURE;
@@ -149,11 +133,13 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
 		cv::Mat& descriptors) {
 
-	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName, CV_LOAD_IMAGE_GRAYSCALE);
+	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName,
+			CV_LOAD_IMAGE_GRAYSCALE);
 
 	if (!img.data) {
 		std::stringstream ss;
-		ss << "Error reading image [" << imgPath + std::string("/") + imgName << "]";
+		ss << "Error reading image [" << imgPath + std::string("/") + imgName
+				<< "]";
 		throw std::runtime_error(ss.str());
 	} else {
 		// Create smart pointer for feature detector
@@ -175,66 +161,4 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		extractor->compute(img, keypoints, descriptors);
 	}
 
-}
-
-void readFolder(const char* folderPath, std::vector<std::string>& files) {
-	DIR *dir;
-	struct dirent *ent;
-	// Try opening folder
-	if ((dir = opendir(folderPath)) != NULL) {
-		fprintf(stdout, "   Opening directory [%s]\n", folderPath);
-		// Save all true directory names into a vector of strings
-		while ((ent = readdir(dir)) != NULL) {
-			// Ignore . and .. as valid folder names
-			std::string name = std::string(ent->d_name);
-			if (name.compare(".") != 0 && name.compare("..") != 0) {
-				files.push_back(std::string(ent->d_name));
-			}
-		}
-		closedir(dir);
-		// Sort alphabetically vector of folder names
-		sort(files.begin(), files.end());
-		fprintf(stdout, "   Found [%d] files\n", (int) files.size());
-	} else {
-		std::stringstream ss;
-		ss << "Could not open directory [" << folderPath << "]";
-		throw std::runtime_error(ss.str());
-	}
-}
-
-void save(const std::string &filename,
-		const std::vector<cv::KeyPoint>& keypoints,
-		const cv::Mat& descriptors) {
-
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
-	if (!fs.isOpened()) {
-		std::stringstream ss;
-		ss << "Could not open file [" << filename << "]";
-		throw std::runtime_error(ss.str());
-	}
-
-	fs << "TotalKeypoints" << descriptors.rows;
-	fs << "DescriptorSize" << descriptors.cols; // Recall this is in Bytes
-	fs << "DescriptorType" << descriptors.type(); // CV_8U = 0 for binary descriptors
-
-	fs << "KeyPoints" << "{";
-
-	for (int i = 0; i < descriptors.rows; i++) {
-		cv::KeyPoint k = keypoints[i];
-		fs << "KeyPoint" << "{";
-		fs << "x" << k.pt.x;
-		fs << "y" << k.pt.y;
-		fs << "size" << k.size;
-		fs << "angle" << k.angle;
-		fs << "response" << k.response;
-		fs << "octave" << k.octave;
-
-		fs << "descriptor" << descriptors.row(i);
-
-		fs << "}";
-	}
-
-	fs << "}"; // End of structure node
-
-	fs.release();
 }

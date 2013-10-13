@@ -1,4 +1,4 @@
-# Makefile for FeatureExtract
+# Makefile for VocabLib
 
 CXX = g++
 
@@ -21,18 +21,31 @@ LDFLAGS += -L../../dbrief_lib/lib -ldbrief
 CXXFLAGS += -I../../agast_lib
 LDFLAGS += -L../../agast_lib/lib -lagast
 
+# KMajority
+CXXFLAGS += -I../KMajorityLib/include
+LDFLAGS += -lkmajority
+
+# VocabLib
+CXXFLAGS += -I../VocabLib/include
+LDFLAGS += -lvocab
+
+# DBow
+CXXFLAGS += -I../../DBoW2/DUtils -I../../DBoW2/DUtilsCV -I../../DBoW2/DVision -I../../DBoW2/DBoW2
+LDFLAGS += -L../../DBoW2/lib -lDBoW2 -lDUtils -lDUtilsCV -lDVision -lstdc++
+
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
 LDFLAGS += -Wl,-rpath=../../agast_lib/lib
 LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
+LDFLAGS += -Wl,-rpath=../../DBoW2/lib
 LDFLAGS += -Wl,-rpath=../lib/
 
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 
-BIN = FeatureExtract
+BIN = VocabLearn
 
 all: $(BIN)
 

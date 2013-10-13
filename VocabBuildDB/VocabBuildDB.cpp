@@ -45,10 +45,45 @@ int main(int argc, char **argv) {
 //		break;
 //	}
 
-	// Read keys
+	cvflann::VocabTree tree;
+	cv::Mat descriptors;
 
-	//
+	// Step 2/4: Quantize training data (several image descriptor matrices)
+	std::vector<cv::Mat> images;
+	images.push_back(descriptors);
+	printf("-- Creating vocabulary database with [%lu] images\n",
+			images.size());
+	tree.clearDatabase();
+	printf("   Clearing Inverted Files\n");
+	for (size_t imgIdx = 0; imgIdx < images.size(); imgIdx++) {
+		printf("   Adding image [%lu] to database\n", imgIdx);
+		tree.addImageToDatabase(imgIdx, images[imgIdx]);
+	}
 
-	printf("-- \n");
+	// Step 3/4: Compute words weights and normalize DB
+	const DBoW2::WeightingType weightingScheme = DBoW2::TF_IDF;
+	printf("   Computing words weights using a [%s] weighting scheme\n",
+			weightingScheme == DBoW2::TF_IDF ? "TF-IDF" :
+			weightingScheme == DBoW2::TF ? "TF" :
+			weightingScheme == DBoW2::IDF ? "IDF" :
+			weightingScheme == DBoW2::BINARY ? "BINARY" : "UNKNOWN");
+	tree.computeWordsWeights(descriptors.rows, weightingScheme);
+	printf("   Applying words weights to the DB BoW vectors counts\n");
+	tree.createDatabase();
+
+	int normType = cv::NORM_L1;
+
+	printf("   Normalizing DB BoW vectors using [%s]\n",
+			normType == cv::NORM_L1 ? "L1-norm" :
+			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+	tree.normalizeDatabase(1, normType);
+
+	std::string dbOut = "db.yaml.gz";
+	printf("   Saving DB to [%s]\n", dbOut.c_str());
+	tree.save(dbOut);
+
+
+
+	return EXIT_SUCCESS;
 }
 

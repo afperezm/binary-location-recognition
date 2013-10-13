@@ -5,7 +5,7 @@
  *      Author: andresf
  */
 
-#include <bin_hierarchical_clustering_index.h>
+#include <VocabTree.h>
 
 namespace cvflann {
 
