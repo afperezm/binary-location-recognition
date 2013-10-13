@@ -111,9 +111,10 @@ int main(int argc, char **argv) {
 
 			std::string descriptorFileName(keysFolder);
 			descriptorFileName += "/" + (*image).substr(0, (*image).size() - 4)
-					+ ".yaml.gz";
+					+ ".xml.gz";
 
-			printf("   Saving feature descriptors to [%s]\n",
+			printf(
+					"-- Saving feature descriptors to [%s] using OpenCV FileStorage\n",
 					descriptorFileName.c_str());
 
 			try {
