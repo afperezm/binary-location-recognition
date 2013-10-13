@@ -79,7 +79,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 
 // --------------------------------------------------------------------------
 
-void loadFeatures(const std::string& filename,
+void FileUtils::loadFeatures(const std::string& filename,
 		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) {
 
 	CV_Error(CV_StsNotImplemented, "Not yet implemented method");
