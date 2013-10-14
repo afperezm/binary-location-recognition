@@ -40,9 +40,6 @@ void FileUtils::saveFeatures(const std::string &filename,
 		const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
-	printf("-- Saving feature descriptors to [%s] using OpenCV FileStorage\n",
-			filename.c_str());
-
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
 	if (!fs.isOpened()) {
@@ -55,7 +52,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 	fs << "DescriptorSize" << descriptors.cols; // Recall this is in Bytes
 	fs << "DescriptorType" << descriptors.type(); // CV_8U = 0 for binary descriptors
 
-	fs << "KeyPoints" << "{";
+	fs << "KeyPoints" << "[";
 
 	for (int i = 0; i < descriptors.rows; i++) {
 		cv::KeyPoint k = keypoints[i];
@@ -72,7 +69,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 		fs << "}";
 	}
 
-	fs << "}"; // End of structure node
+	fs << "]"; // End of structure node
 
 	fs.release();
 }
@@ -81,8 +78,6 @@ void FileUtils::saveFeatures(const std::string &filename,
 
 void FileUtils::loadFeatures(const std::string& filename,
 		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) {
-
-	CV_Error(CV_StsNotImplemented, "Not yet implemented method");
 
 	printf(
 			"-- Loading feature descriptors from [%s] using OpenCV FileStorage\n",
