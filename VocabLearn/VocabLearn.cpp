@@ -150,8 +150,10 @@ int main(int argc, char **argv) {
 //			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
 	if (argc != 6) {
-		printf("Usage: %s <list.in> <depth> <branching_factor> "
-				"<restarts> <tree.out>\n", argv[0]);
+		printf("\nUsage:\n"
+				"\t%s <list.in> <depth>"
+				" <branching_factor> <restarts>"
+				" <tree.out>\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
