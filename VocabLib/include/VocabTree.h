@@ -46,7 +46,7 @@
 namespace cvflann {
 
 struct VocabTreeParams: public IndexParams {
-	VocabTreeParams(int branching = 6, int depth = 10, int iterations = 11,
+	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 11,
 			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM) {
 		// branching factor
 		(*this)["branching"] = branching;

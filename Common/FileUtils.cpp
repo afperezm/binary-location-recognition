@@ -56,7 +56,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 
 	for (int i = 0; i < descriptors.rows; i++) {
 		cv::KeyPoint k = keypoints[i];
-		fs << "KeyPoint" << "{";
+		fs << "{";
 		fs << "x" << k.pt.x;
 		fs << "y" << k.pt.y;
 		fs << "size" << k.size;
@@ -101,6 +101,14 @@ void FileUtils::loadFeatures(const std::string& filename,
 	keypoints.reserve(rows);
 
 	cv::FileNode keypointsSequence = fs["KeyPoints"];
+
+	if (keypointsSequence.type() != cv::FileNode::SEQ) {
+		std::stringstream ss;
+		ss << "Error while parsing [" << filename;
+		ss << "] fetched element KeyPoints is not a sequence";
+		throw std::runtime_error(ss.str());
+	}
+
 	int idx = 0;
 
 	for (cv::FileNodeIterator it = keypointsSequence.begin();
@@ -116,9 +124,6 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 		descriptor.copyTo(descriptors.row(idx));
 
-		std::cout << descriptors.row(idx) << std::endl;
-
-		getchar();
 	}
 
 	fs.release();

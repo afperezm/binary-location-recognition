@@ -14,6 +14,7 @@
 #include <fstream>
 #include <ctime>
 #include <sys/stat.h>
+#include <boost/regex.hpp>
 
 #include <opencv2/core/internal.hpp>
 #include <opencv2/extensions/features2d.hpp>
@@ -22,21 +23,10 @@
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 
-// KMajority
-#include <Clustering.h>
-#include <BOWKmajorityTrainer.h>
-
-// VocabTree
 #include <VocabTree.h>
-
-// DBoW2
-//#include <DBoW2.h>
-//#include <DUtilsCV.h>
-//#include <DVision.h>
 
 #include <FileUtils.hpp>
 
-using cv::Mat;
 using std::vector;
 
 double mytime;
@@ -163,6 +153,15 @@ int main(int argc, char **argv) {
 	int restarts = atoi(argv[4]);
 	const char *tree_out = argv[5];
 
+	boost::cmatch what;
+	boost::regex expression("([a-z]+)(.)(yaml|xml)(.)gz");
+
+	if (boost::regex_match(std::string(tree_out), expression) == false) {
+		fprintf(stderr, "Output tree file must be composed only by "
+				"letters and have the extension .yaml.gz or .xml.gz");
+		return EXIT_FAILURE;
+	}
+
 	printf("-- Building tree with depth: %d, branching factor: %d, "
 			"and restarts: %d\n", depth, branchFactor, restarts);
 
@@ -171,7 +170,8 @@ int main(int argc, char **argv) {
 	std::ifstream keysList(list_in, std::fstream::in);
 
 	if (keysList.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading", list_in);
+		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
+		return EXIT_FAILURE;
 	}
 
 	// Loading file names in list into a vector
@@ -190,51 +190,94 @@ int main(int argc, char **argv) {
 	keysList.close();
 
 	// Step 2: read key files
-	std::vector<cv::KeyPoint> keypoints;
-	cv::Mat descriptors, mergedDescriptors;
+	std::vector<cv::KeyPoint> imgKeypoints;
+	cv::Mat imgDescriptors;
+
+	// TODO Method for adding descriptors to list of cv::Mat
+	// ---------------------------------------------------------------
+	std::vector<cv::Mat> descriptors;
+	descriptors.reserve(keysFilenames.size());
+	int size;
+	// ---------------------------------------------------------------
 
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
-		keypoints.clear();
-		descriptors = cv::Mat();
-		FileUtils::loadFeatures(keyFileName, keypoints, descriptors);
+		imgKeypoints.clear();
+		imgDescriptors = cv::Mat();
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
-		CV_Assert((int )keypoints.size() == descriptors.rows);
-//		tree.add(descriptors);
+		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
+
+		// TODO Method for adding descriptors to list of cv::Mat
+		// ---------------------------------------------------------------
+		CV_Assert(!imgDescriptors.empty());
+		if (!descriptors.empty()) {
+			CV_Assert(descriptors[0].cols == imgDescriptors.cols);
+			CV_Assert(descriptors[0].type() == imgDescriptors.type());
+			size += imgDescriptors.rows;
+		} else {
+			size = imgDescriptors.rows;
+		}
+		descriptors.push_back(imgDescriptors);
+		// ---------------------------------------------------------------
 	}
 
 	// Step 3: build tree
+	// TODO Method for composing descriptors big matrix from the list of descriptors references
+	// ---------------------------------------------------------------
+	CV_Assert(!descriptors.empty());
 
-//	// Cluster descriptors using Vocabulary Tree
-//	cvflann::VocabTreeParams params;
-//	// TODO Add method for composing descriptors big matrix from the list of descriptors references
-//	cvflann::VocabTree tree(descriptors, params);
-//
-//	printf(
-//			"-- Creating vocabulary tree using [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers init algorithm [%s]\n",
-//			descriptors.rows, params["branching"].cast<int>(),
-//			params["iterations"].cast<int>(), params["depth"].cast<int>(),
-//			params["centers_init"].cast<cvflann::flann_centers_init_t>()
-//					== cvflann::FLANN_CENTERS_RANDOM ? "random" :
-//			params["centers_init"].cast<cvflann::flann_centers_init_t>()
-//					== cvflann::FLANN_CENTERS_GONZALES ? "gonzalez" :
-//			params["centers_init"].cast<cvflann::flann_centers_init_t>()
-//					== cvflann::FLANN_CENTERS_KMEANSPP ?
-//					"k-means++" : "unknown");
-//
-//	mytime = cv::getTickCount();
-//	tree.build();
-//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-//			* 1000;
-//	printf("   Vocabulary created in [%lf] ms with [%lu] words\n", mytime,
-//			tree.size());
-//
-//	std::string treeOut = "tree.yaml.gz";
-//	printf("   Saving tree to [%s]\n", treeOut.c_str());
-//	tree.save(treeOut);
+	int descCount = 0;
+	for (size_t i = 0; i < descriptors.size(); i++) {
+		descCount += descriptors[i].rows;
+	}
 
-	delete list_in;
-	delete tree_out;
+	cv::Mat mergedDescriptors(descCount, descriptors[0].cols,
+			descriptors[0].type());
+	for (size_t i = 0, start = 0; i < descriptors.size(); i++) {
+		cv::Mat submut = mergedDescriptors.rowRange((int) start,
+				(int) (start + descriptors[i].rows));
+		descriptors[i].copyTo(submut);
+		start += descriptors[i].rows;
+	}
+	// ---------------------------------------------------------------
+
+	// Cluster descriptors using Vocabulary Tree
+	cvflann::VocabTreeParams params;
+	params["branching"] = branchFactor;
+	params["iterations"] = restarts;
+	params["depth"] = depth;
+
+	cvflann::VocabTree tree(mergedDescriptors, params);
+
+	printf(
+			"-- Creating vocabulary tree using [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers init algorithm [%s]\n",
+			mergedDescriptors.rows, params["branching"].cast<int>(),
+			params["iterations"].cast<int>(), params["depth"].cast<int>(),
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_RANDOM ? "random" :
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_GONZALES ? "gonzalez" :
+			params["centers_init"].cast<cvflann::flann_centers_init_t>()
+					== cvflann::FLANN_CENTERS_KMEANSPP ?
+					"k-means++" : "unknown");
+
+	mytime = cv::getTickCount();
+	tree.build();
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf(
+			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
+			descCount, mytime, tree.size());
+
+	printf("-- Saving tree to [%s]\n", tree_out);
+
+	mytime = cv::getTickCount();
+	tree.save(tree_out);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+
+	printf("   Tree saved in [%lf] ms\n", mytime);
 
 	return EXIT_SUCCESS;
 }

@@ -74,15 +74,15 @@ void VocabTree::build() {
 		indices[i] = int(i);
 	}
 
-//	printf("[VocabTree::build] Building tree from %d features\n", (int) size);
-//	printf("[VocabTree::build]   with depth %d, branching factor %d\n", m_depth, m_branching);
-//	printf("[VocabTree::build]   and restarts %d\n", m_iterations);
+	printf("[VocabTree::build] Building tree from %d features\n", (int) size);
+	printf("[VocabTree::build]   with depth %d, branching factor %d\n", m_depth, m_branching);
+	printf("[VocabTree::build]   and restarts %d\n", m_iterations);
 
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
 	computeClustering(m_root, indices, (int) size, 0);
 
-//	printf("[VocabTree::BuildRecurse] Finished clustering\n");
+	printf("[VocabTree::BuildRecurse] Finished clustering\n");
 
 }
 
@@ -254,7 +254,7 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		return;
 	}
 
-//	printf("[VocabTree::BuildRecurse] (level %d): Running k-means (%d features)\n", level, indices_length);
+	printf("[VocabTree::BuildRecurse] (level %d): Running k-means (%d features)\n", level, indices_length);
 
 	int* centers_idx = new int[m_branching];
 	int centers_length;
