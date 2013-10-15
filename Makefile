@@ -11,7 +11,7 @@ default:
 # Make program
 	cd FeatureExtract; $(MAKE)
 	cd VocabLearn; $(MAKE)
-#	cd VocabBuildDB; $(MAKE)
+	cd VocabBuildDB; $(MAKE)
 #	cd VocabMatch; $(MAKE)
 
 clean:
@@ -23,5 +23,5 @@ clean:
 # Clean program
 	cd FeatureExtract; $(MAKE) clean
 	cd VocabLearn; $(MAKE) clean
-#	cd VocabBuildDB; $(MAKE) clean
+	cd VocabBuildDB; $(MAKE) clean
 #	cd VocabMatch; $(MAKE) clean

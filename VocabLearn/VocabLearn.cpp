@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
-#include <iostream>
 #include <fstream>
 #include <ctime>
 #include <sys/stat.h>
@@ -153,19 +152,18 @@ int main(int argc, char **argv) {
 	int restarts = atoi(argv[4]);
 	const char *tree_out = argv[5];
 
-	boost::cmatch what;
-	boost::regex expression("([a-z]+)(.)(yaml|xml)(.)gz");
+	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
 	if (boost::regex_match(std::string(tree_out), expression) == false) {
-		fprintf(stderr, "Output tree file must be composed only by "
-				"letters and have the extension .yaml.gz or .xml.gz");
+		fprintf(stderr,
+				"Output tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
-	printf("-- Building tree with depth: %d, branching factor: %d, "
-			"and restarts: %d\n", depth, branchFactor, restarts);
+//	printf("-- Building tree with depth: %d, branching factor: %d, "
+//			"and restarts: %d\n", depth, branchFactor, restarts);
 
-	// Step 1: read list of key files that shall be used to build the tree
+// Step 1: read list of key files that shall be used to build the tree
 	std::vector<std::string> keysFilenames;
 	std::ifstream keysList(list_in, std::fstream::in);
 
@@ -251,7 +249,7 @@ int main(int argc, char **argv) {
 	cvflann::VocabTree tree(mergedDescriptors, params);
 
 	printf(
-			"-- Creating vocabulary tree using [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers init algorithm [%s]\n",
+			"-- Building vocabulary tree from [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers initialization algorithm [%s]\n",
 			mergedDescriptors.rows, params["branching"].cast<int>(),
 			params["iterations"].cast<int>(), params["depth"].cast<int>(),
 			params["centers_init"].cast<cvflann::flann_centers_init_t>()

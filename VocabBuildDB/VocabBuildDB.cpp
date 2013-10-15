@@ -5,13 +5,29 @@
  *      Author: andresf
  */
 
+#include <fstream>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string>
+#include <vector>
+#include <sys/stat.h>
+
+#include <boost/regex.hpp>
+
+#include <opencv2/core/core.hpp>
+
+#include <VocabTree.h>
+
+#include <FileUtils.hpp>
+
+double mytime;
 
 int main(int argc, char **argv) {
 
 	if (argc < 4 || argc > 7) {
-		printf("Usage: %s <in.list> <in.tree> <out.tree> [use_tfidf:1] "
-				"[normalize:1] [start_id:0] [distance_type:1]\n", argv[0]);
+		printf("\nUsage:\n"
+				"\t%s <in.list> <in.tree> <out.tree> [use_tfidf:1]"
+				" [normalize:1] [distance_type:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -30,59 +46,127 @@ int main(int argc, char **argv) {
 		normalize = atoi(argv[5]);
 	}
 
-//    if (argc >= 7)
-//	distance_type = (DistanceType) atoi(argv[7]);
-//
-//	switch (distance_type) {
-//	case DistanceDot:
-//		printf("[VocabMatch] Using distance Dot\n");
-//		break;
-//	case DistanceMin:
-//		printf("[VocabMatch] Using distance Min\n");
-//		break;
-//	default:
-//		printf("[VocabMatch] Using no known distance!\n");
-//		break;
-//	}
+	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
-	cvflann::VocabTree tree;
-	cv::Mat descriptors;
-
-	// Step 2/4: Quantize training data (several image descriptor matrices)
-	std::vector<cv::Mat> images;
-	images.push_back(descriptors);
-	printf("-- Creating vocabulary database with [%lu] images\n",
-			images.size());
-	tree.clearDatabase();
-	printf("   Clearing Inverted Files\n");
-	for (size_t imgIdx = 0; imgIdx < images.size(); imgIdx++) {
-		printf("   Adding image [%lu] to database\n", imgIdx);
-		tree.addImageToDatabase(imgIdx, images[imgIdx]);
+	if (boost::regex_match(std::string(tree_in), expression) == false) {
+		fprintf(stderr,
+				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
+		return EXIT_FAILURE;
 	}
 
-	// Step 3/4: Compute words weights and normalize DB
-	const DBoW2::WeightingType weightingScheme = DBoW2::TF_IDF;
-	printf("   Computing words weights using a [%s] weighting scheme\n",
+	if (boost::regex_match(std::string(tree_out), expression) == false) {
+		fprintf(stderr,
+				"Output tree file must have the extension .yaml.gz or .xml.gz\n");
+		return EXIT_FAILURE;
+	}
+
+	// Step 1/4: read list of key files that shall be used to build the tree
+	std::vector<std::string> keysFilenames;
+	std::ifstream keysList(list_in, std::fstream::in);
+
+	if (keysList.is_open() == false) {
+		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
+		return EXIT_FAILURE;
+	}
+
+	// Loading file names in list into a vector
+	std::string line;
+	while (getline(keysList, line)) {
+		struct stat buffer;
+
+		// Checking if file exist, if not print error and exit
+		if (stat(line.c_str(), &buffer) != 0) {
+			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
+					line.c_str());
+			return EXIT_FAILURE;
+		}
+
+		// Checking if file extension to be compressed yaml or xml
+		if (boost::regex_match(line, expression) == false) {
+			fprintf(stderr,
+					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
+					line.c_str());
+			return EXIT_FAILURE;
+		}
+
+		keysFilenames.push_back(line);
+	}
+	// Close file
+	keysList.close();
+
+	printf("-- Building DB using [%lu] images\n", keysFilenames.size());
+
+	cvflann::VocabTree tree;
+
+	printf("-- Reading tree from [%s]\n", tree_in);
+
+	mytime = cv::getTickCount();
+	tree.load(std::string(tree_in));
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
+			tree.size());
+
+	// Step 2/4: Quantize training data (several image descriptor matrices)
+	printf("-- Creating vocabulary database with [%lu] images\n",
+			keysFilenames.size());
+	tree.clearDatabase();
+	printf("   Clearing Inverted Files\n");
+
+	std::vector<cv::KeyPoint> imgKeypoints;
+	cv::Mat imgDescriptors;
+	uint imgIdx = 0;
+
+	for (std::string keyFileName : keysFilenames) {
+		// Initialize keypoints and descriptors
+		imgKeypoints.clear();
+		imgDescriptors = cv::Mat();
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+		printf("   Adding image [%u] to database\n", imgIdx);
+		tree.addImageToDatabase(imgIdx, imgDescriptors);
+		imgIdx++;
+	}
+
+	CV_Assert(keysFilenames.size() == imgIdx);
+
+	printf("   Added [%u] images\n", imgIdx);
+
+// Step 3/4: Compute words weights and normalize DB
+
+	DBoW2::WeightingType weightingScheme = DBoW2::BINARY;
+	if (use_tfidf) {
+		weightingScheme = DBoW2::TF_IDF;
+	}
+
+	printf("-- Computing words weights using a [%s] weighting scheme\n",
 			weightingScheme == DBoW2::TF_IDF ? "TF-IDF" :
 			weightingScheme == DBoW2::TF ? "TF" :
 			weightingScheme == DBoW2::IDF ? "IDF" :
 			weightingScheme == DBoW2::BINARY ? "BINARY" : "UNKNOWN");
-	tree.computeWordsWeights(descriptors.rows, weightingScheme);
-	printf("   Applying words weights to the DB BoW vectors counts\n");
+
+	tree.computeWordsWeights(keysFilenames.size(), weightingScheme);
+
+	printf("-- Applying words weights to the DB BoW vectors counts\n");
 	tree.createDatabase();
 
 	int normType = cv::NORM_L1;
 
-	printf("   Normalizing DB BoW vectors using [%s]\n",
-			normType == cv::NORM_L1 ? "L1-norm" :
-			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-	tree.normalizeDatabase(1, normType);
+	if (normalize == true) {
+		printf("-- Normalizing DB BoW vectors using [%s]\n",
+				normType == cv::NORM_L1 ? "L1-norm" :
+				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+		tree.normalizeDatabase(keysFilenames.size(), normType);
+	}
 
-	std::string dbOut = "db.yaml.gz";
-	printf("   Saving DB to [%s]\n", dbOut.c_str());
-	tree.save(dbOut);
+	printf("-- Saving tree with inverted files and weights to [%s]\n",
+			tree_out);
 
+	mytime = cv::getTickCount();
+	tree.save(tree_out);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
 
+	printf("   Tree saved in [%lf] ms\n", mytime);
 
 	return EXIT_SUCCESS;
 }

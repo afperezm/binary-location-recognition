@@ -12,8 +12,7 @@ namespace cvflann {
 
 // --------------------------------------------------------------------------
 
-VocabTree::VocabTree(const cv::Mat& inputData = cv::Mat(),
-		const IndexParams& params) :
+VocabTree::VocabTree(const cv::Mat& inputData, const IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(
 				0) {
 
@@ -61,8 +60,8 @@ size_t VocabTree::size() {
 void VocabTree::build() {
 
 	if (m_branching < 2) {
-		throw std::runtime_error(
-				"[VocabTree::build] Error, branching factor must be at least 2");
+		throw std::runtime_error("[VocabTree::build] Error, branching factor"
+				" must be at least 2");
 	}
 
 	// Number of features in the dataset
@@ -74,15 +73,19 @@ void VocabTree::build() {
 		indices[i] = int(i);
 	}
 
-	printf("[VocabTree::build] Building tree from %d features\n", (int) size);
-	printf("[VocabTree::build]   with depth %d, branching factor %d\n", m_depth, m_branching);
-	printf("[VocabTree::build]   and restarts %d\n", m_iterations);
+//	printf("[VocabTree::build] Building tree from [%d] features"
+//			" with depth [%d], branching factor [%d]"
+//			" and restarts [%d]\n", (int) size, m_depth, m_branching,
+//			m_iterations);
 
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
+
+	printf("[VocabTree::build] Started clustering\n");
+
 	computeClustering(m_root, indices, (int) size, 0);
 
-	printf("[VocabTree::BuildRecurse] Finished clustering\n");
+	printf("[VocabTree::build] Finished clustering\n");
 
 }
 
@@ -104,11 +107,9 @@ void VocabTree::save(const std::string& filename) const {
 	fs << "vectorLength" << (int) m_veclen;
 	fs << "memoryCounter" << m_memoryCounter;
 
-	fs << "nodes" << "{";
+	fs << "root";
 
 	save_tree(fs, m_root);
-
-	fs << "}";
 
 	fs.release();
 }
@@ -118,23 +119,11 @@ void VocabTree::save(const std::string& filename) const {
 void VocabTree::save_tree(cv::FileStorage& fs, VocabTreeNodePtr node) const {
 
 	// WriteNode
-	fs << "node" << "{";
+	fs << "{";
 	fs << "center" << cv::Mat(1, m_veclen, m_dataset.type(), node->center);
 	fs << "weight" << node->weight;
 	fs << "wordId" << node->word_id;
 
-	if (node->children != NULL) {
-		// Node has no children then it's a leaf node
-	} else {
-		// Node has children then it's an interior node
-	}
-
-	fs << "imageList" << "[";
-	for (ImageCount img : node->image_list) {
-		fs << "{:" << "m_index" << (int) img.m_index << "m_count" << img.m_count
-				<< "}";
-	}
-	fs << "]";
 	fs << "children" << "[";
 	if (node->children != NULL) {
 		// WriteChildren
@@ -143,6 +132,14 @@ void VocabTree::save_tree(cv::FileStorage& fs, VocabTreeNodePtr node) const {
 		}
 	}
 	fs << "]";
+
+	fs << "imageList" << "[";
+	for (ImageCount img : node->image_list) {
+		fs << "{:" << "m_index" << (int) img.m_index << "m_count" << img.m_count
+				<< "}";
+	}
+	fs << "]";
+
 	fs << "}";
 }
 
@@ -164,7 +161,9 @@ void VocabTree::load(const std::string& filename) {
 	m_memoryCounter = (int) fs["memoryCounter"];
 
 	cv::FileNode root = fs["root"];
+
 	m_root = new VocabTreeNode();
+
 	load_tree(root, m_root);
 
 	fs.release();
@@ -176,21 +175,45 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 
 	cv::Mat center;
 	fs["center"] >> center;
-	node->center = center.data;
+	node->center = new TDescriptor(*center.data);
 	node->weight = (double) fs["weight"];
 	node->word_id = (int) fs["wordId"];
 
 	cv::FileNode children = fs["children"];
 
+	// If children is not an empty node then verify it's a sequence
+	if (children.type() != cv::FileNode::NONE
+			&& children.type() != cv::FileNode::SEQ) {
+		std::stringstream ss;
+		ss << "Error while parsing tree, fetched element"
+				" 'children' should be a sequence";
+		throw std::runtime_error(ss.str());
+	}
+
 	// Verifying that the retrieved children collection has 0 or k elements
-	CV_Assert(
-			children.type() == cv::FileNode::SEQ
-					&& (children.size() == 0
-							|| (int ) children.size() == m_branching));
+	if (children.size() != 0 && (int) children.size() != m_branching) {
+		std::stringstream ss;
+		ss << "Error while parsing tree, fetched element"
+				" 'children' must have [0] or [" << m_branching << "] elements";
+		throw std::runtime_error(ss.str());
+	}
 
 	if (children.size() == 0) {
 		// Node has no children then it's a leaf node
 		cv::FileNode images = fs["imageList"];
+
+		// Verifying that children is a sequence
+		if (children.type() != cv::FileNode::NONE
+				&& images.type() != cv::FileNode::SEQ) {
+			std::stringstream ss;
+			ss << "Error while parsing tree, fetched element"
+					" 'images' should be a sequence";
+			throw std::runtime_error(ss.str());
+		}
+
+		node->children = NULL;
+		node->word_id = m_words.size();
+		node->weight = 1.0;
 		node->image_list.clear();
 		for (cv::FileNodeIterator it = images.begin(); it != images.end();
 				++it) {
@@ -198,6 +221,9 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 			ImageCount* img = new ImageCount(index, (float) (*it)["m_count"]);
 			node->image_list.push_back(*img);
 		}
+
+		m_words.push_back(node);
+
 	} else {
 		// Node has children then it's an interior node
 		node->children = new VocabTreeNodePtr[m_branching];
@@ -254,7 +280,9 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 		return;
 	}
 
-	printf("[VocabTree::BuildRecurse] (level %d): Running k-means (%d features)\n", level, indices_length);
+	printf(
+			"[VocabTree::computeClustering] (level %d): Running k-means (%d features)\n",
+			level, indices_length);
 
 	int* centers_idx = new int[m_branching];
 	int centers_length;

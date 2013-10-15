@@ -152,7 +152,7 @@ public:
 	 *
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 */
-	VocabTree(const cv::Mat& inputData, const IndexParams& params =
+	VocabTree(const cv::Mat& inputData = cv::Mat(), const IndexParams& params =
 			VocabTreeParams());
 
 	/**
