@@ -40,10 +40,15 @@
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
 #include <opencv2/flann/flann.hpp>
-#include <ScoringObject.h>
 #include <CentersChooser.h>
 
 namespace cvflann {
+
+enum WeightingType
+{
+  TF_IDF,
+  BINARY
+};
 
 struct VocabTreeParams: public IndexParams {
 	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 11,
@@ -194,30 +199,6 @@ public:
 	 */
 	void load(const std::string& filename);
 
-//	/**
-//	 * Returns the score of two vectors.
-//	 *
-//	 * @param v1 - First BoW vector
-//	 * @param v2 - Second BoW vector
-//	 * @param scoring - Scoring method
-//	 *
-//	 * @return the score between the two vectors
-//	 * @note v1 and v2 must be already sorted and normalized if necessary
-//	 */
-//	double score(const DBoW2::BowVector &v1, const DBoW2::BowVector &v2,
-//			DBoW2::ScoringType scoring = DBoW2::L1_NORM) const;
-
-//	/**
-//	 * Sets the weight of the nodes of the tree according to the training data set.
-//	 * Before calling this function, the nodes and the words must have been already
-//	 * created (by calling computeClustering)
-//	 *
-//	 * @param training_data - Vector of matrices with training data
-//	 * @param weighting - Weighting method
-//	 */
-//	void setNodeWeights(const std::vector<cv::Mat>& training_data,
-//			DBoW2::WeightingType weighting = DBoW2::TF_IDF);
-
 	/**
 	 * Pushes DB image features down the tree until a leaf node,
 	 * once reached updates the inverted file.
@@ -234,7 +215,7 @@ public:
 	 * @param NWords
 	 * @param weighting - The weighting scheme to apply
 	 */
-	void computeWordsWeights(DBoW2::WeightingType weighting,
+	void computeWordsWeights(WeightingType weighting,
 			const uint numDbWords = 0);
 
 	/**

@@ -537,14 +537,14 @@ void VocabTree::quantize(const cv::Mat& feature, uint &word_id,
 
 // --------------------------------------------------------------------------
 
-void VocabTree::computeWordsWeights(DBoW2::WeightingType weighting,
+void VocabTree::computeWordsWeights(WeightingType weighting,
 		const uint numDbWords) {
-	if (weighting == DBoW2::TF || weighting == DBoW2::BINARY) {
+	if (weighting == cvflann::BINARY) {
 		// Setting constant weight equal to 1
 		for (VocabTreeNodePtr& word : m_words) {
 			word->weight = 1.0;
 		}
-	} else if (weighting == DBoW2::IDF || weighting == DBoW2::TF_IDF) {
+	} else if (weighting == cvflann::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (VocabTreeNodePtr& word : m_words) {
@@ -558,6 +558,8 @@ void VocabTree::computeWordsWeights(DBoW2::WeightingType weighting,
 				word->weight = 0.0;
 			}
 		}
+	} else {
+		throw std::runtime_error("[VocabTree::computeWordsWeights] Unknown weighting type");
 	}
 }
 
@@ -590,15 +592,6 @@ bool VocabTree::empty() const {
 }
 
 // --------------------------------------------------------------------------
-
-//double VocabTree::score(const DBoW2::BowVector &v1, const DBoW2::BowVector &v2,
-//		DBoW2::ScoringType m_scoring) const {
-//
-//	cv::Ptr<DBoW2::GeneralScoring> m_scoring_object = createScoringObject(
-//			m_scoring);
-//
-//	return m_scoring_object->score(v1, v2);
-//}
 
 void VocabTree::addImageToDatabase(uint imgIdx, cv::Mat imgFeatures) {
 

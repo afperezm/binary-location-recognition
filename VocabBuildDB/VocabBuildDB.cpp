@@ -133,16 +133,14 @@ int main(int argc, char **argv) {
 
 // Step 3/4: Compute words weights and normalize DB
 
-	DBoW2::WeightingType weightingScheme = DBoW2::BINARY;
+	cvflann::WeightingType weightingScheme = cvflann::BINARY;
 	if (use_tfidf) {
-		weightingScheme = DBoW2::TF_IDF;
+		weightingScheme = cvflann::TF_IDF;
 	}
 
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
-			weightingScheme == DBoW2::TF_IDF ? "TF-IDF" :
-			weightingScheme == DBoW2::TF ? "TF" :
-			weightingScheme == DBoW2::IDF ? "IDF" :
-			weightingScheme == DBoW2::BINARY ? "BINARY" : "UNKNOWN");
+			weightingScheme == cvflann::TF_IDF ? "TF-IDF" :
+			weightingScheme == cvflann::BINARY ? "BINARY" : "UNKNOWN");
 
 	tree.computeWordsWeights(weightingScheme, keysFilenames.size());
 
