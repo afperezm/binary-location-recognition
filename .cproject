@@ -26,7 +26,6 @@
 								<option id="gnu.cpp.compiler.option.include.paths.512675721" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/include"/>
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/include/opencv"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MediaEval-PlacingTask/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DBoW2}&quot;"/>
@@ -40,7 +39,6 @@
 								<option id="gnu.c.compiler.option.include.paths.671375506" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/include"/>
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/include/opencv"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MediaEval-PlacingTask/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DBoW2/DBoW2}&quot;"/>
