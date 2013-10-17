@@ -3,6 +3,7 @@ main
 FeatureExtract/FeatureExtract
 VocabLearn/VocabLearn
 VocabBuildDB/VocabBuildDB
+VocabMatch/VocabMatch
 .settings/*
 
 # Compiled Object files

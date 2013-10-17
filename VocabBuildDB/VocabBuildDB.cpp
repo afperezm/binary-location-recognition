@@ -24,10 +24,10 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 4 || argc > 7) {
+	if (argc < 4 || argc > 6) {
 		printf("\nUsage:\n"
-				"\t%s <in.list> <in.tree> <out.tree> [use_tfidf:1]"
-				" [normalize:1] [distance_type:1]\n\n", argv[0]);
+				"\t%s <in.list> <in.tree> <out.tree>"
+				" [use_tfidf:1] [normalize:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
 			weightingScheme == DBoW2::IDF ? "IDF" :
 			weightingScheme == DBoW2::BINARY ? "BINARY" : "UNKNOWN");
 
-	tree.computeWordsWeights(keysFilenames.size(), weightingScheme);
+	tree.computeWordsWeights(weightingScheme, keysFilenames.size());
 
 	printf("-- Applying words weights to the DB BoW vectors counts\n");
 	tree.createDatabase();

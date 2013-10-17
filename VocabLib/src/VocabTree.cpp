@@ -181,28 +181,11 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 
 	cv::FileNode children = fs["children"];
 
-	// If children is not an empty node then verify it's a sequence
-	if (children.type() != cv::FileNode::NONE
-			&& children.type() != cv::FileNode::SEQ) {
-		std::stringstream ss;
-		ss << "Error while parsing tree, fetched element"
-				" 'children' should be a sequence";
-		throw std::runtime_error(ss.str());
-	}
-
-	// Verifying that the retrieved children collection has 0 or k elements
-	if (children.size() != 0 && (int) children.size() != m_branching) {
-		std::stringstream ss;
-		ss << "Error while parsing tree, fetched element"
-				" 'children' must have [0] or [" << m_branching << "] elements";
-		throw std::runtime_error(ss.str());
-	}
-
 	if (children.size() == 0) {
 		// Node has no children then it's a leaf node
 		cv::FileNode images = fs["imageList"];
 
-		// Verifying that children is a sequence
+		// Verifying that imageList is a sequence
 		if (children.type() != cv::FileNode::NONE
 				&& images.type() != cv::FileNode::SEQ) {
 			std::stringstream ss;
@@ -212,8 +195,6 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 		}
 
 		node->children = NULL;
-		node->word_id = m_words.size();
-		node->weight = 1.0;
 		node->image_list.clear();
 		for (cv::FileNodeIterator it = images.begin(); it != images.end();
 				++it) {
@@ -226,14 +207,32 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 
 	} else {
 		// Node has children then it's an interior node
+
+		// Verifying that children is a sequence
+		if (children.type() != cv::FileNode::NONE
+				&& children.type() != cv::FileNode::SEQ) {
+			std::stringstream ss;
+			ss << "Error while parsing tree, fetched element"
+					" 'children' should be a sequence";
+			throw std::runtime_error(ss.str());
+		}
+
+		// Verifying that children has 0 or k elements
+		if (children.size() != 0 && (int) children.size() != m_branching) {
+			std::stringstream ss;
+			ss << "Error while parsing tree, fetched element"
+					" 'children' must have [0] or [" << m_branching
+					<< "] elements";
+			throw std::runtime_error(ss.str());
+		}
+
 		node->children = new VocabTreeNodePtr[m_branching];
 		cv::FileNodeIterator it = children.begin();
 
-		for (size_t c = 0; (int) c < m_branching; ++c) {
+		for (size_t c = 0; (int) c < m_branching; ++c, it++) {
 			node->children[c] = new VocabTreeNode();
 			cv::FileNode child = *it;
 			load_tree(child, node->children[c]);
-			it++;
 		}
 	}
 
@@ -538,18 +537,21 @@ void VocabTree::quantize(const cv::Mat& feature, uint &word_id,
 
 // --------------------------------------------------------------------------
 
-void VocabTree::computeWordsWeights(const uint numDbWords,
-		DBoW2::WeightingType weighting) {
+void VocabTree::computeWordsWeights(DBoW2::WeightingType weighting,
+		const uint numDbWords) {
 	if (weighting == DBoW2::TF || weighting == DBoW2::BINARY) {
 		// Setting constant weight equal to 1
 		for (VocabTreeNodePtr& word : m_words) {
-			word->weight = 1;
+			word->weight = 1.0;
 		}
 	} else if (weighting == DBoW2::IDF || weighting == DBoW2::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (VocabTreeNodePtr& word : m_words) {
-			int len = (int) word->image_list.size();
+			int len = word->image_list.size();
+			// TODO Check that descriptors are being correctly quantized
+			// because having that a descriptor from all DB images is quantized
+			// to the same word is quite unlikely
 			if (len > 0) {
 				word->weight = log((double) numDbWords / (double) len);
 			} else {
@@ -625,7 +627,7 @@ void VocabTree::addImageToDatabase(uint imgIdx, cv::Mat imgFeatures) {
 
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
 		uint wordIdx;
-		double wordWeight;
+		double wordWeight; // not needed
 		// w is the IDF value if TF_IDF, 1 if TF
 		// w is the Inverse Document Frequency if IDF, 1 if BINARY
 		quantize(imgFeatures.row(i), wordIdx, wordWeight);
@@ -640,20 +642,19 @@ void VocabTree::addFeatureToInvertedFile(uint wordIdx, uint imgIdx) {
 
 	int n = (int) m_words[wordIdx]->image_list.size();
 
-	// First time a new image must be pushed
+	// Images list is empty: push a new image
 	if (n == 0) {
-		m_words[wordIdx]->image_list.push_back(
-				ImageCount(imgIdx, (float) m_words[wordIdx]->weight));
+		m_words[wordIdx]->image_list.push_back(ImageCount(imgIdx, (float) 1.0));
 	} else {
 		// Images list is not empty: check if the id of the last added image
 		// is the same than that of the image being added
 		if (m_words[wordIdx]->image_list[n - 1].m_index == imgIdx) {
 			// Images are equal then the counter is increased by one
-			m_words[wordIdx]->image_list[n - 1].m_count += 1;
+			m_words[wordIdx]->image_list[n - 1].m_count += (float) 1.0;
 		} else {
 			// Images are different then push a new image
 			m_words[wordIdx]->image_list.push_back(
-					ImageCount(imgIdx, (float) m_words[wordIdx]->weight));
+					ImageCount(imgIdx, (float) 1.0));
 		}
 	}
 
@@ -790,11 +791,37 @@ void VocabTree::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 		for (ImageCount& image : word->image_list) {
 			float di = image.m_count;
-//			printf("Word id: %d, image id: %d qi=%f di=%f\n", word->word_id, image.m_index, qi, di);
+//			printf("Word id=[%d] weight=[%f] image id=[%d] qi=[%f] di=[%f]\n",
+//					word->word_id, word->weight, image.m_index, qi, di);
 
 			// Normalized BoW vector counts hence (0, 1]
-			CV_Assert(qi > 0.0 && qi <= 1.0);
-			CV_Assert(di > 0.0 && di <= 1.0);
+//			printf("qi=[%f] is equal to zero? [%s]\n", qi,
+//					qi == 0.0 ? "true" : "false");
+//			printf("di=[%f] is equal to zero? [%s]\n", di,
+//					di == 0.0 ? "true" : "false");
+
+			if (qi <= 0.0 || qi > 1.0) {
+				// qi cannot be sure because we are jumping to the next iteration
+				// i.e. computing score only for non zero qi values
+				// qi cannot be more than 1 because it is supposed to be normalized
+				std::stringstream ss;
+				ss
+						<< "Error while scoring query, query BoW vector component qi=["
+						<< qi << "] is not in the range (0,1]";
+				throw std::runtime_error(ss.str());
+			}
+
+			if ((word->weight != 0.0 && di == 0.0) || di < 0.0 || di > 1.0) {
+				// di cannot be zero if the weight is nonzero because the inverted files
+				// contain only counts for images with a descriptor which was quantized
+				// into that word
+				// di cannot more than 1 because it is supposed to be normalized
+
+				std::stringstream ss;
+				ss << "Error while scoring query, DB BoW vector component di=["
+						<< di << "] is not in the range (0,1]";
+				throw std::runtime_error(ss.str());
+			}
 
 			if (normType == cv::NORM_L1) {
 //				printf("img=%u qi=%f di=%f\n", image.m_index, qi, di);

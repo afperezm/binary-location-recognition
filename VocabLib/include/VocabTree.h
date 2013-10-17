@@ -234,8 +234,8 @@ public:
 	 * @param NWords
 	 * @param weighting - The weighting scheme to apply
 	 */
-	void computeWordsWeights(const uint numDbWords,
-			DBoW2::WeightingType weighting = DBoW2::TF_IDF);
+	void computeWordsWeights(DBoW2::WeightingType weighting,
+			const uint numDbWords = 0);
 
 	/**
 	 * Computes the DB BoW vectors by applying the words weights

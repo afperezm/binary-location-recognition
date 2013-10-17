@@ -180,7 +180,8 @@ int main(int argc, char **argv) {
 		if (stat(line.c_str(), &buffer) == 0) {
 			keysFilenames.push_back(line);
 		} else {
-			fprintf(stderr, "Found invalid keypoints file [%s]", line.c_str());
+			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
+					line.c_str());
 			return EXIT_FAILURE;
 		}
 	}

@@ -12,7 +12,7 @@ default:
 	cd FeatureExtract; $(MAKE)
 	cd VocabLearn; $(MAKE)
 	cd VocabBuildDB; $(MAKE)
-#	cd VocabMatch; $(MAKE)
+	cd VocabMatch; $(MAKE)
 
 clean:
 # Clean libraries
@@ -24,4 +24,4 @@ clean:
 	cd FeatureExtract; $(MAKE) clean
 	cd VocabLearn; $(MAKE) clean
 	cd VocabBuildDB; $(MAKE) clean
-#	cd VocabMatch; $(MAKE) clean
+	cd VocabMatch; $(MAKE) clean
