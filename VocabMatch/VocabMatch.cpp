@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 
 #include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <opencv2/core/core.hpp>
 
@@ -22,7 +23,8 @@
 
 double mytime;
 
-int BasifyFilename(const char *filename, char *base);
+//int BasifyFilename(const char *filename, char *base);
+void BasifyFilename(const std::string& filename, std::string& base);
 
 void PrintHTMLHeader(FILE *f, int num_nns);
 
@@ -54,6 +56,8 @@ int main(int argc, char **argv) {
 
 	if (argc >= 8)
 		candidates_out = argv[7];
+
+	// Verifying input parameters
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
@@ -91,6 +95,7 @@ int main(int argc, char **argv) {
 	std::string line;
 	while (getline(keysList, line)) {
 
+		// Verifying line format
 		if (boost::regex_match(line, boost::regex("^(.+)\\s(.+)$")) == false) {
 			fprintf(stderr,
 					"Error while parsing DB list file [%s], line [%s] should be: <key.file> <landmark.id>\n",
@@ -98,19 +103,19 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
+		// Extracting filename and landmark from line
 		char filename[256];
 		int landmark;
 		sscanf(line.c_str(), "%s %d", filename, &landmark);
 
+		// Checking that file exists, if not print error and exit
 		struct stat buffer;
-
-		// Checking if file exist, if not print error and exit
 		if (stat(filename, &buffer) != 0) {
 			fprintf(stderr, "Keypoints file [%s] doesn't exist\n", filename);
 			return EXIT_FAILURE;
 		}
 
-		// Checking that line refers to a compressed yaml or xml file
+		// Checking that filename refers to a compressed yaml or xml file
 		if (boost::regex_match(std::string(filename), expression) == false) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
@@ -137,9 +142,8 @@ int main(int argc, char **argv) {
 	// Loading file names in list into a vector
 	while (getline(keysList, line)) {
 
+		// Checking that file exists, if not print error and exit
 		struct stat buffer;
-
-		// Checking if file exist, if not print error and exit
 		if (stat(line.c_str(), &buffer) != 0) {
 			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
 					line.c_str());
@@ -160,7 +164,6 @@ int main(int argc, char **argv) {
 	keysList.close();
 
 	// Step 4/4: score each query keyfile
-
 	int normType = cv::NORM_L1;
 
 	printf("-- Scoring [%lu] query images against [%lu] DB images using [%s]\n",
@@ -172,10 +175,7 @@ int main(int argc, char **argv) {
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
 
-	std::vector<int>::iterator it = std::max_element(db_landmarks.begin(),
-			db_landmarks.end());
-
-	int max_ld = *it;
+	int max_ld = *std::max_element(db_landmarks.begin(), db_landmarks.end());
 
 	FILE *f_match = fopen(matches_out, "w");
 	if (f_match == NULL) {
@@ -184,8 +184,6 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-//	std::ofstream candidates(candidates_out, std::fstream::out);
-//	if (candidates.is_open() == false) {
 	FILE *f_candidates = fopen(candidates_out, "w");
 	if (f_candidates == NULL) {
 		fprintf(stderr, "Error opening file [%s] for writing\n",
@@ -210,7 +208,7 @@ int main(int argc, char **argv) {
 		FileUtils::loadFeatures(query_filenames[i], imgKeypoints,
 				imgDescriptors);
 
-		// Score query bow vector against db images bow vectors
+		// Score query bow vector against DB images bow vectors
 		mytime = cv::getTickCount();
 		try {
 			tree.scoreQuery(imgDescriptors, scores, db_filenames.size(),
@@ -223,7 +221,7 @@ int main(int argc, char **argv) {
 				* 1000;
 
 		// Print to standard output the matching scores between
-		// the query bow vector and the db images bow vectors
+		// the query bow vector and the DB images bow vectors
 		for (size_t j = 0; (int) j < scores.cols; j++) {
 			printf(
 					"   Match score between [%lu] query image and [%lu] DB image: %f\n",
@@ -232,14 +230,30 @@ int main(int argc, char **argv) {
 
 		// Obtain indices of ordered scores
 		cv::Mat perm;
-		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_ASCENDING);
+		// Note: recall that the index of the images in the inverted file corresponds
+		// to the zero-based line number in the file used to build the DB.
+		// Hence scores matrix and db_landmarks and db_filenames vectors.
+		// are equally ordered.
+		// Also the images in list_db and list_db_ld must be equally ordered,
+		// that implies same number of elements.
+		//
+		// list_db      list_db_ld
+		//   img1  --->  img1 ld1
+		//   img2  --->  img2 ld1
+		//   img3  --->  img3 ld1
+		//   img4  --->  img4 ld2
+		//   img5  --->  img5 ld2
+		//   img6  --->  img6 ld2
+		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_DESCENDING);
 
 		int top = MIN (num_nbrs, db_filenames.size());
 
-		// Sum one to the landmark index because its zero-based
+		// Initialize votes vector
+		// Note: size is maximum landmark id plus one because landmark index its zero-based
 		std::vector<int> votes(max_ld + 1, 0);
 
 		// Accumulating landmark votes for the top scored images
+		// Note: recall that images might refer to the same landmark
 		for (size_t i = 0; (int) i < top; i++) {
 			votes[db_landmarks[perm.at<int>(0, i)]]++;
 		}
@@ -263,7 +277,7 @@ int main(int argc, char **argv) {
 		fprintf(f_candidates, "\n");
 		fflush(f_candidates);
 
-		// Print to a file the matching information
+		// Print to a file the max voted landmark information
 		fprintf(f_match, "%lu %d %d\n", i, max_landmark, max_votes);
 		fflush(f_match);
 		fflush(stdout);
@@ -273,7 +287,6 @@ int main(int argc, char **argv) {
 				db_filenames);
 	}
 
-//	candidates.close();
 	fclose(f_candidates);
 	fclose(f_match);
 	PrintHTMLFooter(f_html);
@@ -300,29 +313,29 @@ void PrintHTMLHeader(FILE *f, int num_nns) {
 
 void PrintHTMLRow(FILE *f, const std::string &query, cv::Mat& scores,
 		cv::Mat& perm, int num_nns, const std::vector<std::string> &db_images) {
-	char q_base[512], q_thumb[512];
-	BasifyFilename(query.c_str(), q_base);
-	sprintf(q_thumb, "%s.thumb.jpg", q_base);
+
+	std::string q_thumb;
+
+	BasifyFilename(query, q_thumb);
 
 	fprintf(f,
 			"<tr align=center>\n<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-			q_thumb, q_thumb);
+			q_thumb.c_str(), q_thumb.c_str());
 
 	for (int i = 0; i < num_nns; i++) {
-		char d_base[512], d_thumb[512];
-		BasifyFilename(db_images[perm.at<int>(0, i)].c_str(), d_base);
-		sprintf(d_thumb, "%s.thumb.jpg", d_base);
+		std::string d_thumb;
+		BasifyFilename(db_images[perm.at<int>(0, i)], d_thumb);
 
 		fprintf(f,
 				"<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-				d_thumb, d_thumb);
+				d_thumb.c_str(), d_thumb.c_str());
 	}
 
 	fprintf(f, "</tr>\n<tr align=right>\n");
 
 	fprintf(f, "<td></td>\n");
 	for (int i = 0; i < num_nns; i++)
-		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, i));
+		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, perm.at<int>(0, i)));
 
 	fprintf(f, "</tr>\n");
 }
@@ -335,9 +348,21 @@ void PrintHTMLFooter(FILE *f) {
 			"</html>\n");
 }
 
-int BasifyFilename(const char *filename, char *base) {
-	strcpy(base, filename);
-	base[strlen(base) - 4] = 0;
+//int BasifyFilename(const char *filename, char *base)
+void BasifyFilename(const std::string& key_fname, std::string& img_fname) {
 
-	return 0;
+	// Extract key file name from query key file path
+	std::vector<std::string> tokens;
+	boost::split(tokens, key_fname, boost::is_any_of("//"));
+	CV_Assert(tokens.size() > 0);
+
+	// Get query key file name and query images path
+	std::string query_fname = tokens.back();
+	tokens.pop_back();
+	img_fname = boost::algorithm::join(tokens, "/");
+	tokens.clear();
+	boost::split(tokens, query_fname, boost::is_any_of("\\."));
+	CV_Assert(tokens.size() == 4);
+
+	img_fname += std::string("/") + tokens[0] + std::string(".thumb.jpg");
 }
