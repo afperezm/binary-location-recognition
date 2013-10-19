@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 
 #include <boost/regex.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <opencv2/core/core.hpp>
 
@@ -23,8 +22,7 @@
 
 double mytime;
 
-//int BasifyFilename(const char *filename, char *base);
-void BasifyFilename(const std::string& filename, std::string& base);
+int BasifyFilename(const char *filename, char *base);
 
 void PrintHTMLHeader(FILE *f, int num_nns);
 
@@ -313,29 +311,29 @@ void PrintHTMLHeader(FILE *f, int num_nns) {
 
 void PrintHTMLRow(FILE *f, const std::string &query, cv::Mat& scores,
 		cv::Mat& perm, int num_nns, const std::vector<std::string> &db_images) {
-
-	std::string q_thumb;
-
-	BasifyFilename(query, q_thumb);
+	char q_base[512], q_thumb[512];
+	BasifyFilename(query.c_str(), q_base);
+	sprintf(q_thumb, "%s.thumb.jpg", q_base);
 
 	fprintf(f,
 			"<tr align=center>\n<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-			q_thumb.c_str(), q_thumb.c_str());
+			q_thumb, q_thumb);
 
 	for (int i = 0; i < num_nns; i++) {
-		std::string d_thumb;
-		BasifyFilename(db_images[perm.at<int>(0, i)], d_thumb);
+		char d_base[512], d_thumb[512];
+		BasifyFilename(db_images[perm.at<int>(0, i)].c_str(), d_base);
+		sprintf(d_thumb, "%s.thumb.jpg", d_base);
 
 		fprintf(f,
 				"<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-				d_thumb.c_str(), d_thumb.c_str());
+				d_thumb, d_thumb);
 	}
 
 	fprintf(f, "</tr>\n<tr align=right>\n");
 
 	fprintf(f, "<td></td>\n");
 	for (int i = 0; i < num_nns; i++)
-		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, perm.at<int>(0, i)));
+		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, i));
 
 	fprintf(f, "</tr>\n");
 }
@@ -348,21 +346,9 @@ void PrintHTMLFooter(FILE *f) {
 			"</html>\n");
 }
 
-//int BasifyFilename(const char *filename, char *base)
-void BasifyFilename(const std::string& key_fname, std::string& img_fname) {
+int BasifyFilename(const char *filename, char *base) {
+	strcpy(base, filename);
+	base[strlen(base) - 8] = 0;
 
-	// Extract key file name from query key file path
-	std::vector<std::string> tokens;
-	boost::split(tokens, key_fname, boost::is_any_of("//"));
-	CV_Assert(tokens.size() > 0);
-
-	// Get query key file name and query images path
-	std::string query_fname = tokens.back();
-	tokens.pop_back();
-	img_fname = boost::algorithm::join(tokens, "/");
-	tokens.clear();
-	boost::split(tokens, query_fname, boost::is_any_of("\\."));
-	CV_Assert(tokens.size() == 4);
-
-	img_fname += std::string("/") + tokens[0] + std::string(".thumb.jpg");
+	return 0;
 }
