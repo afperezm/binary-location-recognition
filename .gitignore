@@ -20,5 +20,10 @@ VocabMatch/VocabMatch
 *.la
 *.a
 /test_descriptors
+
+# Executables output files
 *.xml.gz
 *.yaml.gz
+VocabMatch/candidates.txt
+VocabMatch/matches.txt
+VocabMatch/results.html
