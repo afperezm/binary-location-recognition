@@ -72,16 +72,15 @@ int main(int argc, char **argv) {
 	// Loading file names in list into a vector
 	std::string line;
 	while (getline(keysList, line)) {
+		// Checking that file exists, if not print error and exit
 		struct stat buffer;
-
-		// Checking if file exist, if not print error and exit
 		if (stat(line.c_str(), &buffer) != 0) {
 			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
 					line.c_str());
 			return EXIT_FAILURE;
 		}
 
-		// Checking if file extension to be compressed yaml or xml
+		// Checking file extension to be compressed yaml or xml
 		if (boost::regex_match(line, expression) == false) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
