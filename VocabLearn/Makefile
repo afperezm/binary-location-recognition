@@ -1,25 +1,13 @@
-# Makefile for VocabLib
+# Makefile for VocabLearn
 
 CXX = g++
 
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../lib/ -lboost_regex
 
-# OpenCV Extensions
-CXXFLAGS += -I../OpenCVExtensions/include
-LDFLAGS += -lopencv_extensions
-
 # Common
 CXXFLAGS += -I../Common/
 LDFLAGS += -lcommon
-
-# DBrief
-CXXFLAGS += -I../../dbrief_lib
-LDFLAGS += -L../../dbrief_lib/lib -ldbrief
-
-# Agast
-CXXFLAGS += -I../../agast_lib
-LDFLAGS += -L../../agast_lib/lib -lagast
 
 # KMajority
 CXXFLAGS += -I../KMajorityLib/include
@@ -33,9 +21,9 @@ LDFLAGS += -lvocab
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
-LDFLAGS += -Wl,-rpath=../../agast_lib/lib
-LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
-LDFLAGS += -Wl,-rpath=../lib/
+#LDFLAGS += -Wl,-rpath=../../agast_lib/lib
+#LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
+#LDFLAGS += -Wl,-rpath=../lib/
 
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)

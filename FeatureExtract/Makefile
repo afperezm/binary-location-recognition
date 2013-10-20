@@ -25,9 +25,9 @@ LDFLAGS += -L../../agast_lib/lib -lagast
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
-LDFLAGS += -Wl,-rpath=../../agast_lib/lib
-LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
-LDFLAGS += -Wl,-rpath=../lib/
+#LDFLAGS += -Wl,-rpath=../../agast_lib/lib
+#LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
+#LDFLAGS += -Wl,-rpath=../lib/
 
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
