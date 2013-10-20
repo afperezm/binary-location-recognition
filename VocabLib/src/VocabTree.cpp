@@ -175,7 +175,16 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 
 	cv::Mat center;
 	fs["center"] >> center;
-	node->center = new TDescriptor(*center.data);
+	CV_Assert(center.rows == 1);
+	CV_Assert(center.cols == m_veclen);
+
+	// Deep copy
+	node->center = new TDescriptor[m_veclen];
+	m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
+	for (size_t k = 0; k < m_veclen; ++k) {
+		node->center[k] = center.at<TDescriptor>(0, k);
+	}
+
 	node->weight = (double) fs["weight"];
 	node->word_id = (int) fs["wordId"];
 
@@ -455,40 +464,14 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 void VocabTree::transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
 		const int& normType) const {
 
-//	if (queryImgFeatures.type() != CV_8U) {
-//		throw std::runtime_error(
-//				"[VocabTree::scoreQueryFeatures] Features matrix is not binary");
-//	}
-//
-//	if (queryImgFeatures.cols != (int) m_veclen) {
-//		std::stringstream ss;
-//		ss << "[VocabTree::scoreQueryFeatures] Features vectors must be "
-//				<< m_veclen << " bytes long, i.e. " << m_veclen * 8
-//				<< "-dimensional";
-//		throw std::runtime_error(ss.str());
-//	}
-//
-//	if (queryImgFeatures.rows < 1) {
-//		throw std::runtime_error(
-//				"[VocabTree::scoreQueryFeatures] At least one feature vector is needed");
-//	}
-//
-//	if (empty()) {
-//		throw std::runtime_error(
-//				"[VocabTree::scoreQueryFeatures] Vocabulary is empty");
-//	}
-
 	// Initialize query BoW vector
 	bowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
-
-//	printf("[VocabTree::scoreQuery] Quantizing query feature vector into BoW vector\n");
 
 	// Quantize each query image feature vector
 	for (size_t i = 0; (int) i < featuresVector.rows; i++) {
 		uint wordIdx;
 		double wordWeight;
 		quantize(featuresVector.row(i), wordIdx, wordWeight);
-//		printf("[VocabTree::scoreQuery] feature (%d) quantized into (%d/%d) word, weight %f\n", (int) i, (int) wordIdx, (int) m_words.size(), wordWeight);
 
 		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
 			throw std::runtime_error(
@@ -498,8 +481,7 @@ void VocabTree::transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
 		bowVector.at<float>(0, wordIdx) += (float) wordWeight;
 	}
 
-//	printf("[VocabTree::scoreQuery] Normalizing query BoW vector\n");
-
+	//	Normalizing query BoW vector
 	cv::normalize(bowVector, bowVector, 1, 0, normType);
 }
 
@@ -689,13 +671,6 @@ void VocabTree::normalizeDatabase(const uint num_db_images, int normType) {
 		}
 	}
 
-	// Print magnitudes
-//	for (size_t i = 0; i < num_db_images; i++) {
-//		printf(
-//				"[VocabTree::normalizeDatabase] Vector %lu has magnitude %0.3f\n",
-//				i, mags[i]);
-//	}
-
 	// Normalizing database
 	for (VocabTreeNodePtr& word : m_words) {
 		for (ImageCount& image : word->image_list) {
@@ -746,26 +721,11 @@ void VocabTree::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
-//	= cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
-//	printf("[VocabTree::scoreQuery] Quantizing query feature vector into BoW vector\n");
-	// Quantize each query image feature vector
-//	for (size_t i = 0; (int) i < queryImgFeatures.rows; i++) {
-//		uint wordIdx;
-//		double wordWeight;
-//		quantize(queryImgFeatures.row(i), wordIdx, wordWeight);
-//		printf("[VocabTree::scoreQuery] feature (%d) quantized into (%d/%d) word, weight %f\n", (int) i, (int) wordIdx, (int) m_words.size(), wordWeight);
-//		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
-//			throw std::runtime_error("[VocabTree::scoreQuery] Feature quantized into a non-existent word");
-//		}
-//		queryBowVector.at<float>(0, wordIdx) += (float) wordWeight;
-//	}
-//	printf("[VocabTree::scoreQuery] Normalizing query BoW vector\n");
-//	cv::normalize(queryBowVector, queryBowVector, 1, 0, cv::NORM_L1);
+
+	//	Efficient scoring query BoW vector against all DB BoW vectors
 
 	// ||v - w||_{L1} = 2 + Sum(|v_i - w_i| - |v_i| - |w_i|)
 	// ||v - w||_{L2} = sqrt( 2 - 2 * Sum(v_i * w_i) )
-
-//	printf("[VocabTree::scoreQuery] Efficient scoring query BoW vector against all DB BoW vectors\n");
 
 	// Calculating sum part of the efficient score implementation
 	for (VocabTreeNodePtr word : m_words) {
@@ -784,40 +744,24 @@ void VocabTree::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 		for (ImageCount& image : word->image_list) {
 			float di = image.m_count;
-//			printf("Word id=[%d] weight=[%f] image id=[%d] qi=[%f] di=[%f]\n",
-//					word->word_id, word->weight, image.m_index, qi, di);
 
-			// Normalized BoW vector counts hence (0, 1]
-//			printf("qi=[%f] is equal to zero? [%s]\n", qi,
-//					qi == 0.0 ? "true" : "false");
-//			printf("di=[%f] is equal to zero? [%s]\n", di,
-//					di == 0.0 ? "true" : "false");
+			// qi cannot be zero because we are considering only when its non-zero
+			// qi cannot be more than 1 because it is supposed to be normalized
+			CV_Assert(qi > 0 && qi <= 1.0);
 
-			if (qi <= 0.0 || qi > 1.0) {
-				// qi cannot be sure because we are jumping to the next iteration
-				// i.e. computing score only for non zero qi values
-				// qi cannot be more than 1 because it is supposed to be normalized
-				std::stringstream ss;
-				ss
-						<< "Error while scoring query, query BoW vector component qi=["
-						<< qi << "] is not in the range (0,1]";
-				throw std::runtime_error(ss.str());
-			}
+			// di cannot more than 1 because it is supposed to be normalized
+			CV_Assert(di <= 1.0);
 
-			if ((word->weight != 0.0 && di == 0.0) || di < 0.0 || di > 1.0) {
-				// di cannot be zero if the weight is nonzero because the inverted files
-				// contain only counts for images with a descriptor which was quantized
-				// into that word
-				// di cannot more than 1 because it is supposed to be normalized
-
-				std::stringstream ss;
-				ss << "Error while scoring query, DB BoW vector component di=["
-						<< di << "] is not in the range (0,1]";
-				throw std::runtime_error(ss.str());
+			// di cannot be zero (unless the weight is zero) because the inverted files
+			// contain only counts for images with a descriptor which was quantized
+			// into that word
+			if (word->weight != 0.0) {
+				CV_Assert(di > 0.0);
+			} else {
+				CV_Assert(di >= 0.0);
 			}
 
 			if (normType == cv::NORM_L1) {
-//				printf("img=%u qi=%f di=%f\n", image.m_index, qi, di);
 				scores.at<float>(0, image.m_index) += (float) (fabs(qi - di)
 						- fabs(qi) - fabs(di));
 			} else if (normType == cv::NORM_L2) {

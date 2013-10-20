@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
 	if (argc < 6 || argc > 8) {
 		printf("\nUsage:\n"
-				"\t%s <in.tree> <in.db.list> <in.query.list>"
+				"\t%s <in.tree> <in.db.gt.list> <in.query.list>"
 				" <num_nbrs> <matches.out> [results.html] [candidates.txt]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
@@ -56,7 +56,6 @@ int main(int argc, char **argv) {
 		candidates_out = argv[7];
 
 	// Verifying input parameters
-
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
 	if (boost::regex_match(std::string(tree_in), expression) == false) {
@@ -66,7 +65,6 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree
-
 	cvflann::VocabTree tree;
 
 	printf("-- Reading tree from [%s]\n", tree_in);
@@ -333,7 +331,7 @@ void PrintHTMLRow(FILE *f, const std::string &query, cv::Mat& scores,
 
 	fprintf(f, "<td></td>\n");
 	for (int i = 0; i < num_nns; i++)
-		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, i));
+		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, perm.at<int>(0, i)));
 
 	fprintf(f, "</tr>\n");
 }
