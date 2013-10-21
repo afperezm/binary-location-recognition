@@ -139,9 +139,9 @@ int main(int argc, char **argv) {
 
 	if (argc != 6) {
 		printf("\nUsage:\n"
-				"\t%s <list.in> <depth>"
-				" <branching_factor> <restarts>"
-				" <tree.out>\n\n", argv[0]);
+				"\t%s <in.list> <in.depth>"
+				" <in.branch.factor> <in.restarts>"
+				" <out.tree>\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
