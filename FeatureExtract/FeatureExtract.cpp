@@ -23,25 +23,65 @@
 
 void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
-		cv::Mat& descriptors);
+		cv::Mat& descriptors, const std::string detectorType = "SIFT",
+		const std::string descriptorType = "BRIEF");
 
 double mytime;
 
 int main(int argc, char **argv) {
 
-	cv::initModule_features2d_extensions();
-
-	if (argc != 3) {
-		printf("\nUsage:\n"
-				"\t%s <in.imgs.folder> <out.keys.folder>\n\n", argv[0]);
+	if (argc < 3 || argc > 5) {
+		printf(
+				"\nUsage:\n"
+						"\t%s <in.imgs.folder> <out.keys.folder> [in.detector:SIFT] [in.descriptor:BRIEF]\n\n",
+				argv[0]);
 		return EXIT_FAILURE;
 	}
 
 	char* imgsFolder = argv[1];
 	char* keysFolder = argv[2];
+	std::string detectorType = "SIFT";
+	std::string descriptorType = "BRISK";
+
+	if (argc >= 4) {
+		detectorType = std::string(argv[3]);
+	}
+
+	if (argc >= 5) {
+		descriptorType = std::string(argv[4]);
+	}
+
+	cv::initModule_features2d_extensions();
 
 	// Initiating non-free module, it's necessary for using SIFT and SURF
 	cv::initModule_nonfree();
+
+	// Verifying that input detector/descriptor are valid OpenCV algorithms
+	std::vector<std::string> algorithms;
+	cv::Algorithm::getList(algorithms);
+	bool isDetectorValid = false, isDescriptorValid = false;
+	for (std::string algName : algorithms) {
+		isDetectorValid |= algName.substr(algName.size() - detectorType.size(),
+				detectorType.size()).compare(detectorType) == 0;
+		isDescriptorValid |=
+				algName.substr(algName.size() - descriptorType.size(),
+						descriptorType.size()).compare(descriptorType) == 0;
+	}
+	if (isDetectorValid == false) {
+		fprintf(stderr,
+				"Input detector=[%s] is not a registered algorithm in OpenCV\n",
+				detectorType.c_str());
+		return EXIT_FAILURE;
+	}
+	if (isDescriptorValid == false) {
+		fprintf(stderr,
+				"Input descriptor=[%s] is not a registered algorithm in OpenCV\n",
+				descriptorType.c_str());
+		return EXIT_FAILURE;
+	}
+
+	printf("-- Using detector=[%s] descriptor=[%s]\n", detectorType.c_str(),
+			descriptorType.c_str());
 
 	printf("-- Loading images in folder [%s]\n", imgsFolder);
 
@@ -102,7 +142,8 @@ int main(int argc, char **argv) {
 			try {
 				// Notice that number of keypoints might be reduced due to border effect
 				detectAndDescribeFeatures(imgsFolder, (*image), keypoints,
-						descriptors);
+						descriptors, std::string(detectorType),
+						std::string(descriptorType));
 				CV_Assert((int )keypoints.size() == descriptors.rows);
 			} catch (const std::runtime_error& error) {
 				fprintf(stderr, "%s\n", error.what());
@@ -132,7 +173,8 @@ int main(int argc, char **argv) {
 
 void detectAndDescribeFeatures(const std::string& imgPath,
 		const std::string& imgName, std::vector<cv::KeyPoint>& keypoints,
-		cv::Mat& descriptors) {
+		cv::Mat& descriptors, const std::string detectorType,
+		const std::string descriptorType) {
 
 	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName,
 			CV_LOAD_IMAGE_GRAYSCALE);

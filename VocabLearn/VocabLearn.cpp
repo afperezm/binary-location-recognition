@@ -159,10 +159,7 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-//	printf("-- Building tree with depth: %d, branching factor: %d, "
-//			"and restarts: %d\n", depth, branchFactor, restarts);
-
-// Step 1: read list of key files that shall be used to build the tree
+	// Step 1: read list of key files that shall be used to build the tree
 	std::vector<std::string> keysFilenames;
 	std::ifstream keysList(list_in, std::fstream::in);
 

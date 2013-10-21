@@ -73,11 +73,6 @@ void VocabTree::build() {
 		indices[i] = int(i);
 	}
 
-//	printf("[VocabTree::build] Building tree from [%d] features"
-//			" with depth [%d], branching factor [%d]"
-//			" and restarts [%d]\n", (int) size, m_depth, m_branching,
-//			m_iterations);
-
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
 
@@ -176,7 +171,7 @@ void VocabTree::load_tree(cv::FileNode& fs, VocabTreeNodePtr& node) {
 	cv::Mat center;
 	fs["center"] >> center;
 	CV_Assert(center.rows == 1);
-	CV_Assert(center.cols == m_veclen);
+	CV_Assert(center.cols == (int ) m_veclen);
 
 	// Deep copy
 	node->center = new TDescriptor[m_veclen];
@@ -321,10 +316,8 @@ void VocabTree::computeClustering(VocabTreeNodePtr node, int* indices,
 	}
 	delete[] centers_idx;
 
-	std::vector<DistanceType> radiuses(m_branching);
 	int* count = new int[m_branching];
 	for (int i = 0; i < m_branching; ++i) {
-		radiuses[i] = 0;
 		count[i] = 0;
 	}
 
@@ -541,7 +534,8 @@ void VocabTree::computeWordsWeights(WeightingType weighting,
 			}
 		}
 	} else {
-		throw std::runtime_error("[VocabTree::computeWordsWeights] Unknown weighting type");
+		throw std::runtime_error(
+				"[VocabTree::computeWordsWeights] Unknown weighting type");
 	}
 }
 
