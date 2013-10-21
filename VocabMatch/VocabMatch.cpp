@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 	if (argc < 6 || argc > 8) {
 		printf("\nUsage:\n"
 				"\t%s <in.tree> <in.db.gt.list> <in.query.list>"
-				" <num_nbrs> <matches.out> [results.html] [candidates.txt]\n\n",
+				" <in.num.neighbors> <out.matches> [out.results:results.html] [out.candidates:candidates.txt]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
 	}
