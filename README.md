@@ -1,5 +1,4 @@
 # BinVocabTree #
----
 
 ## Overview ##
 
@@ -76,7 +75,6 @@ __VocabMatch:__
 ```
 
 ## C++ HTTP library options ##
----
 
 Starred ones:
 
