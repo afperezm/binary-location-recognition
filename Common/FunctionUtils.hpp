@@ -13,6 +13,44 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
+class HtmlResultsWriter {
+public:
+//	HtmlViewer();
+//	~HtmlViewer();
+	static HtmlResultsWriter& getInstance() {
+		static HtmlResultsWriter instance; // Guaranteed to be destroyed.
+		// Instantiated on first use.
+		return instance;
+	}
+
+	void writeHeader(FILE *f, int num_nns);
+
+	void writeRow(FILE *f, const std::string &query, cv::Mat& scores,
+			cv::Mat& perm, int num_nns,
+			const std::vector<std::string> &db_images);
+
+	void writeFooter(FILE *f);
+
+	std::string getHtml() const;
+
+private:
+	// Constructor? (the {} brackets) are needed here.
+	HtmlResultsWriter() {
+	}
+	;
+
+	// Don't forget to declare these two. You want to make sure they
+	// are unaccessible otherwise you may accidently get copies of
+	// your singleton appearing.
+	HtmlResultsWriter(HtmlResultsWriter const&); // Don't Implement
+	void operator=(HtmlResultsWriter const&); // Don't implement
+
+	void basifyFilename(const char *filename, char *base);
+
+protected:
+	std::stringstream html;
+};
+
 namespace FunctionUtils {
 
 void printKeypoints(std::vector<cv::KeyPoint>& keypoints);

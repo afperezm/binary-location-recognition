@@ -20,16 +20,9 @@
 
 #include <FileUtils.hpp>
 
+#include <FunctionUtils.hpp>
+
 double mytime;
-
-int BasifyFilename(const char *filename, char *base);
-
-void PrintHTMLHeader(FILE *f, int num_nns);
-
-void PrintHTMLRow(FILE *f, const std::string &query, cv::Mat& scores,
-		cv::Mat& perm, int num_nns, const std::vector<std::string> &db_images);
-
-void PrintHTMLFooter(FILE *f);
 
 int main(int argc, char **argv) {
 
@@ -188,7 +181,7 @@ int main(int argc, char **argv) {
 	}
 
 	FILE *f_html = fopen(output_html, "w");
-	PrintHTMLHeader(f_html, num_nbrs);
+	HtmlResultsWriter::getInstance().writeHeader(f_html, num_nbrs);
 	if (f_html == NULL) {
 		fprintf(stderr, "Error opening file [%s] for writing\n",
 				candidates_out);
@@ -279,74 +272,14 @@ int main(int argc, char **argv) {
 		fflush(stdout);
 
 		// Print to a file the ranked list of candidates ordered by score in HTML format
-		PrintHTMLRow(f_html, query_filenames[i], scores, perm, top,
+		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i], scores, perm, top,
 				db_filenames);
 	}
 
 	fclose(f_candidates);
 	fclose(f_match);
-	PrintHTMLFooter(f_html);
+	HtmlResultsWriter::getInstance().writeFooter(f_html);
 	fclose(f_html);
 
 	return EXIT_SUCCESS;
-}
-
-void PrintHTMLHeader(FILE *f, int num_nns) {
-	fprintf(f, "<html>\n"
-			"<header>\n"
-			"<title>Vocabulary tree results</title>\n"
-			"</header>\n"
-			"<body>\n"
-			"<h1>Vocabulary tree results</h1>\n"
-			"<hr>\n\n");
-
-	fprintf(f, "<table border=2 align=center>\n<tr>\n<th>Query image</th>\n");
-	for (int i = 0; i < num_nns; i++) {
-		fprintf(f, "<th>Match %d</th>\n", i + 1);
-	}
-	fprintf(f, "</tr>\n");
-}
-
-void PrintHTMLRow(FILE *f, const std::string &query, cv::Mat& scores,
-		cv::Mat& perm, int num_nns, const std::vector<std::string> &db_images) {
-	char q_base[512], q_thumb[512];
-	BasifyFilename(query.c_str(), q_base);
-	sprintf(q_thumb, "%s.thumb.jpg", q_base);
-
-	fprintf(f,
-			"<tr align=center>\n<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-			q_thumb, q_thumb);
-
-	for (int i = 0; i < num_nns; i++) {
-		char d_base[512], d_thumb[512];
-		BasifyFilename(db_images[perm.at<int>(0, i)].c_str(), d_base);
-		sprintf(d_thumb, "%s.thumb.jpg", d_base);
-
-		fprintf(f,
-				"<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
-				d_thumb, d_thumb);
-	}
-
-	fprintf(f, "</tr>\n<tr align=right>\n");
-
-	fprintf(f, "<td></td>\n");
-	for (int i = 0; i < num_nns; i++)
-		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, perm.at<int>(0, i)));
-
-	fprintf(f, "</tr>\n");
-}
-
-void PrintHTMLFooter(FILE *f) {
-	fprintf(f, "</tr>\n"
-			"</table>\n"
-			"<hr>\n"
-			"</body>\n"
-			"</html>\n");
-}
-
-int BasifyFilename(const char *filename, char *base) {
-	strcpy(base, filename);
-	base[strlen(base) - 8] = 0;
-
-	return 0;
 }
