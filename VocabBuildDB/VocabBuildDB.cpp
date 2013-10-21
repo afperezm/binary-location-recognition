@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 	if (argc < 4 || argc > 6) {
 		printf("\nUsage:\n"
 				"\t%s <in.list> <in.tree> <out.tree>"
-				" [use_tfidf:1] [normalize:1]\n\n", argv[0]);
+				" [in.use.tfidf:1] [in.normalize:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -135,6 +135,8 @@ int main(int argc, char **argv) {
 	cvflann::WeightingType weightingScheme = cvflann::BINARY;
 	if (use_tfidf) {
 		weightingScheme = cvflann::TF_IDF;
+	} else {
+		weightingScheme = cvflann::BINARY;
 	}
 
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
