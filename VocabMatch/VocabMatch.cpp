@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree
-	cvflann::VocabTree tree;
+	cvflann::VocabTree<uchar, cv::flann::Hamming<uchar> > tree;
 
 	printf("-- Reading tree from [%s]\n", tree_in);
 

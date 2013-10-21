@@ -79,13 +79,11 @@ public:
 	float m_count;
 };
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
+template<class TDescriptor, class Distance = cv::flann::Hamming<TDescriptor> >
 class VocabTree {
 
 private:
 
-	typedef uchar TDescriptor;
-	typedef cv::flann::Hamming<TDescriptor> Distance;
 	typedef typename Distance::ElementType ElementType;
 	typedef typename Distance::ResultType DistanceType;
 
@@ -345,8 +343,8 @@ private:
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-VocabTree<Feature, Distance>::VocabTree(const cv::Mat& inputData,
+template<class TDescriptor, class Distance>
+VocabTree<TDescriptor, Distance>::VocabTree(const cv::Mat& inputData,
 		const IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(
 				0) {
@@ -367,8 +365,8 @@ VocabTree<Feature, Distance>::VocabTree(const cv::Mat& inputData,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-VocabTree<Feature, Distance>::~VocabTree() {
+template<class TDescriptor, class Distance>
+VocabTree<TDescriptor, Distance>::~VocabTree() {
 	if (m_root != NULL) {
 		free_centers(m_root);
 	}
@@ -376,8 +374,8 @@ VocabTree<Feature, Distance>::~VocabTree() {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::free_centers(VocabTreeNodePtr node) {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::free_centers(VocabTreeNodePtr node) {
 	delete[] node->center;
 	if (node->children != NULL) {
 		for (int k = 0; k < m_branching; ++k) {
@@ -388,15 +386,15 @@ void VocabTree<Feature, Distance>::free_centers(VocabTreeNodePtr node) {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-size_t VocabTree<Feature, Distance>::size() {
+template<class TDescriptor, class Distance>
+size_t VocabTree<TDescriptor, Distance>::size() {
 	return m_words.size();
 }
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::build() {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::build() {
 
 	if (m_branching < 2) {
 		throw std::runtime_error("[VocabTree::build] Error, branching factor"
@@ -425,8 +423,8 @@ void VocabTree<Feature, Distance>::build() {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::save(const std::string& filename) const {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
@@ -451,8 +449,8 @@ void VocabTree<Feature, Distance>::save(const std::string& filename) const {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::save_tree(cv::FileStorage& fs,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 		VocabTreeNodePtr node) const {
 
 	// WriteNode
@@ -482,8 +480,8 @@ void VocabTree<Feature, Distance>::save_tree(cv::FileStorage& fs,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::load(const std::string& filename) {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
@@ -509,8 +507,8 @@ void VocabTree<Feature, Distance>::load(const std::string& filename) {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::load_tree(cv::FileNode& fs,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		VocabTreeNodePtr& node) {
 
 	cv::Mat center;
@@ -589,9 +587,9 @@ void VocabTree<Feature, Distance>::load_tree(cv::FileNode& fs,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::computeNodeStatistics(VocabTreeNodePtr node,
-		int* indices, int indices_length) {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
+		VocabTreeNodePtr node, int* indices, int indices_length) {
 
 	TDescriptor* center = new TDescriptor[m_veclen];
 
@@ -615,8 +613,8 @@ void VocabTree<Feature, Distance>::computeNodeStatistics(VocabTreeNodePtr node,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::computeClustering(VocabTreeNodePtr node,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		int* indices, int indices_length, int level) {
 
 	// Recursion base case: done when the last level is reached
@@ -803,8 +801,8 @@ void VocabTree<Feature, Distance>::computeClustering(VocabTreeNodePtr node,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::transform(const cv::Mat& featuresVector,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 		cv::Mat& bowVector, const int& normType) const {
 
 	// Initialize query BoW vector
@@ -830,8 +828,8 @@ void VocabTree<Feature, Distance>::transform(const cv::Mat& featuresVector,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::quantize(const cv::Mat& feature,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 		uint &word_id, double &weight) const {
 
 	VocabTreeNodePtr best_node = m_root;
@@ -863,9 +861,9 @@ void VocabTree<Feature, Distance>::quantize(const cv::Mat& feature,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::computeWordsWeights(WeightingType weighting,
-		const uint numDbWords) {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::computeWordsWeights(
+		WeightingType weighting, const uint numDbWords) {
 	if (weighting == cvflann::BINARY) {
 		// Setting constant weight equal to 1
 		for (VocabTreeNodePtr& word : m_words) {
@@ -893,8 +891,8 @@ void VocabTree<Feature, Distance>::computeWordsWeights(WeightingType weighting,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::createDatabase() {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::createDatabase() {
 
 	// Loop over words
 	for (VocabTreeNodePtr& word : m_words) {
@@ -908,8 +906,8 @@ void VocabTree<Feature, Distance>::createDatabase() {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::clearDatabase() {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::clearDatabase() {
 	for (VocabTreeNodePtr& word : m_words) {
 		word->image_list.clear();
 	}
@@ -917,15 +915,15 @@ void VocabTree<Feature, Distance>::clearDatabase() {
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-bool VocabTree<Feature, Distance>::empty() const {
+template<class TDescriptor, class Distance>
+bool VocabTree<TDescriptor, Distance>::empty() const {
 	return m_words.empty();
 }
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::addImageToDatabase(uint imgIdx,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		cv::Mat imgFeatures) {
 
 	if (imgFeatures.type() != CV_8U) {
@@ -964,8 +962,8 @@ void VocabTree<Feature, Distance>::addImageToDatabase(uint imgIdx,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::addFeatureToInvertedFile(uint wordIdx,
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 		uint imgIdx) {
 
 	int n = (int) m_words[wordIdx]->image_list.size();
@@ -990,9 +988,9 @@ void VocabTree<Feature, Distance>::addFeatureToInvertedFile(uint wordIdx,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::normalizeDatabase(const uint num_db_images,
-		int normType) {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::normalizeDatabase(
+		const uint num_db_images, int normType) {
 
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
@@ -1041,9 +1039,10 @@ void VocabTree<Feature, Distance>::normalizeDatabase(const uint num_db_images,
 
 // --------------------------------------------------------------------------
 
-template<class Feature, class Distance = cv::flann::Hamming<Feature> >
-void VocabTree<Feature, Distance>::scoreQuery(const cv::Mat& queryImgFeatures,
-		cv::Mat& scores, const uint numDbImages, const int normType) const {
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::scoreQuery(
+		const cv::Mat& queryImgFeatures, cv::Mat& scores,
+		const uint numDbImages, const int normType) const {
 
 	if (queryImgFeatures.type() != CV_8U) {
 		throw std::runtime_error(

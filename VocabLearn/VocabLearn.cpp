@@ -243,7 +243,8 @@ int main(int argc, char **argv) {
 	params["iterations"] = restarts;
 	params["depth"] = depth;
 
-	cvflann::VocabTree tree(mergedDescriptors, params);
+	cvflann::VocabTree<uchar, cv::flann::Hamming<uchar> > tree(
+			mergedDescriptors, params);
 
 	printf(
 			"-- Building vocabulary tree from [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers initialization algorithm [%s]\n",
