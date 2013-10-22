@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
 
 	printf("-- Loading images in folder [%s]\n", imgsFolder);
 
+	// Load files from images folder into a vector
 	std::vector<std::string> imgFolderFiles;
 	try {
 		FileUtils::readFolder(imgsFolder, imgFolderFiles);
@@ -100,7 +101,7 @@ int main(int argc, char **argv) {
 			keysFolder);
 	// By default set to the first file
 	std::vector<std::string>::iterator startImg = imgFolderFiles.begin();
-	// Load files in keys folder
+	// Load files from keys folder into a vector
 	std::vector<std::string> keyFiles;
 	try {
 		FileUtils::readFolder(keysFolder, keyFiles);
@@ -142,8 +143,7 @@ int main(int argc, char **argv) {
 			try {
 				// Notice that number of keypoints might be reduced due to border effect
 				detectAndDescribeFeatures(imgsFolder, (*image), keypoints,
-						descriptors, std::string(detectorType),
-						std::string(descriptorType));
+						descriptors, detectorType, descriptorType);
 				CV_Assert((int )keypoints.size() == descriptors.rows);
 			} catch (const std::runtime_error& error) {
 				fprintf(stderr, "%s\n", error.what());
@@ -187,7 +187,7 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 	} else {
 		// Create smart pointer for feature detector
 		cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
-				"AGAST");
+				detectorType);
 
 		keypoints.clear();
 		// Detect the keypoints
@@ -196,7 +196,7 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 
 		// Create smart pointer for descriptor extractor
 		cv::Ptr<cv::DescriptorExtractor> extractor =
-				cv::DescriptorExtractor::create("BRIEF");
+				cv::DescriptorExtractor::create(descriptorType);
 
 		descriptors = cv::Mat();
 		// Describe keypoints
