@@ -49,7 +49,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 	}
 
 	fs << "TotalKeypoints" << descriptors.rows;
-	fs << "DescriptorSize" << descriptors.cols; // Recall this is in Bytes
+	fs << "DescriptorSize" << descriptors.cols; // In Bytes for binary descriptors
 	fs << "DescriptorType" << descriptors.type(); // CV_8U = 0 for binary descriptors
 
 	fs << "KeyPoints" << "[";
