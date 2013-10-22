@@ -26,10 +26,12 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 6 || argc > 8) {
-		printf("\nUsage:\n"
-				"\t%s <in.tree> <in.db.gt.list> <in.query.list>"
-				" <in.num.neighbors> <out.matches> [out.results:results.html] [out.candidates:candidates.txt]\n\n",
+	if (argc < 5 || argc > 9) {
+		printf(
+				"\nUsage:\n"
+						"\t%s <in.tree> <in.db.gt.list> <in.query.list>"
+						" <in.num.neighbors> [in.type.binary:1] [out.matches:matches.txt]"
+						" [out.results:results.html] [out.candidates:candidates.txt]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
 	}
@@ -38,15 +40,26 @@ int main(int argc, char **argv) {
 	char *db_list_in = argv[2];
 	char *query_list_in = argv[3];
 	uint num_nbrs = atoi(argv[4]);
-	char *matches_out = argv[5];
-	const char *output_html = "results.html";
-	const char *candidates_out = "candidates.txt";
+	bool isDescriptorBinary = true;
+	char *matches_out = const_cast<char*>("matches.txt");
+	const char *output_html = const_cast<char*>("results.html");
+	const char *candidates_out = const_cast<char*>("candidates.txt");
 
-	if (argc >= 7)
-		output_html = argv[6];
+	if (argc >= 6) {
+		isDescriptorBinary = atoi(argv[5]);
+	}
 
-	if (argc >= 8)
-		candidates_out = argv[7];
+	if (argc >= 7) {
+		matches_out = argv[6];
+	}
+
+	if (argc >= 8) {
+		output_html = argv[7];
+	}
+
+	if (argc >= 9) {
+		candidates_out = argv[8];
+	}
 
 	// Verifying input parameters
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -58,16 +71,25 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree
-	cvflann::VocabTree<uchar, cv::flann::Hamming<uchar> > tree;
+	cv::Ptr<cvflann::VocabTreeBase> tree;
+
+	if (isDescriptorBinary == true) {
+		printf(
+				"Instantiation of VocabTree<uchar, cv::flann::Hamming<uchar> >\n");
+		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
+	} else {
+		printf("Instantiation of VocabTree<float, cv::flann::L2<float> >\n");
+		tree = new cvflann::VocabTree<float, cvflann::L2<float> >();
+	}
 
 	printf("-- Reading tree from [%s]\n", tree_in);
 
 	mytime = cv::getTickCount();
-	tree.load(std::string(tree_in));
+	tree->load(std::string(tree_in));
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			tree.size());
+			tree->size());
 
 	// Step 2/4: read the database keyfiles
 	printf("-- Loading DB keyfiles names and landmark id's\n");
@@ -197,10 +219,19 @@ int main(int argc, char **argv) {
 		FileUtils::loadFeatures(query_filenames[i], imgKeypoints,
 				imgDescriptors);
 
+		// Check type of descriptors
+		if ((imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
+			fprintf(stderr,
+					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+					isDescriptorBinary == true ? "binary" : "non-binary",
+					imgDescriptors.type() == CV_8U ? "binary" : "real");
+			return EXIT_FAILURE;
+		}
+
 		// Score query bow vector against DB images bow vectors
 		mytime = cv::getTickCount();
 		try {
-			tree.scoreQuery(imgDescriptors, scores, db_filenames.size(),
+			tree->scoreQuery(imgDescriptors, scores, db_filenames.size(),
 					cv::NORM_L1);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
@@ -272,8 +303,8 @@ int main(int argc, char **argv) {
 		fflush(stdout);
 
 		// Print to a file the ranked list of candidates ordered by score in HTML format
-		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i], scores, perm, top,
-				db_filenames);
+		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i],
+				scores, perm, top, db_filenames);
 	}
 
 	fclose(f_candidates);

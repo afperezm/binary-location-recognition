@@ -24,9 +24,9 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 4 || argc > 6) {
+	if (argc < 4 || argc > 7) {
 		printf("\nUsage:\n"
-				"\t%s <in.list> <in.tree> <out.tree>"
+				"\t%s <in.list> <in.tree> <out.tree> [in.type.binary:1]"
 				" [in.use.tfidf:1] [in.normalize:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
@@ -37,13 +37,18 @@ int main(int argc, char **argv) {
 	char *list_in = argv[1];
 	char *tree_in = argv[2];
 	char *tree_out = argv[3];
+	bool isDescriptorBinary = true;
 
 	if (argc >= 5) {
-		use_tfidf = atoi(argv[4]);
+		isDescriptorBinary = atoi(argv[4]);
 	}
 
 	if (argc >= 6) {
-		normalize = atoi(argv[5]);
+		use_tfidf = atoi(argv[5]);
+	}
+
+	if (argc >= 7) {
+		normalize = atoi(argv[6]);
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -95,21 +100,27 @@ int main(int argc, char **argv) {
 
 	printf("-- Building DB using [%lu] images\n", keysFilenames.size());
 
-	cvflann::VocabTree<uchar, cv::flann::Hamming<uchar> > tree;
+	cv::Ptr<cvflann::VocabTreeBase> tree;
+
+	if (isDescriptorBinary == true) {
+		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
+	} else {
+		tree = new cvflann::VocabTree<float, cv::L2<float> >();
+	}
 
 	printf("-- Reading tree from [%s]\n", tree_in);
 
 	mytime = cv::getTickCount();
-	tree.load(std::string(tree_in));
+	tree->load(std::string(tree_in));
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			tree.size());
+			tree->size());
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",
 			keysFilenames.size());
-	tree.clearDatabase();
+	tree->clearDatabase();
 	printf("   Clearing Inverted Files\n");
 
 	std::vector<cv::KeyPoint> imgKeypoints;
@@ -121,10 +132,27 @@ int main(int argc, char **argv) {
 		imgKeypoints.clear();
 		imgDescriptors = cv::Mat();
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+
+		// Check type of descriptors
+		if ((imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
+			fprintf(stderr,
+					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+					isDescriptorBinary == true ? "binary" : "non-binary",
+					imgDescriptors.type() == CV_8U ? "binary" : "real");
+			return EXIT_FAILURE;
+		}
+
 		printf("   Adding image [%u] to database\n", imgIdx);
-		tree.addImageToDatabase(imgIdx, imgDescriptors);
+		try {
+			tree->addImageToDatabase(imgIdx, imgDescriptors);
+		} catch (const std::runtime_error& error) {
+			fprintf(stderr, "%s\n", error.what());
+			return EXIT_FAILURE;
+		}
 		imgIdx++;
 	}
+
+	imgDescriptors.release();
 
 	CV_Assert(keysFilenames.size() == imgIdx);
 
@@ -143,10 +171,10 @@ int main(int argc, char **argv) {
 			weightingScheme == cvflann::TF_IDF ? "TF-IDF" :
 			weightingScheme == cvflann::BINARY ? "BINARY" : "UNKNOWN");
 
-	tree.computeWordsWeights(weightingScheme, keysFilenames.size());
+	tree->computeWordsWeights(weightingScheme, keysFilenames.size());
 
 	printf("-- Applying words weights to the DB BoW vectors counts\n");
-	tree.createDatabase();
+	tree->createDatabase();
 
 	int normType = cv::NORM_L1;
 
@@ -154,14 +182,14 @@ int main(int argc, char **argv) {
 		printf("-- Normalizing DB BoW vectors using [%s]\n",
 				normType == cv::NORM_L1 ? "L1-norm" :
 				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-		tree.normalizeDatabase(keysFilenames.size(), normType);
+		tree->normalizeDatabase(keysFilenames.size(), normType);
 	}
 
 	printf("-- Saving tree with inverted files and weights to [%s]\n",
 			tree_out);
 
 	mytime = cv::getTickCount();
-	tree.save(tree_out);
+	tree->save(tree_out);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 

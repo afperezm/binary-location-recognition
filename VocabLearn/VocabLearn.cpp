@@ -137,11 +137,11 @@ int main(int argc, char **argv) {
 //			score == DBoW2::BHATTACHARYYA ? "Bhattacharyya coefficient" :
 //			score == DBoW2::DOT_PRODUCT ? "Dot product" : "unknown");
 
-	if (argc != 6) {
+	if (argc < 6 || argc > 7) {
 		printf("\nUsage:\n"
 				"\t%s <in.list> <in.depth>"
 				" <in.branch.factor> <in.restarts>"
-				" <out.tree>\n\n", argv[0]);
+				" <out.tree> [in.type.binary:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -150,6 +150,11 @@ int main(int argc, char **argv) {
 	int branchFactor = atoi(argv[3]);
 	int restarts = atoi(argv[4]);
 	const char *tree_out = argv[5];
+	bool isDescriptorBinary = true;
+
+	if (argc >= 7) {
+		isDescriptorBinary = atoi(argv[6]);
+	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
@@ -243,8 +248,23 @@ int main(int argc, char **argv) {
 	params["iterations"] = restarts;
 	params["depth"] = depth;
 
-	cvflann::VocabTree<uchar, cv::flann::Hamming<uchar> > tree(
-			mergedDescriptors, params);
+	cv::Ptr<cvflann::VocabTreeBase> tree;
+
+	if ((mergedDescriptors.type() == CV_8U) != isDescriptorBinary) {
+		fprintf(stderr,
+				"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+				isDescriptorBinary == true ? "binary" : "non-binary",
+				mergedDescriptors.type() == CV_8U ? "binary" : "real");
+		return EXIT_FAILURE;
+	}
+
+	if (isDescriptorBinary == true) {
+		tree = new cvflann::VocabTree<uchar, cv::Hamming>(mergedDescriptors,
+				params);
+	} else {
+		tree = new cvflann::VocabTree<float, cv::L2<float> >(mergedDescriptors,
+				params);
+	}
 
 	printf(
 			"-- Building vocabulary tree from [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers initialization algorithm [%s]\n",
@@ -259,17 +279,17 @@ int main(int argc, char **argv) {
 					"k-means++" : "unknown");
 
 	mytime = cv::getTickCount();
-	tree.build();
+	tree->build();
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf(
 			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
-			descCount, mytime, tree.size());
+			descCount, mytime, tree->size());
 
 	printf("-- Saving tree to [%s]\n", tree_out);
 
 	mytime = cv::getTickCount();
-	tree.save(tree_out);
+	tree->save(tree_out);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 

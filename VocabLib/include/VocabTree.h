@@ -39,6 +39,7 @@
 #ifndef BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 #define BIN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
+#include <opencv2/core/core_c.h>
 #include <opencv2/flann/flann.hpp>
 
 #include <CentersChooser.h>
@@ -79,12 +80,41 @@ public:
 	float m_count;
 };
 
-template<class TDescriptor, class Distance = cv::flann::Hamming<TDescriptor> >
-class VocabTree {
+class VocabTreeBase {
+public:
+	virtual ~VocabTreeBase() {
+	}
+
+	virtual size_t size()=0;
+
+	virtual void build()=0;
+
+	virtual void save(const std::string& filename) const = 0;
+
+	virtual void load(const std::string& filename) = 0;
+
+	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
+
+	virtual void computeWordsWeights(WeightingType weighting,
+			const uint numDbWords = 0) = 0;
+
+	virtual void createDatabase() = 0;
+
+	virtual void normalizeDatabase(const uint numDbImages, int normType =
+			cv::NORM_L1) = 0;
+
+	virtual void clearDatabase() = 0;
+
+	virtual void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
+			const uint numDbImages, const int normType = cv::NORM_L2) const = 0;
+
+};
+
+template<class TDescriptor, class Distance>
+class VocabTree: public VocabTreeBase {
 
 private:
 
-	typedef typename Distance::ElementType ElementType;
 	typedef typename Distance::ResultType DistanceType;
 
 	/**
@@ -595,18 +625,26 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 
 	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
 
-	// Compute center using majority voting over all data
-	cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
-	accVector = cv::Scalar::all(0);
-	for (size_t i = 0; (int) i < indices_length; i++) {
-		KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
-	}
 	cv::Mat centroid(1, m_veclen, m_dataset.type());
-	KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
+
+	if (m_dataset.type() == CV_8U) {
+		// Compute center using majority voting over all data
+		cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
+		accVector = cv::Scalar::all(0);
+		for (size_t i = 0; (int) i < indices_length; i++) {
+			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
+		}
+		KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
+		accVector.release();
+	} else {
+		// Reduce all data set to a single row by component wise averaging it
+		cv::reduce(m_dataset, centroid, 0, CV_REDUCE_AVG);
+	}
 
 	for (size_t k = 0; k < m_veclen; ++k) {
 		center[k] = centroid.at<TDescriptor>(0, k);
 	}
+	centroid.release();
 
 	node->center = center;
 }
@@ -635,8 +673,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	int* centers_idx = new int[m_branching];
 	int centers_length;
 
-	CentersChooser<Distance>::create(m_centers_init)->chooseCenters(m_branching,
-			indices, indices_length, centers_idx, centers_length, m_dataset);
+	CentersChooser<TDescriptor, Distance>::create(m_centers_init)->chooseCenters(
+			m_branching, indices, indices_length, centers_idx, centers_length,
+			m_dataset);
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
@@ -651,9 +690,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	// TODO initCentroids: assign centers based on the chosen indexes
-
-//	printf("[BuildRecurse] (level %d): initCentroids - assign centers based on the chosen indexes\n", level);
-
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
 		m_dataset.row(centers_idx[i]).copyTo(
@@ -667,17 +703,17 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	//TODO quantize: assign points to clusters
-
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
 
-		DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
-				dcenters.row(0).data, m_veclen);
+		DistanceType sq_dist = m_distance(
+				(TDescriptor*) m_dataset.row(indices[i]).data,
+				(TDescriptor*) dcenters.row(0).data, m_veclen);
 		belongs_to[i] = 0;
 		for (int j = 1; j < m_branching; ++j) {
 			DistanceType new_sq_dist = m_distance(
-					m_dataset.row(indices[i]).data, dcenters.row(j).data,
-					m_veclen);
+					(TDescriptor*) m_dataset.row(indices[i]).data,
+					(TDescriptor*) dcenters.row(j).data, m_veclen);
 			if (sq_dist > new_sq_dist) {
 				belongs_to[i] = j;
 				sq_dist = new_sq_dist;
@@ -693,37 +729,55 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		iteration++;
 
 		// TODO: computeCentroids compute the new cluster centers
-		// Warning: using matrix of integers, there might be
-		// an overflow when summing too much descriptors
-		cv::Mat bitwiseCount(m_branching, m_veclen * 8,
-				cv::DataType<int>::type);
-		// Zeroing matrix of cumulative bits
-		bitwiseCount = cv::Scalar::all(0);
 		// Zeroing all the centroids dimensions
 		dcenters = cv::Scalar::all(0);
 
-		// Bitwise summing the data into each centroid
-		for (size_t i = 0; (int) i < indices_length; i++) {
-			uint j = belongs_to[i];
-			cv::Mat b = bitwiseCount.row(j);
-			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
-		}
-		// Bitwise majority voting
-		for (size_t j = 0; (int) j < m_branching; j++) {
-			cv::Mat centroid = dcenters.row(j);
-			KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
-					count[j]);
+		if (m_dataset.type() == CV_8U) {
+			// Warning: using matrix of integers, there might be
+			// an overflow when summing too much descriptors
+			cv::Mat bitwiseCount(m_branching, m_veclen * 8,
+					cv::DataType<int>::type);
+			// Zeroing matrix of cumulative bits
+			bitwiseCount = cv::Scalar::all(0);
+			// Bitwise summing the data into each centroid
+			for (size_t i = 0; (int) i < indices_length; i++) {
+				uint j = belongs_to[i];
+				cv::Mat b = bitwiseCount.row(j);
+				KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
+			}
+			// Bitwise majority voting
+			for (size_t j = 0; (int) j < m_branching; j++) {
+				cv::Mat centroid = dcenters.row(j);
+				KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
+						count[j]);
+			}
+		} else {
+			// Accumulate data into its corresponding cluster accumulator
+			for (size_t i = 0; (int) i < indices_length; ++i) {
+				for (size_t k = 0; k < m_veclen; ++k) {
+					dcenters.at<TDescriptor>(belongs_to[i], k) += m_dataset.at<
+							TDescriptor>(indices[i], k);
+				}
+			}
+			// Divide accumulated data by the number transaction assigned to the cluster
+			for (size_t i = 0; (int) i < m_branching; ++i) {
+				int cnt = count[i];
+				for (size_t k = 0; k < m_veclen; ++k) {
+					dcenters.at<TDescriptor>(i, k) /= cnt;
+				}
+			}
 		}
 
 		// TODO quantize: reassign points to clusters
 		for (int i = 0; i < indices_length; ++i) {
-			DistanceType sq_dist = m_distance(m_dataset.row(indices[i]).data,
-					dcenters.row(0).data, m_veclen);
+			DistanceType sq_dist = m_distance(
+					(TDescriptor*) m_dataset.row(indices[i]).data,
+					(TDescriptor*) dcenters.row(0).data, m_veclen);
 			int new_centroid = 0;
 			for (int j = 1; j < m_branching; ++j) {
 				DistanceType new_sq_dist = m_distance(
-						m_dataset.row(indices[i]).data, dcenters.row(j).data,
-						m_veclen);
+						(TDescriptor*) m_dataset.row(indices[i]).data,
+						(TDescriptor*) dcenters.row(j).data, m_veclen);
 				if (sq_dist > new_sq_dist) {
 					new_centroid = j;
 					sq_dist = new_sq_dist;
@@ -834,24 +888,41 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 	VocabTreeNodePtr best_node = m_root;
 
+//	int level = 0;
 	while (best_node->children != NULL) {
 
 		VocabTreeNodePtr node = best_node;
 
 		// Arbitrarily assign to first child
 		best_node = node->children[0];
-		DistanceType best_distance = m_distance(feature.data, best_node->center,
-				m_veclen);
+		DistanceType best_distance = m_distance((TDescriptor*) feature.data,
+				best_node->center, m_veclen);
 
+//		cvflann::L2<float> dfun = cvflann::L2<float>();
+//		cvflann::L2<float>::ResultType d = dfun((TDescriptor*) feature.data, best_node->center, m_veclen);
+
+//		std::cout << "feature:" << std::endl << feature << std::endl;
+//		std::cout << "center:" << std::endl;
+
+//		for (size_t i = 0; i < m_veclen; i++) {
+//			std::cout << best_node->center[i] << ",";
+//		}
+
+//		std::cout << std::endl;
+
+//		std::cout << "At level [" << level << "] distance to node [0] is " << "[" << best_distance << "]\n";
+
+//		size_t j = 1;
 		// Looking for a better child
 		for (size_t j = 1; (int) j < this->m_branching; j++) {
-			DistanceType d = m_distance(feature.data, node->children[j]->center,
-					m_veclen);
+			DistanceType d = m_distance((TDescriptor*) feature.data,
+					node->children[j]->center, m_veclen);
 			if (d < best_distance) {
 				best_distance = d;
 				best_node = node->children[j];
 			}
 		}
+//		level++;
 	}
 
 	// Turn node id into word id
@@ -926,22 +997,18 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		cv::Mat imgFeatures) {
 
-	if (imgFeatures.type() != CV_8U) {
+	if (imgFeatures.rows < 1) {
 		throw std::runtime_error(
-				"[VocabTree::addImageToDatabase] Features matrix is not binary");
+				"[VocabTree::addImageToDatabase] Error while adding image, at least one feature vector is needed");
 	}
 
 	if (imgFeatures.cols != (int) m_veclen) {
 		std::stringstream ss;
-		ss << "[VocabTree::addImageToDatabase] Features vectors must be "
-				<< m_veclen << " bytes long, i.e. " << m_veclen * 8
-				<< "-dimensional";
+		ss << "Error while adding image, feature vector has different length"
+				" than the ones used for building the tree, it is ["
+				<< imgFeatures.cols << "] while it should be[" << m_veclen
+				<< "]";
 		throw std::runtime_error(ss.str());
-	}
-
-	if (imgFeatures.rows < 1) {
-		throw std::runtime_error(
-				"[VocabTree::addImageToDatabase] At least one feature vector is needed");
 	}
 
 	if (empty()) {
@@ -1044,22 +1111,18 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 		const cv::Mat& queryImgFeatures, cv::Mat& scores,
 		const uint numDbImages, const int normType) const {
 
-	if (queryImgFeatures.type() != CV_8U) {
+	if (queryImgFeatures.rows < 1) {
 		throw std::runtime_error(
-				"[VocabTree::scoreQueryFeatures] Features matrix is not binary");
+				"[VocabTree::addImageToDatabase] Error while scoring image, at least one feature vector is needed");
 	}
 
 	if (queryImgFeatures.cols != (int) m_veclen) {
 		std::stringstream ss;
-		ss << "[VocabTree::scoreQueryFeatures] Features vectors must be "
-				<< m_veclen << " bytes long, i.e. " << m_veclen * 8
-				<< "-dimensional";
+		ss << "Error while adding image, feature vector has different length"
+				" than the ones used for building the tree, it is ["
+				<< queryImgFeatures.cols << "] while it should be[" << m_veclen
+				<< "]";
 		throw std::runtime_error(ss.str());
-	}
-
-	if (queryImgFeatures.rows < 1) {
-		throw std::runtime_error(
-				"[VocabTree::scoreQueryFeatures] At least one feature vector is needed");
 	}
 
 	if (empty()) {

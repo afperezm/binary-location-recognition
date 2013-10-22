@@ -126,8 +126,8 @@ void KMajorityIndex::initCentroids() {
 	int centers_length;
 
 	// Randomly chose centers
-	CentersChooser<cvflann::Hamming<uchar> >::create(m_centers_init)->chooseCenters(
-			k, indices, n, centers_idx, centers_length, this->data);
+	CentersChooser<uchar, cv::Hamming>::create(m_centers_init)->chooseCenters(k,
+			indices, n, centers_idx, centers_length, this->data);
 
 	// Assign centers based on the chosen indexes
 	centroids.create(centers_length, dim, data.type());

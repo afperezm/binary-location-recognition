@@ -12,7 +12,7 @@
 
 //namespace cv {
 
-template<typename Distance>
+template<typename TDescriptor, typename Distance>
 class CentersChooser {
 public:
 	virtual ~CentersChooser() {
@@ -20,13 +20,13 @@ public:
 	virtual void chooseCenters(int k, int* indices, int indices_length,
 			int* centers, int& centers_length, const cv::Mat& dataset,
 			Distance distance = Distance()) = 0;
-	static cv::Ptr<CentersChooser<Distance> > create(
+	static cv::Ptr<CentersChooser<TDescriptor, Distance> > create(
 			const cvflann::flann_centers_init_t& chooserType);
 
 };
 
-template<typename Distance>
-class RandomCenters: public CentersChooser<Distance> {
+template<typename TDescriptor, typename Distance>
+class RandomCenters: public CentersChooser<TDescriptor, Distance> {
 
 	typedef typename Distance::ResultType DistanceType;
 
@@ -52,8 +52,8 @@ public:
 
 };
 
-template<typename Distance>
-class GonzalezCenters: public CentersChooser<Distance> {
+template<typename TDescriptor, typename Distance>
+class GonzalezCenters: public CentersChooser<TDescriptor, Distance> {
 
 	typedef typename Distance::ResultType DistanceType;
 
@@ -80,8 +80,8 @@ public:
 
 };
 
-template<typename Distance>
-class KmeansppCenters: public CentersChooser<Distance> {
+template<typename TDescriptor, typename Distance>
+class KmeansppCenters: public CentersChooser<TDescriptor, Distance> {
 
 	typedef typename Distance::ResultType DistanceType;
 
@@ -107,8 +107,8 @@ public:
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void RandomCenters<Distance>::chooseCenters(int k, int* indices,
+template<typename TDescriptor, typename Distance>
+void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, int* centers, int& centers_length,
 		const cv::Mat& dataset, Distance distance) {
 	cvflann::UniqueRandom r(indices_length);
@@ -128,8 +128,10 @@ void RandomCenters<Distance>::chooseCenters(int k, int* indices,
 			centers[index] = indices[rnd];
 
 			for (int j = 0; j < index; ++j) {
-				DistanceType sq = distance(dataset.row(centers[index]).data,
-						dataset.row(centers[j]).data, dataset.cols);
+				DistanceType sq = distance(
+						(TDescriptor*) dataset.row(centers[index]).data,
+						(TDescriptor*) dataset.row(centers[j]).data,
+						dataset.cols);
 				if (sq < 1e-16) {
 					duplicate = true;
 				}
@@ -141,8 +143,8 @@ void RandomCenters<Distance>::chooseCenters(int k, int* indices,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void GonzalezCenters<Distance>::chooseCenters(int k, int* indices,
+template<typename TDescriptor, typename Distance>
+void GonzalezCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, int* centers, int& centers_length,
 		const cv::Mat& m_dataset, Distance distance) {
 	int n = indices_length;
@@ -157,11 +159,15 @@ void GonzalezCenters<Distance>::chooseCenters(int k, int* indices,
 		int best_index = -1;
 		DistanceType best_val = 0;
 		for (int j = 0; j < n; ++j) {
-			DistanceType dist = distance(m_dataset.row(centers[0]).data,
-					m_dataset.row(indices[j]).data, m_dataset.cols);
+			DistanceType dist = distance(
+					(TDescriptor*) m_dataset.row(centers[0]).data,
+					(TDescriptor*) m_dataset.row(indices[j]).data,
+					m_dataset.cols);
 			for (int i = 1; i < index; ++i) {
-				DistanceType tmp_dist = distance(m_dataset.row(centers[i]).data,
-						m_dataset.row(indices[j]).data, m_dataset.cols);
+				DistanceType tmp_dist = distance(
+						(TDescriptor*) m_dataset.row(centers[i]).data,
+						(TDescriptor*) m_dataset.row(indices[j]).data,
+						m_dataset.cols);
 				if (tmp_dist < dist) {
 					dist = tmp_dist;
 				}
@@ -182,8 +188,8 @@ void GonzalezCenters<Distance>::chooseCenters(int k, int* indices,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-void KmeansppCenters<Distance>::chooseCenters(int k, int* indices,
+template<typename TDescriptor, typename Distance>
+void KmeansppCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, int* centers, int& centers_length,
 		const cv::Mat& m_dataset, Distance distance) {
 	int n = indices_length;
@@ -197,8 +203,10 @@ void KmeansppCenters<Distance>::chooseCenters(int k, int* indices,
 	centers[0] = indices[index];
 
 	for (int i = 0; i < n; i++) {
-		closestDistSq[i] = distance(m_dataset.row(indices[i]).data,
-				m_dataset.row(indices[index]).data, m_dataset.cols);
+		closestDistSq[i] = distance(
+				(TDescriptor*) m_dataset.row(indices[i]).data,
+				(TDescriptor*) m_dataset.row(indices[index]).data,
+				m_dataset.cols);
 		currentPot += closestDistSq[i];
 	}
 
@@ -226,10 +234,13 @@ void KmeansppCenters<Distance>::chooseCenters(int k, int* indices,
 			// Compute the new potential
 			double newPot = 0;
 			for (int i = 0; i < n; i++)
-				newPot += std::min(
-						distance(m_dataset.row(indices[i]).data,
-								m_dataset.row(indices[index]).data,
-								m_dataset.cols), closestDistSq[i]);
+				newPot +=
+						std::min(
+								distance(
+										(TDescriptor*) m_dataset.row(indices[i]).data,
+										(TDescriptor*) m_dataset.row(
+												indices[index]).data,
+										m_dataset.cols), closestDistSq[i]);
 
 			// Store the best result
 			if ((bestNewPot < 0) || (newPot < bestNewPot)) {
@@ -242,10 +253,13 @@ void KmeansppCenters<Distance>::chooseCenters(int k, int* indices,
 		centers[centerCount] = indices[bestNewIndex];
 		currentPot = bestNewPot;
 		for (int i = 0; i < n; i++)
-			closestDistSq[i] = std::min(
-					distance(m_dataset.row(indices[i]).data,
-							m_dataset.row(indices[bestNewIndex]).data,
-							m_dataset.cols), closestDistSq[i]);
+			closestDistSq[i] =
+					std::min(
+							distance(
+									(TDescriptor*) m_dataset.row(indices[i]).data,
+									(TDescriptor*) m_dataset.row(
+											indices[bestNewIndex]).data,
+									m_dataset.cols), closestDistSq[i]);
 	}
 
 	centers_length = centerCount;
@@ -255,18 +269,18 @@ void KmeansppCenters<Distance>::chooseCenters(int k, int* indices,
 
 // --------------------------------------------------------------------------
 
-template<typename Distance>
-cv::Ptr<CentersChooser<Distance> > CentersChooser<Distance>::create(
-		const cvflann::flann_centers_init_t& chooserType) {
+template<typename TDescriptor, typename Distance>
+cv::Ptr<CentersChooser<TDescriptor, Distance> > CentersChooser<TDescriptor,
+		Distance>::create(const cvflann::flann_centers_init_t& chooserType) {
 
-	cv::Ptr<CentersChooser<Distance> > cc;
+	cv::Ptr<CentersChooser<TDescriptor, Distance> > cc;
 
 	if (chooserType == cvflann::FLANN_CENTERS_RANDOM) {
-		cc = new RandomCenters<Distance>();
+		cc = new RandomCenters<TDescriptor, Distance>();
 	} else if (chooserType == cvflann::FLANN_CENTERS_GONZALES) {
-		cc = new GonzalezCenters<Distance>();
+		cc = new GonzalezCenters<TDescriptor, Distance>();
 	} else if (chooserType == cvflann::FLANN_CENTERS_KMEANSPP) {
-		cc = new KmeansppCenters<Distance>();
+		cc = new KmeansppCenters<TDescriptor, Distance>();
 	} else {
 		CV_Error(CV_StsBadArg,
 				"Unknown algorithm for choosing initial centers");
