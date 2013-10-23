@@ -82,13 +82,13 @@ public:
 
 class VocabTreeBase {
 public:
+	// Virtual destructor to enable destruction from a subclass
 	virtual ~VocabTreeBase() {
 	}
 
-	// TODO Add necessary validation of m_dataset.empty() or m_words.empty on each method
-	virtual size_t size()=0;
+	virtual size_t size() = 0;
 
-	virtual void build()=0;
+	virtual void build() = 0;
 
 	virtual void save(const std::string& filename) const = 0;
 
@@ -109,7 +109,7 @@ public:
 	virtual void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			const uint numDbImages, const int normType = cv::NORM_L2) const = 0;
 
-	virtual void getDbBowVector(uint idx, cv::Mat& dbBowVector) const = 0;
+	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
 };
 
 template<class TDescriptor, class Distance>
@@ -130,7 +130,6 @@ private:
 		// this is a k-ary tree, where 'k' is the branch factor, that is has k children or none
 		VocabTreeNode** children;
 		// Word id (only for terminal nodes)
-		// TODO Check if this attribute is truly necessary
 		int word_id;
 		// Weight (only for terminal nodes)
 		double weight;
@@ -289,7 +288,7 @@ public:
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			const uint numDbImages, const int normType = cv::NORM_L2) const;
 
-	void getDbBowVector(uint idx, cv::Mat& dbBowVector) const;
+	void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const;
 
 private:
 
@@ -465,6 +464,11 @@ void VocabTree<TDescriptor, Distance>::build() {
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
+
+	if (empty()) {
+		throw std::runtime_error(
+				"[VocabTree::save] Error while saving tree, vocabulary is empty");
+	}
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
@@ -804,7 +808,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			}
 		}
 
-		// TODO handle empty clusters
+		// Handle empty clusters
 		for (int i = 0; i < m_branching; ++i) {
 			// if one cluster converges to an empty cluster,
 			// move an element into that cluster
@@ -962,6 +966,12 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 		WeightingType weighting, const uint numDbWords) {
+
+	if (empty()) {
+		throw std::runtime_error("[VocabTree::computeWordsWeights]"
+				" Error while computing words weights, vocabulary is empty");
+	}
+
 	if (weighting == cvflann::BINARY) {
 		// Setting constant weight equal to 1
 		for (VocabTreeNodePtr& word : m_words) {
@@ -972,7 +982,6 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (VocabTreeNodePtr& word : m_words) {
 			int len = word->image_list.size();
-			// TODO Check that descriptors are being correctly quantized
 			// because having that a descriptor from all DB images is quantized
 			// to the same word is quite unlikely
 			if (len > 0) {
@@ -991,6 +1000,11 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::createDatabase() {
+
+	if (empty()) {
+		throw std::runtime_error("[VocabTree::createDatabase] Error while"
+				" applying weights to words histogram, vocabulary is empty");
+	}
 
 	// Loop over words
 	for (VocabTreeNodePtr& word : m_words) {
@@ -1090,6 +1104,11 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::normalizeDatabase(
 		const uint num_db_images, int normType) {
 
+	if (empty()) {
+		throw std::runtime_error("[VocabTree::normalizeDatabase] Error while"
+				" normalizing DB BoW vectors, vocabulary is empty");
+	}
+
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
 	std::vector<float> mags(num_db_images, 0.0);
@@ -1144,7 +1163,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 
 	if (queryImgFeatures.rows < 1) {
 		throw std::runtime_error(
-				"[VocabTree::addImageToDatabase] Error while scoring image, at least one feature vector is needed");
+				"[VocabTree::scoreQuery] Error while scoring image, at least one feature vector is needed");
 	}
 
 	if (queryImgFeatures.cols != (int) m_veclen) {
@@ -1157,8 +1176,8 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	}
 
 	if (empty()) {
-		throw std::runtime_error(
-				"[VocabTree::scoreQueryFeatures] Vocabulary is empty");
+		throw std::runtime_error("[VocabTree::scoreQuery]"
+				" Error while scoring query, vocabulary is empty");
 	}
 
 	if (normType != cv::NORM_L1 && normType != cv::NORM_L2) {
@@ -1235,8 +1254,14 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 }
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::getDbBowVector(uint idx,
+void VocabTree<TDescriptor, Distance>::getDbBoWVector(uint idx,
 		cv::Mat& dbBowVector) const {
+
+	if (empty()) {
+		throw std::runtime_error(
+				"[VocabTree::getDbBoWVector] Error while obtaining DB BoW vectors,"
+						" vocabulary is empty");
+	}
 
 	dbBowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
 
