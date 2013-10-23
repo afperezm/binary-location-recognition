@@ -28,9 +28,8 @@ void FileUtils::readFolder(const char* folderPath,
 		std::sort(files.begin(), files.end());
 		fprintf(stdout, "   Found [%d] files\n", (int) files.size());
 	} else {
-		std::stringstream ss;
-		ss << "Could not open directory [" << folderPath << "]";
-		throw std::runtime_error(ss.str());
+		throw std::runtime_error(
+				"Could not open directory [" + std::string(folderPath) + "]");
 	}
 }
 
@@ -43,9 +42,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
 	if (!fs.isOpened()) {
-		std::stringstream ss;
-		ss << "Could not open file [" << filename << "]";
-		throw std::runtime_error(ss.str());
+		throw std::runtime_error("Could not open file [" + filename + "]");
 	}
 
 	fs << "TotalKeypoints" << descriptors.rows;
@@ -86,9 +83,7 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
-		std::stringstream ss;
-		ss << "Could not open file [" << filename << "]";
-		throw std::runtime_error(ss.str());
+		throw std::runtime_error("Could not open file [" + filename + "]");
 	}
 
 	int rows, cols, type;
@@ -103,10 +98,8 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileNode keypointsSequence = fs["KeyPoints"];
 
 	if (keypointsSequence.type() != cv::FileNode::SEQ) {
-		std::stringstream ss;
-		ss << "Error while parsing [" << filename;
-		ss << "] fetched element KeyPoints is not a sequence";
-		throw std::runtime_error(ss.str());
+		throw std::runtime_error("Error while parsing [" + filename + "]"
+				" fetched element KeyPoints is not a sequence");
 	}
 
 	int idx = 0;

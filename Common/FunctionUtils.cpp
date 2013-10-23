@@ -33,8 +33,9 @@ void HtmlResultsWriter::writeHeader(FILE *f, int num_nns) {
 	fprintf(f, "</tr>\n");
 }
 
-void HtmlResultsWriter::writeRow(FILE *f, const std::string &query, cv::Mat& scores,
-		cv::Mat& perm, int num_nns, const std::vector<std::string> &db_images) {
+void HtmlResultsWriter::writeRow(FILE *f, const std::string &query,
+		cv::Mat& scores, cv::Mat& perm, int num_nns,
+		const std::vector<std::string> &db_images) {
 	char q_base[512], q_thumb[512];
 	basifyFilename(query.c_str(), q_base);
 	sprintf(q_thumb, "%s.thumb.jpg", q_base);
@@ -160,13 +161,12 @@ int FunctionUtils::NumberOfSetBits(int i) {
 
 int FunctionUtils::BinToDec(const cv::Mat& binRow) {
 	if (binRow.type() != CV_8U) {
-		fprintf(stderr, "BinToDec: error, received matrix is not binary");
-		throw;
+		throw std::invalid_argument(
+				"BinToDec: error, received matrix is not binary");
 	}
 	if (binRow.rows != 1) {
-		fprintf(stderr,
+		throw std::invalid_argument(
 				"BinToDec: error, received matrix must have only one row");
-		throw;
 	}
 	int decimal = 0;
 	for (int i = 0; i < binRow.cols; i++) {

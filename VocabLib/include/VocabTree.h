@@ -540,8 +540,7 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (!fs.isOpened()) {
-		throw std::runtime_error(
-				std::string("Could not open file ") + filename);
+		throw std::runtime_error("Could not open file " + filename);
 	}
 
 	m_iterations = (int) fs["iterations"];
@@ -589,10 +588,8 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		// Verifying that imageList is a sequence
 		if (children.type() != cv::FileNode::NONE
 				&& images.type() != cv::FileNode::SEQ) {
-			std::stringstream ss;
-			ss << "Error while parsing tree, fetched element"
-					" 'images' should be a sequence";
-			throw std::runtime_error(ss.str());
+			throw std::runtime_error("Error while parsing tree,"
+					" fetched element 'images' should be a sequence");
 		}
 
 		node->children = NULL;
@@ -612,10 +609,8 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		// Verifying that children is a sequence
 		if (children.type() != cv::FileNode::NONE
 				&& children.type() != cv::FileNode::SEQ) {
-			std::stringstream ss;
-			ss << "Error while parsing tree, fetched element"
-					" 'children' should be a sequence";
-			throw std::runtime_error(ss.str());
+			throw std::runtime_error("Error while parsing tree,"
+					" fetched element 'children' should be a sequence");
 		}
 
 		// Verifying that children has 0 or k elements

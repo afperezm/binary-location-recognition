@@ -180,10 +180,9 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 			CV_LOAD_IMAGE_GRAYSCALE);
 
 	if (!img.data) {
-		std::stringstream ss;
-		ss << "Error reading image [" << imgPath + std::string("/") + imgName
-				<< "]";
-		throw std::runtime_error(ss.str());
+		throw std::runtime_error(
+				"Error reading image [" + imgPath + std::string("/") + imgName
+						+ "]");
 	} else {
 		// Create smart pointer for feature detector
 		cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
