@@ -140,8 +140,16 @@ private:
 			image_list.clear();
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
-			// TODO Deep copy the pointer
-			center = node.center;
+			if (node.center != NULL) {
+				// Deep copy
+				center = new TDescriptor[m_veclen];
+				m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
+				for (size_t k = 0; k < m_veclen; ++k) {
+					center[k] = node.center[k];
+				}
+			} else {
+				center = NULL;
+			}
 			children = node.children;
 			word_id = node.word_id;
 			weight = node.weight;
