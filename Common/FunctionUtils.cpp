@@ -12,14 +12,6 @@
 #include <string>
 #include <stdexcept>
 
-//HtmlViewer::HtmlViewer() {
-//	html = "";
-//}
-//
-//HtmlViewer::~HtmlViewer() {
-//
-//}
-
 void HtmlResultsWriter::basifyFilename(const char *filename, char *base) {
 	strcpy(base, filename);
 	base[strlen(base) - 8] = 0;

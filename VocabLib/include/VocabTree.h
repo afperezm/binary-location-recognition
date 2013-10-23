@@ -85,6 +85,7 @@ public:
 	virtual ~VocabTreeBase() {
 	}
 
+	// TODO Add necessary validation of m_dataset.empty() or m_words.empty on each method
 	virtual size_t size()=0;
 
 	virtual void build()=0;
@@ -108,6 +109,7 @@ public:
 	virtual void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			const uint numDbImages, const int normType = cv::NORM_L2) const = 0;
 
+	virtual void getDbBowVector(uint idx, cv::Mat& dbBowVector) const = 0;
 };
 
 template<class TDescriptor, class Distance>
@@ -139,6 +141,7 @@ private:
 			image_list.clear();
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
+			// TODO Deep copy the pointer
 			center = node.center;
 			children = node.children;
 			word_id = node.word_id;
@@ -286,6 +289,8 @@ public:
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			const uint numDbImages, const int normType = cv::NORM_L2) const;
 
+	void getDbBowVector(uint idx, cv::Mat& dbBowVector) const;
+
 private:
 
 	/**
@@ -431,6 +436,11 @@ void VocabTree<TDescriptor, Distance>::build() {
 				" must be at least 2");
 	}
 
+	if (m_dataset.empty() == true) {
+		throw std::runtime_error("[VocabTree::build] Error, data set is empty"
+				" cannot proceed with clustering");
+	}
+
 	// Number of features in the dataset
 	size_t size = m_dataset.rows;
 
@@ -485,7 +495,9 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 
 	// WriteNode
 	fs << "{";
-	fs << "center" << cv::Mat(1, m_veclen, m_dataset.type(), node->center);
+	fs << "center"
+			<< cv::Mat(1, m_veclen, cv::DataType<TDescriptor>::type,
+					(uchar*) node->center);
 	fs << "weight" << node->weight;
 	fs << "wordId" << node->word_id;
 
@@ -862,11 +874,16 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 	// Initialize query BoW vector
 	bowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
 
+//	printf("Quantizing query features vectors]\n");
 	// Quantize each query image feature vector
 	for (size_t i = 0; (int) i < featuresVector.rows; i++) {
 		uint wordIdx;
 		double wordWeight;
+
+//		printf("  Quantizing vector [%lu]\n", i);
+//		std::cout << featuresVector.row(i) << std::endl;
 		quantize(featuresVector.row(i), wordIdx, wordWeight);
+//		getchar();
 
 		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
 			throw std::runtime_error(
@@ -888,15 +905,22 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 	VocabTreeNodePtr best_node = m_root;
 
-//	int level = 0;
+//	int level = 0, k;
 	while (best_node->children != NULL) {
 
 		VocabTreeNodePtr node = best_node;
 
+//		k = 0;
 		// Arbitrarily assign to first child
 		best_node = node->children[0];
 		DistanceType best_distance = m_distance((TDescriptor*) feature.data,
 				best_node->center, m_veclen);
+
+//		for (size_t i = 0; i < m_veclen; i++) {
+//			printf("%f, ", best_node->center);
+//		}
+
+//		printf("d(%d)=%f ", k, best_distance);
 
 //		cvflann::L2<float> dfun = cvflann::L2<float>();
 //		cvflann::L2<float>::ResultType d = dfun((TDescriptor*) feature.data, best_node->center, m_veclen);
@@ -912,16 +936,19 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 //		std::cout << "At level [" << level << "] distance to node [0] is " << "[" << best_distance << "]\n";
 
-//		size_t j = 1;
+//		size_t j;
 		// Looking for a better child
 		for (size_t j = 1; (int) j < this->m_branching; j++) {
 			DistanceType d = m_distance((TDescriptor*) feature.data,
 					node->children[j]->center, m_veclen);
+//			printf("d(%d)=%f ", j, d);
 			if (d < best_distance) {
 				best_distance = d;
 				best_node = node->children[j];
+//				k = j;
 			}
 		}
+//		printf("\nlevel=[%d] node=[%d]\n", level, k);
 //		level++;
 	}
 
@@ -1013,7 +1040,8 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 
 	if (empty()) {
 		throw std::runtime_error(
-				"[VocabTree::addImageToDatabase] Vocabulary is empty");
+				"[VocabTree::addImageToDatabase] Error while adding image,"
+						" vocabulary is empty");
 	}
 
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
@@ -1021,7 +1049,10 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		double wordWeight; // not needed
 		// w is the IDF value if TF_IDF, 1 if TF
 		// w is the Inverse Document Frequency if IDF, 1 if BINARY
+//		printf("  Quantizing vector [%lu]\n", i);
+//		std::cout << imgFeatures.row(i) << std::endl;
 		quantize(imgFeatures.row(i), wordIdx, wordWeight);
+//		getchar();
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 	}
 
@@ -1140,6 +1171,8 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
 
+//	std::cout << "Query BoW vector:\n" << queryBowVector << std::endl;
+
 	//	Efficient scoring query BoW vector against all DB BoW vectors
 
 	// ||v - w||_{L1} = 2 + Sum(|v_i - w_i| - |v_i| - |w_i|)
@@ -1199,6 +1232,21 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 		// else, not possible since normType was validated before
 	}
 
+}
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::getDbBowVector(uint idx,
+		cv::Mat& dbBowVector) const {
+
+	dbBowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
+
+	for (VocabTreeNodePtr word : m_words) {
+		for (ImageCount& image : word->image_list) {
+			if (image.m_index == idx) {
+				dbBowVector.at<float>(0, word->word_id) = image.m_count;
+			}
+		}
+	}
 }
 
 } /* namespace cvflann */

@@ -15,8 +15,7 @@
 
 class HtmlResultsWriter {
 public:
-//	HtmlViewer();
-//	~HtmlViewer();
+
 	static HtmlResultsWriter& getInstance() {
 		static HtmlResultsWriter instance; // Guaranteed to be destroyed.
 		// Instantiated on first use.
@@ -34,14 +33,13 @@ public:
 	std::string getHtml() const;
 
 private:
-	// Constructor? (the {} brackets) are needed here.
+	// Make the constructor private so that it cannot be instantiated from outside
 	HtmlResultsWriter() {
 	}
 	;
 
-	// Don't forget to declare these two. You want to make sure they
-	// are unaccessible otherwise you may accidently get copies of
-	// your singleton appearing.
+	// Make private the copy constructor and the assignment operator
+	// to prevent obtaining copies of the singleton
 	HtmlResultsWriter(HtmlResultsWriter const&); // Don't Implement
 	void operator=(HtmlResultsWriter const&); // Don't implement
 

@@ -187,6 +187,7 @@ int main(int argc, char **argv) {
 	cv::Mat scores;
 
 	int max_ld = *std::max_element(db_landmarks.begin(), db_landmarks.end());
+	int top = MIN (num_nbrs, db_filenames.size());
 
 	FILE *f_match = fopen(matches_out, "w");
 	if (f_match == NULL) {
@@ -203,7 +204,7 @@ int main(int argc, char **argv) {
 	}
 
 	FILE *f_html = fopen(output_html, "w");
-	HtmlResultsWriter::getInstance().writeHeader(f_html, num_nbrs);
+	HtmlResultsWriter::getInstance().writeHeader(f_html, top);
 	if (f_html == NULL) {
 		fprintf(stderr, "Error opening file [%s] for writing\n",
 				candidates_out);
@@ -243,6 +244,13 @@ int main(int argc, char **argv) {
 		// Print to standard output the matching scores between
 		// the query bow vector and the DB images bow vectors
 		for (size_t j = 0; (int) j < scores.cols; j++) {
+//			cv::Mat dbBowVector;
+//			tree->getDbBowVector(j, dbBowVector);
+//			std::cout << j << ") DB BoW vector:\n" << dbBowVector << std::endl;
+//			printf(
+//					"   Match score between [%s] query image and [%lu] DB image: %f\n",
+//					query_filenames[i].c_str(), j, scores.at<float>(0, j));
+//			getchar();
 			printf(
 					"   Match score between [%lu] query image and [%lu] DB image: %f\n",
 					i, j, scores.at<float>(0, j));
@@ -265,8 +273,6 @@ int main(int argc, char **argv) {
 		//   img5  --->  img5 ld2
 		//   img6  --->  img6 ld2
 		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_DESCENDING);
-
-		int top = MIN (num_nbrs, db_filenames.size());
 
 		// Initialize votes vector
 		// Note: size is maximum landmark id plus one because landmark index its zero-based
