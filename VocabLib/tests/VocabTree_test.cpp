@@ -5,8 +5,15 @@
  *      Author: andresf
  */
 
+#include <gtest/gtest.h>
 #include <VocabTree.h>
+#include <opencv2/core/core.hpp>
 
-namespace cvflann {
+TEST(VocabTree, Instantiation) {
+	cv::Ptr<cvflann::VocabTreeBase> tree;
+	tree = new cvflann::VocabTree<float, cv::L2<float> >();
 
-} /* namespace cvflann */
+	std::cout << "a is of type: " << typeid(tree).name() << std::endl;
+
+	ASSERT_NE(NULL, tree);
+}
