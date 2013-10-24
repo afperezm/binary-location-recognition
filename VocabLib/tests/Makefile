@@ -18,9 +18,8 @@ CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
 # GoogleTest
-GTEST_DIR = /home/andresf/workspace-cpp/gtest-1.7.0
 CXXFLAGS += -Wextra -pthread
-LDFLAGS += -L$(GTEST_DIR)/make/ -lgtest_main -lpthread
+LDFLAGS += -lgtest_main -lpthread
 
 SOURCES = VocabTree_test.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
@@ -30,10 +29,10 @@ BIN =  VocabTree_test
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) -isystem $(GTEST_DIR)/include $(CXXFLAGS) $< $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~
 
 VocabTree_test.o: VocabTree_test.cpp
-	$(CXX) -isystem $(GTEST_DIR)/include $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
