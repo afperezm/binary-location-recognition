@@ -892,7 +892,7 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 		quantize(featuresVector.row(i), wordIdx, wordWeight);
 //		getchar();
 
-		if (wordIdx > m_words.size() - 1 || wordIdx < 0) {
+		if (wordIdx > m_words.size() - 1) {
 			throw std::runtime_error(
 					"[VocabTree::scoreQuery] Feature quantized into a non-existent word");
 		}
