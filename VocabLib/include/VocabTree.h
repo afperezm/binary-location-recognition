@@ -298,6 +298,26 @@ public:
 
 	void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const;
 
+	bool operator==(const VocabTree<TDescriptor, Distance> &other) const;
+
+	bool operator!=(const VocabTree<TDescriptor, Distance> &other) const;
+
+	VocabTreeNodePtr getRoot() const {
+		return m_root;
+	}
+
+	int getBranching() const {
+		return m_branching;
+	}
+
+	int getDepth() const {
+		return m_depth;
+	}
+
+	size_t getVeclen() const {
+		return m_veclen;
+	}
+
 private:
 
 	/**
@@ -381,6 +401,13 @@ private:
 	void transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
 			const int& normType) const;
 
+	bool compareEqual(const VocabTreeNode& a, const VocabTreeNode& b) const;
+
+	// Make private the copy constructor and the assignment operator
+	// to prevent obtaining copies of the instance
+	VocabTree(VocabTree const&); // Don't Implement
+	void operator=(VocabTree const&); // Don't implement
+
 };
 
 // --------------------------------------------------------------------------
@@ -440,6 +467,11 @@ void VocabTree<TDescriptor, Distance>::build() {
 
 	if (m_branching < 2) {
 		throw std::runtime_error("[VocabTree::build] Error, branching factor"
+				" must be at least 2");
+	}
+
+	if (m_depth <= 2) {
+		throw std::runtime_error("[VocabTree::build] Error, depth"
 				" must be at least 2");
 	}
 
@@ -1275,6 +1307,77 @@ void VocabTree<TDescriptor, Distance>::getDbBoWVector(uint idx,
 			}
 		}
 	}
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNode& a,
+		const VocabTreeNode& b) const {
+
+	// Assert both nodes are interior or leaf nodes
+	if ((a.children != NULL && b.children == NULL)
+			|| (a.children == NULL && b.children != NULL)) {
+		printf("Nodes are not both interior or leaf nodes\n");
+		return false;
+	}
+
+	// Recursion base case: both are leaf nodes and have no children
+	// Note: in this point both nodes have none or some children
+	if (a.children == NULL) {
+
+		if (a.word_id != b.word_id) {
+			printf("Word ids don't coincide\n");
+			return false;
+		}
+		if (a.weight != b.weight) {
+			printf("Word weights don't coincide\n");
+			return false;
+		}
+
+		return true;
+	}
+
+	for (size_t k = 0; k < m_veclen; ++k) {
+		// Might be necessary to check the type of pointer
+		// i.e. both should be pointers to the same type
+		if (a.center[k] != b.center[k]) {
+			printf("Centers don't coincide\n");
+			return false;
+		}
+		if (compareEqual(*a.children[k], *b.children[k]) == false) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+template<class TDescriptor, class Distance>
+bool VocabTree<TDescriptor, Distance>::operator==(
+		const VocabTree<TDescriptor, Distance> &other) const {
+
+	if (this->getVeclen() != other.getVeclen()
+			|| this->getBranching() != other.getBranching()
+			|| this->getDepth() != other.getDepth()) {
+		return false;
+	}
+
+//	if (this->m_words.size() != other.size()) {
+//		return false;
+//	}
+
+	if (compareEqual(*this->getRoot(), *other.getRoot()) == false) {
+		return false;
+	}
+
+	return true;
+}
+
+template<class TDescriptor, class Distance>
+bool VocabTree<TDescriptor, Distance>::operator!=(
+		const VocabTree<TDescriptor, Distance> &other) const {
+	return !(*this == other);
 }
 
 } /* namespace cvflann */
