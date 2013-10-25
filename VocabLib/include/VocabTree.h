@@ -401,7 +401,7 @@ private:
 	void transform(const cv::Mat& featuresVector, cv::Mat& bowVector,
 			const int& normType) const;
 
-	bool compareEqual(const VocabTreeNode& a, const VocabTreeNode& b) const;
+	bool compareEqual(const VocabTreeNodePtr a, const VocabTreeNodePtr b) const;
 
 	// Make private the copy constructor and the assignment operator
 	// to prevent obtaining copies of the instance
@@ -492,11 +492,15 @@ void VocabTree<TDescriptor, Distance>::build() {
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
 
+#if VTREEVERBOSE
 	printf("[VocabTree::build] Started clustering\n");
+#endif
 
 	computeClustering(m_root, indices, (int) size, 0);
 
+#if VTREEVERBOSE
 	printf("[VocabTree::build] Finished clustering\n");
+#endif
 
 }
 
@@ -717,9 +721,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		return;
 	}
 
+#if VTREEVERBOSE
 	printf(
 			"[VocabTree::computeClustering] (level %d): Running k-means (%d features)\n",
 			level, indices_length);
+#endif
 
 	int* centers_idx = new int[m_branching];
 	int centers_length;
@@ -1312,41 +1318,48 @@ void VocabTree<TDescriptor, Distance>::getDbBoWVector(uint idx,
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNode& a,
-		const VocabTreeNode& b) const {
+bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
+		const VocabTreeNodePtr b) const {
+
+#if VTREEVERBOSE
+	printf("[VocabTree::compareEqual] Comparing tree roots\n");
+#endif
 
 	// Assert both nodes are interior or leaf nodes
-	if ((a.children != NULL && b.children == NULL)
-			|| (a.children == NULL && b.children != NULL)) {
-		printf("Nodes are not both interior or leaf nodes\n");
+	if ((a->children != NULL && b->children == NULL)
+			|| (a->children == NULL && b->children != NULL)) {
 		return false;
 	}
 
-	// Recursion base case: both are leaf nodes and have no children
-	// Note: in this point both nodes have none or some children
-	if (a.children == NULL) {
-
-		if (a.word_id != b.word_id) {
-			printf("Word ids don't coincide\n");
+	// At this point both nodes have none or some children,
+	// hence valid nodes so we proceed to check the centers
+	for (size_t k = 0; k < m_veclen; ++k) {
+		// Might be necessary to check as well the type of pointer
+		// i.e. both should be pointers to the same type
+		if (a->center[k] != b->center[k]) {
 			return false;
 		}
-		if (a.weight != b.weight) {
-			printf("Word weights don't coincide\n");
+	}
+
+	if (a->children == NULL) {
+		// Base case: both are leaf nodes since have no children
+		if (a->word_id != b->word_id) {
+			return false;
+		}
+		if (a->weight != b->weight) {
+			return false;
+		}
+		if (a->image_list.size() != a->image_list.size()) {
 			return false;
 		}
 
 		return true;
-	}
-
-	for (size_t k = 0; k < m_veclen; ++k) {
-		// Might be necessary to check the type of pointer
-		// i.e. both should be pointers to the same type
-		if (a.center[k] != b.center[k]) {
-			printf("Centers don't coincide\n");
-			return false;
-		}
-		if (compareEqual(*a.children[k], *b.children[k]) == false) {
-			return false;
+	} else {
+		// Recursion case: both are interior nodes
+		for (size_t i = 0; (int) i < m_branching; i++) {
+			if (compareEqual(a->children[i], b->children[i]) == false) {
+				return false;
+			}
 		}
 	}
 
@@ -1367,7 +1380,7 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 //		return false;
 //	}
 
-	if (compareEqual(*this->getRoot(), *other.getRoot()) == false) {
+	if (compareEqual(this->getRoot(), other.getRoot()) == false) {
 		return false;
 	}
 
