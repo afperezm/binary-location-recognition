@@ -19,7 +19,8 @@ LDFLAGS += `pkg-config opencv --libs`
 
 # GoogleTest
 CXXFLAGS += -Wextra -pthread
-LDFLAGS += -lgtest_main -lpthread
+#LDFLAGS += -lgtest_main -lpthread
+LDFLAGS += -L/home/andresf/workspace-cpp/gtest-1.7.0/make -lgtest_main -lpthread
 
 SOURCES = VocabTree_test.cpp
 OBJECTS = $(SOURCES:.cpp=.o)

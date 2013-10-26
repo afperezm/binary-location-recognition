@@ -150,6 +150,13 @@ int main(int argc, char **argv) {
 				return EXIT_FAILURE;
 			}
 
+			// Show keypoints
+
+			//	cv::drawKeypoints(img_1, keypoints, img_1, cv::Scalar::all(-1));
+			//	cv::namedWindow("Image keypoints", CV_WINDOW_NORMAL);
+			//	cv::imshow("Image keypoints", img_1);
+			//	cv::waitKey(0);
+
 			std::string descriptorFileName(keysFolder);
 			descriptorFileName += "/" + (*image).substr(0, (*image).size() - 4)
 					+ ".yaml.gz";
@@ -193,14 +200,33 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		printf("   Detecting keypoints from image [%s]\n", imgName.c_str());
 		detector->detect(img, keypoints);
 
+		//	mytime = cv::getTickCount();
+		//	detector->detect(img_1, keypoints);
+		//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+		//			* 1000;
+		//	printf("-- Detected [%zu] keypoints in [%lf] ms\n", keypoints.size(),
+		//			mytime);
+
 		// Create smart pointer for descriptor extractor
 		cv::Ptr<cv::DescriptorExtractor> extractor =
 				cv::DescriptorExtractor::create(descriptorType);
 
 		descriptors = cv::Mat();
 		// Describe keypoints
+		// Notice that number of keypoints might be reduced due to border effect
 		printf("   Describing keypoints from image [%s]\n", imgName.c_str());
 		extractor->compute(img, keypoints, descriptors);
+
+		//	mytime = cv::getTickCount();
+		//	extractor->compute(img_1, keypoints, descriptors);
+		//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+		//			* 1000;
+
+		// Notice that number of keypoints might be reduced due to border effect
+		//	printf(
+		//			"-- Extracted [%d] descriptors of size [%d] and type [%s] in [%lf] ms\n",
+		//			descriptors.rows, descriptors.cols,
+		//			descriptors.type() == CV_8U ? "binary" : "real-valued", mytime);
 	}
 
 }
