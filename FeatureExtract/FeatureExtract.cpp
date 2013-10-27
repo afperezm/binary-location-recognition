@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 	if (argc < 3 || argc > 5) {
 		printf(
 				"\nUsage:\n"
-						"\t%s <in.imgs.folder> <out.keys.folder> [in.detector:SIFT] [in.descriptor:BRIEF]\n\n",
+						"\t%s <in.imgs.folder> <out.keys.folder> [in.detector:SIFT] [in.descriptor:BRISK]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
 	}
@@ -60,12 +60,16 @@ int main(int argc, char **argv) {
 	std::vector<std::string> algorithms;
 	cv::Algorithm::getList(algorithms);
 	bool isDetectorValid = false, isDescriptorValid = false;
+
 	for (std::string algName : algorithms) {
-		isDetectorValid |= algName.substr(algName.size() - detectorType.size(),
-				detectorType.size()).compare(detectorType) == 0;
-		isDescriptorValid |=
-				algName.substr(algName.size() - descriptorType.size(),
-						descriptorType.size()).compare(descriptorType) == 0;
+		isDetectorValid |= algName.substr(
+				algName.size() < detectorType.size() ?
+						0 : algName.size() - detectorType.size()).compare(
+				detectorType) == 0;
+		isDescriptorValid |= algName.substr(
+				algName.size() < descriptorType.size() ?
+						0 : algName.size() - descriptorType.size()).compare(
+				descriptorType) == 0;
 	}
 	if (isDetectorValid == false) {
 		fprintf(stderr,
