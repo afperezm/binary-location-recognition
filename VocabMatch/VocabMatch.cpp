@@ -120,11 +120,11 @@ int main(int argc, char **argv) {
 		sscanf(line.c_str(), "%s %d", filename, &landmark);
 
 		// Checking that file exists, if not print error and exit
-		struct stat buffer;
-		if (stat(filename, &buffer) != 0) {
-			fprintf(stderr, "Keypoints file [%s] doesn't exist\n", filename);
-			return EXIT_FAILURE;
-		}
+//		struct stat buffer;
+//		if (stat(filename, &buffer) != 0) {
+//			fprintf(stderr, "Keypoints file [%s] doesn't exist\n", filename);
+//			return EXIT_FAILURE;
+//		}
 
 		// Checking that filename refers to a compressed yaml or xml file
 		if (boost::regex_match(std::string(filename), expression) == false) {
@@ -280,8 +280,8 @@ int main(int argc, char **argv) {
 
 		// Accumulating landmark votes for the top scored images
 		// Note: recall that images might refer to the same landmark
-		for (size_t i = 0; (int) i < top; i++) {
-			votes[db_landmarks[perm.at<int>(0, i)]]++;
+		for (size_t j = 0; (int) j < top; j++) {
+			votes[db_landmarks[perm.at<int>(0, j)]]++;
 		}
 
 		// Finding max voted landmark and the number of votes it got
@@ -302,6 +302,21 @@ int main(int argc, char **argv) {
 		}
 		fprintf(f_candidates, "\n");
 		fflush(f_candidates);
+
+		std::stringstream ranked_list_fname;
+		ranked_list_fname << "query_" << i << "_ranked.txt";
+
+		FILE *f_ranked_list = fopen(ranked_list_fname.str().c_str(), "w");
+		if (f_ranked_list == NULL) {
+			fprintf(stderr, "Error opening file [%s] for writing\n",
+					ranked_list_fname.str().c_str());
+			return EXIT_FAILURE;
+		}
+		for (int j = 0; j < top; j++) {
+			std::string d_base = db_filenames[perm.at<int>(0, j)];
+			fprintf(f_ranked_list, "%s\n", d_base.c_str());
+		}
+		fclose(f_ranked_list);
 
 		// Print to a file the max voted landmark information
 		fprintf(f_match, "%lu %d %d\n", i, max_landmark, max_votes);
