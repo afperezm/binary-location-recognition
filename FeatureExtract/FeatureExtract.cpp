@@ -176,6 +176,8 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s\n", error.what());
 				return EXIT_FAILURE;
 			}
+
+			descriptors.release();
 		}
 	}
 
@@ -220,6 +222,8 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		// Notice that number of keypoints might be reduced due to border effect
 		printf("   Describing keypoints from image [%s]\n", imgName.c_str());
 		extractor->compute(img, keypoints, descriptors);
+
+		img.release();
 
 		//	mytime = cv::getTickCount();
 		//	extractor->compute(img_1, keypoints, descriptors);
