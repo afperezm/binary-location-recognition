@@ -91,7 +91,6 @@ int main(int argc, char **argv) {
 	// ---------------------------------------------------------------
 	std::vector<cv::Mat> descriptors;
 	descriptors.reserve(keysFilenames.size());
-	int size;
 	// ---------------------------------------------------------------
 
 	for (std::string keyFileName : keysFilenames) {
@@ -104,22 +103,25 @@ int main(int argc, char **argv) {
 
 		// TODO Method for adding descriptors to list of cv::Mat
 		// ---------------------------------------------------------------
-		CV_Assert(!imgDescriptors.empty());
-		if (!descriptors.empty()) {
-			CV_Assert(descriptors[0].cols == imgDescriptors.cols);
+		if (imgDescriptors.empty() == false) {
+			if (descriptors.empty() == false) {
+				if (descriptors[0].cols != imgDescriptors.cols) {
+					printf(
+							"descriptors[0].cols=[%d] imgDescriptors.cols=[%d]\n",
+							descriptors[0].cols, imgDescriptors.cols);
+				}
+				CV_Assert(descriptors[0].cols == imgDescriptors.cols);
+			}
 			CV_Assert(descriptors[0].type() == imgDescriptors.type());
-			size += imgDescriptors.rows;
-		} else {
-			size = imgDescriptors.rows;
+			descriptors.push_back(imgDescriptors);
 		}
-		descriptors.push_back(imgDescriptors);
 		// ---------------------------------------------------------------
 	}
 
 	// Step 3: build tree
 	// TODO Method for composing descriptors big matrix from the list of descriptors references
 	// ---------------------------------------------------------------
-	CV_Assert(!descriptors.empty());
+	CV_Assert(descriptors.empty() == false);
 
 	int descCount = 0;
 	for (size_t i = 0; i < descriptors.size(); i++) {
