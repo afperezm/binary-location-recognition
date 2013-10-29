@@ -142,13 +142,16 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
-		printf("   Adding image [%u] to database\n", imgIdx);
-		try {
-			tree->addImageToDatabase(imgIdx, imgDescriptors);
-		} catch (const std::runtime_error& error) {
-			fprintf(stderr, "%s\n", error.what());
-			return EXIT_FAILURE;
+		if (imgDescriptors.rows != 0) {
+			printf("   Adding image [%u] to database\n", imgIdx);
+			try {
+				tree->addImageToDatabase(imgIdx, imgDescriptors);
+			} catch (const std::runtime_error& error) {
+				fprintf(stderr, "%s\n", error.what());
+				return EXIT_FAILURE;
+			}
 		}
+
 		imgIdx++;
 	}
 
@@ -158,7 +161,7 @@ int main(int argc, char **argv) {
 
 	printf("   Added [%u] images\n", imgIdx);
 
-// Step 3/4: Compute words weights and normalize DB
+	// Step 3/4: Compute words weights and normalize DB
 
 	cvflann::WeightingType weightingScheme = cvflann::BINARY;
 	if (use_tfidf) {
