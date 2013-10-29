@@ -28,6 +28,7 @@
 									<listOptionValue builtIn="false" value="/opt/ros/groovy/include/opencv"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/BinVocabTree/KMajorityLib/include}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1749597468" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
