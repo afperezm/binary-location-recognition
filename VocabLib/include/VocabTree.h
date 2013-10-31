@@ -96,18 +96,16 @@ public:
 
 	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
 
-	virtual void computeWordsWeights(WeightingType weighting,
-			const uint numDbWords = 0) = 0;
+	virtual void computeWordsWeights(WeightingType weighting) = 0;
 
 	virtual void createDatabase() = 0;
 
-	virtual void normalizeDatabase(const uint numDbImages, int normType =
-			cv::NORM_L1) = 0;
+	virtual void normalizeDatabase(int normType = cv::NORM_L1) = 0;
 
 	virtual void clearDatabase() = 0;
 
 	virtual void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-			const uint numDbImages, const int normType = cv::NORM_L2) const = 0;
+			const int normType = cv::NORM_L2) const = 0;
 
 	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
 };
@@ -182,6 +180,8 @@ protected:
 	VocabTreeNodePtr m_root;
 	// Words of the vocabulary
 	std::vector<VocabTreeNodePtr> m_words;
+	// Number of DB images, used for creating the scores matrix
+	uint m_numDbImages;
 
 	/* Attributes used by several methods */
 	// The distance
@@ -254,8 +254,7 @@ public:
 	 * @param NWords
 	 * @param weighting - The weighting scheme to apply
 	 */
-	void computeWordsWeights(WeightingType weighting,
-			const uint numDbWords = 0);
+	void computeWordsWeights(WeightingType weighting);
 
 	/**
 	 * Computes the DB BoW vectors by applying the words weights
@@ -271,10 +270,9 @@ public:
 	 * Normalizes the DB BoW vectors by dividing the weighted counts
 	 * stored in the inverted files.
 	 *
-	 * @param numDbImages
 	 * @param normType
 	 */
-	void normalizeDatabase(const uint numDbImages, int normType = cv::NORM_L1);
+	void normalizeDatabase(int normType = cv::NORM_L1);
 
 	/**
 	 * Clears the inverted files from the leaf nodes
@@ -287,14 +285,13 @@ public:
 	 * the pre-computed DB BoW vectors.
 	 *
 	 * @param queryImgFeatures - Matrix containing the features of the query image
-	 * @param numDbImages - Number of DB images, used for creating the scores matrix
 	 * @param scores - Row matrix of size [1 x n] where n is the number DB images
 	 * @param scoringMethod - normalization method used for scoring BoW vectors
 	 *
 	 * @note DB BoW vectors must be normalized beforehand
 	 */
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-			const uint numDbImages, const int normType = cv::NORM_L2) const;
+			const int normType = cv::NORM_L2) const;
 
 	void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const;
 
@@ -424,6 +421,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(const cv::Mat& inputData,
 	m_iterations = get_param(params, "iterations", 11);
 	m_depth = get_param(params, "depth", 10);
 	m_centers_init = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
+	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
 		m_iterations = (std::numeric_limits<int>::max)();
@@ -1006,7 +1004,7 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeWordsWeights(
-		WeightingType weighting, const uint numDbWords) {
+		WeightingType weighting) {
 
 	if (empty()) {
 		throw std::runtime_error("[VocabTree::computeWordsWeights]"
@@ -1026,7 +1024,7 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 			// because having that a descriptor from all DB images is quantized
 			// to the same word is quite unlikely
 			if (len > 0) {
-				word->weight = log((double) numDbWords / (double) len);
+				word->weight = log((double) m_numDbImages / (double) len);
 			} else {
 				word->weight = 0.0;
 			}
@@ -1111,6 +1109,9 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 	}
 
+	// Increasing the counter of images in the DB
+	m_numDbImages++;
+
 }
 
 // --------------------------------------------------------------------------
@@ -1142,8 +1143,7 @@ void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::normalizeDatabase(
-		const uint num_db_images, int normType) {
+void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 
 	if (empty()) {
 		throw std::runtime_error("[VocabTree::normalizeDatabase] Error while"
@@ -1152,7 +1152,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(
 
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
-	std::vector<float> mags(num_db_images, 0.0);
+	std::vector<float> mags(m_numDbImages, 0.0);
 
 	// Computing DB BoW vectors magnitude
 
@@ -1177,7 +1177,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(
 
 	// Applying power over sum result
 	if (normType == cv::NORM_L2) {
-		for (size_t i = 0; i < num_db_images; i++) {
+		for (size_t i = 0; i < mags.size(); i++) {
 			mags[i] = sqrt(mags[i]);
 		}
 	}
@@ -1200,7 +1200,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::scoreQuery(
 		const cv::Mat& queryImgFeatures, cv::Mat& scores,
-		const uint numDbImages, const int normType) const {
+		const int normType) const {
 
 	if (queryImgFeatures.rows < 1) {
 		throw std::runtime_error(
@@ -1226,7 +1226,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 				"[VocabTree::scoreQuery] Unknown scoring method");
 	}
 
-	scores = cv::Mat::zeros(1, numDbImages, cv::DataType<float>::type);
+	scores = cv::Mat::zeros(1, m_numDbImages, cv::DataType<float>::type);
 
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);

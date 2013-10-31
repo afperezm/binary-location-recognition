@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
 			weightingScheme == cvflann::TF_IDF ? "TF-IDF" :
 			weightingScheme == cvflann::BINARY ? "BINARY" : "UNKNOWN");
 
-	tree->computeWordsWeights(weightingScheme, keysFilenames.size());
+	tree->computeWordsWeights(weightingScheme);
 
 	printf("-- Applying words weights to the DB BoW vectors counts\n");
 	tree->createDatabase();
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 		printf("-- Normalizing DB BoW vectors using [%s]\n",
 				normType == cv::NORM_L1 ? "L1-norm" :
 				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-		tree->normalizeDatabase(keysFilenames.size(), normType);
+		tree->normalizeDatabase(normType);
 	}
 
 	printf("-- Saving tree with inverted files and weights to [%s]\n",

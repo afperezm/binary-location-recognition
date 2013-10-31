@@ -74,11 +74,8 @@ int main(int argc, char **argv) {
 	cv::Ptr<cvflann::VocabTreeBase> tree;
 
 	if (isDescriptorBinary == true) {
-		printf(
-				"Instantiation of VocabTree<uchar, cv::flann::Hamming<uchar> >\n");
 		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
 	} else {
-		printf("Instantiation of VocabTree<float, cv::flann::L2<float> >\n");
 		tree = new cvflann::VocabTree<float, cvflann::L2<float> >();
 	}
 
@@ -92,7 +89,7 @@ int main(int argc, char **argv) {
 			tree->size());
 
 	// Step 2/4: read the database keyfiles
-	printf("-- Loading DB keyfiles names and landmark id's\n");
+	printf("-- Loading file of DB images ground truth\n");
 	std::vector<std::string> db_filenames;
 	std::vector<int> db_landmarks;
 	std::ifstream keysList(db_list_in, std::fstream::in);
@@ -102,15 +99,15 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	// Loading file names in list into a vector
+	// Loading db keypoint filename and landmark id into a set
 	std::string line;
 	while (getline(keysList, line)) {
 
 		// Verifying line format
 		if (boost::regex_match(line, boost::regex("^(.+)\\s(.+)$")) == false) {
 			fprintf(stderr,
-					"Error while parsing DB list file [%s], line [%s] should be: <key.file> <landmark.id>\n",
-					db_list_in, line.c_str());
+					"Line [%s] should be formatted as: <key.file> <landmark.id>\n",
+					line.c_str());
 			return EXIT_FAILURE;
 		}
 
@@ -119,18 +116,19 @@ int main(int argc, char **argv) {
 		int landmark;
 		sscanf(line.c_str(), "%s %d", filename, &landmark);
 
-		// Checking that file exists, if not print error and exit
-//		struct stat buffer;
-//		if (stat(filename, &buffer) != 0) {
-//			fprintf(stderr, "Keypoints file [%s] doesn't exist\n", filename);
-//			return EXIT_FAILURE;
-//		}
-
 		// Checking that filename refers to a compressed yaml or xml file
 		if (boost::regex_match(std::string(filename), expression) == false) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
 					filename);
+			return EXIT_FAILURE;
+		}
+
+		// Check that landmark id is valid
+		if (landmark < 0) {
+			fprintf(stderr,
+					"Landmark id [%d] extracted from line [%s] should be greater than or equal to zero\n",
+					landmark, line.c_str());
 			return EXIT_FAILURE;
 		}
 
@@ -187,6 +185,7 @@ int main(int argc, char **argv) {
 	cv::Mat scores;
 
 	int max_ld = *std::max_element(db_landmarks.begin(), db_landmarks.end());
+	// Compute the number of candidates
 	int top = MIN (num_nbrs, db_filenames.size());
 
 	FILE *f_match = fopen(matches_out, "w");
@@ -232,8 +231,7 @@ int main(int argc, char **argv) {
 		// Score query bow vector against DB images bow vectors
 		mytime = cv::getTickCount();
 		try {
-			tree->scoreQuery(imgDescriptors, scores, db_filenames.size(),
-					cv::NORM_L1);
+			tree->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
 			return EXIT_FAILURE;
@@ -275,7 +273,7 @@ int main(int argc, char **argv) {
 		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_DESCENDING);
 
 		// Initialize votes vector
-		// Note: size is maximum landmark id plus one because landmark index its zero-based
+		// Note: size is maximum landmark id plus one because landmark index is zero-based
 		std::vector<int> votes(max_ld + 1, 0);
 
 		// Accumulating landmark votes for the top scored images
