@@ -12,6 +12,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <sstream>
 
 class HtmlResultsWriter {
 public:
@@ -71,6 +72,8 @@ void printParams(cv::Ptr<cv::Algorithm> algorithm);
 int NumberOfSetBits(int i);
 
 int BinToDec(const cv::Mat& binRow);
+
+void split(const std::string &s, char delim, std::vector<std::string> &tokens);
 
 } // namespace FunctionUtils
 

@@ -174,3 +174,16 @@ int FunctionUtils::BinToDec(const cv::Mat& binRow) {
 	}
 	return decimal;
 }
+
+void FunctionUtils::split(const std::string &s, char delim,
+		std::vector<std::string> &tokens) {
+
+	tokens.clear();
+
+	std::stringstream ss(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		tokens.push_back(item);
+	}
+
+}

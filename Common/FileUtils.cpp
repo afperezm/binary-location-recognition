@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <sys/stat.h>
 
 void FileUtils::readFolder(const char* folderPath,
 		std::vector<std::string>& files) {
@@ -121,4 +122,11 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 	fs.release();
 
+}
+
+// --------------------------------------------------------------------------
+
+bool FileUtils::checkFileExist(const std::string& fname) {
+	struct stat buffer;
+	return stat(fname.c_str(), &buffer) == 0;
 }

@@ -13,6 +13,7 @@ default:
 	cd VocabLearn; $(MAKE)
 	cd VocabBuildDB; $(MAKE)
 	cd VocabMatch; $(MAKE)
+	cd ComputeMAP; $(MAKE)
 
 clean:
 # Clean libraries
@@ -25,3 +26,4 @@ clean:
 	cd VocabLearn; $(MAKE) clean
 	cd VocabBuildDB; $(MAKE) clean
 	cd VocabMatch; $(MAKE) clean
+	cd ComputeMAP; $(MAKE) clean

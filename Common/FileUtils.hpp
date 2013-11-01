@@ -40,6 +40,14 @@ void saveFeatures(const std::string& filename,
 void loadFeatures(const std::string& filename,
 		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
+/**
+ * Checks whether the file indicated by fname exists.
+ *
+ * @param fname - Name of the file to check
+ * @return true if the file exists, false otherwise
+ */
+bool checkFileExist(const std::string& fname);
+
 } // namespace FileUtils
 
 #endif
