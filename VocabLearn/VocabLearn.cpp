@@ -111,8 +111,8 @@ int main(int argc, char **argv) {
 							descriptors[0].cols, imgDescriptors.cols);
 				}
 				CV_Assert(descriptors[0].cols == imgDescriptors.cols);
+				CV_Assert(descriptors[0].type() == imgDescriptors.type());
 			}
-			CV_Assert(descriptors[0].type() == imgDescriptors.type());
 			descriptors.push_back(imgDescriptors);
 		}
 		// ---------------------------------------------------------------
