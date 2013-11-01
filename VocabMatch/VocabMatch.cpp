@@ -26,10 +26,10 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 9) {
+	if (argc < 6 || argc > 10) {
 		printf(
 				"\nUsage:\n"
-						"\t%s <in.tree> <in.db.gt.list> <in.query.list>"
+						"\t%s <in.db> <in.db.gt.list> <in.query.list> <out.ranked.files.folder>"
 						" <in.num.neighbors> [in.type.binary:1] [out.matches:matches.txt]"
 						" [out.results:results.html] [out.candidates:candidates.txt]\n\n",
 				argv[0]);
@@ -39,26 +39,27 @@ int main(int argc, char **argv) {
 	char *tree_in = argv[1];
 	char *db_list_in = argv[2];
 	char *query_list_in = argv[3];
-	uint num_nbrs = atoi(argv[4]);
+	char *ranked_files_folder = argv[4];
+	uint num_nbrs = atoi(argv[5]);
 	bool isDescriptorBinary = true;
 	char *matches_out = const_cast<char*>("matches.txt");
 	const char *output_html = const_cast<char*>("results.html");
 	const char *candidates_out = const_cast<char*>("candidates.txt");
 
-	if (argc >= 6) {
-		isDescriptorBinary = atoi(argv[5]);
-	}
-
 	if (argc >= 7) {
-		matches_out = argv[6];
+		isDescriptorBinary = atoi(argv[6]);
 	}
 
 	if (argc >= 8) {
-		output_html = argv[7];
+		matches_out = argv[7];
 	}
 
 	if (argc >= 9) {
-		candidates_out = argv[8];
+		output_html = argv[8];
+	}
+
+	if (argc >= 10) {
+		candidates_out = argv[9];
 	}
 
 	// Verifying input parameters
@@ -238,6 +239,7 @@ int main(int argc, char **argv) {
 		}
 		mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 				* 1000;
+		imgDescriptors.release();
 
 		// Print to standard output the matching scores between
 		// the query bow vector and the DB images bow vectors
@@ -302,7 +304,9 @@ int main(int argc, char **argv) {
 		fflush(f_candidates);
 
 		std::stringstream ranked_list_fname;
-		ranked_list_fname << "query_" << i << "_ranked.txt";
+		printf("%lu) %s\n", i, query_filenames[i].c_str());
+		ranked_list_fname << ranked_files_folder << "/query_" << i
+				<< "_ranked.txt";
 
 		FILE *f_ranked_list = fopen(ranked_list_fname.str().c_str(), "w");
 		if (f_ranked_list == NULL) {
@@ -312,7 +316,8 @@ int main(int argc, char **argv) {
 		}
 		for (int j = 0; j < top; j++) {
 			std::string d_base = db_filenames[perm.at<int>(0, j)];
-			fprintf(f_ranked_list, "%s\n", d_base.c_str());
+			fprintf(f_ranked_list, "%s\n",
+					d_base.substr(0, d_base.size() - 8).substr(3).c_str());
 		}
 		fclose(f_ranked_list);
 
@@ -324,6 +329,8 @@ int main(int argc, char **argv) {
 		// Print to a file the ranked list of candidates ordered by score in HTML format
 		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i],
 				scores, perm, top, db_filenames);
+		scores.release();
+		perm.release();
 	}
 
 	fclose(f_candidates);

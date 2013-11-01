@@ -524,6 +524,7 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 	fs << "branching" << m_branching;
 	fs << "depth" << m_depth;
 	fs << "vectorLength" << (int) m_veclen;
+	fs << "numDbImages" << (int) m_numDbImages;
 	fs << "memoryCounter" << m_memoryCounter;
 
 	fs << "root";
@@ -581,6 +582,7 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 	m_branching = (int) fs["branching"];
 	m_depth = (int) fs["depth"];
 	m_veclen = (int) fs["vectorLength"];
+	m_numDbImages = (int) fs["numDbImages"];
 	m_memoryCounter = (int) fs["memoryCounter"];
 
 	cv::FileNode root = fs["root"];
@@ -609,6 +611,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	for (size_t k = 0; k < m_veclen; ++k) {
 		node->center[k] = center.at<TDescriptor>(0, k);
 	}
+	center.release();
 
 	node->weight = (double) fs["weight"];
 	node->word_id = (int) fs["wordId"];
