@@ -100,12 +100,12 @@ TEST(VocabTree, TestDatabase) {
 
 	ASSERT_FALSE(gotException);
 
-	tree->computeWordsWeights(cvflann::TF_IDF, data.rows);
+	tree->computeWordsWeights(cvflann::TF_IDF);
 
 	tree->createDatabase();
 	// TODO assert inverted files are not empty anymore
 
-	tree->normalizeDatabase(data.rows, cv::NORM_L1);
+	tree->normalizeDatabase(cv::NORM_L1);
 	// TODO assert DB BoW vector's values are in the [0,1] range
 
 	// Querying the tree using the same documents used for building it
@@ -114,7 +114,7 @@ TEST(VocabTree, TestDatabase) {
 		cv::Mat scores;
 
 		tree->scoreQuery(data.rowRange(cv::Range(3000 * i, 3000 * (i + 1))),
-				scores, data.rows, cv::NORM_L1);
+				scores, cv::NORM_L1);
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
 		EXPECT_TRUE(1 == scores.rows);
 		EXPECT_TRUE(data.rows == scores.cols);
