@@ -77,9 +77,11 @@ void FileUtils::saveFeatures(const std::string &filename,
 void FileUtils::loadFeatures(const std::string& filename,
 		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) {
 
+#if FILEUTILSVERBOSE
 	printf(
 			"-- Loading feature descriptors from [%s] using OpenCV FileStorage\n",
 			filename.c_str());
+#endif
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 

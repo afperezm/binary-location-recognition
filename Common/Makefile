@@ -16,14 +16,16 @@ BINLIB=../lib
 
 LIB = libcommon
 
+#DYNMATVERBOSE = -DDYNMATVERBOSE
+
 all: $(LIB).so
 
 $(LIB).so: $(OBJECTS)
 	mkdir -p $(BINLIB)
-	$(CXX) -shared $(OBJECTS) -o $(BINLIB)/$@ $(LDFLAGS)
+	$(CXX) $(DYNMATVERBOSE) -shared $(OBJECTS) -o $(BINLIB)/$@ $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+	$(CXX) $(DYNMATVERBOSE) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJECTS) $(BINLIB)/$(LIB) *~

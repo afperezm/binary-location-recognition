@@ -1,20 +1,12 @@
-# Makefile for VocabLib Tests
+# Makefile for Common Tests
 
 CXX = g++
 
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../../lib/
 
-# KMajority
-CXXFLAGS += -I../../KMajorityLib/include
-LDFLAGS += -lkmajority
-
-# VocabLib
-CXXFLAGS += -I../include
-LDFLAGS += -lvocab
-
 # Common
-CXXFLAGS += -I../../Common/
+CXXFLAGS += -I../
 LDFLAGS += -lcommon
 
 # OpenCV
@@ -26,21 +18,20 @@ CXXFLAGS += -Wextra -pthread
 LDFLAGS += -L/home/andresf/workspace-cpp/gtest-1.7.0/make
 LDFLAGS += -lgtest_main -lpthread
 
-SOURCES = VocabTree_test.cpp
+SOURCES = DynamicMat_test.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
-BIN =  VocabTree_test
+BIN =  DynamicMat_test
 
 VTREEVERBOSE = -DVTREEVERBOSE
-#DYNMATVERBOSE = -DDYNMATVERBOSE
 
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) $(VTREEVERBOSE) $(DYNMATVERBOSE) $(CXXFLAGS) $< $(LDFLAGS) -o $@
+	$(CXX) $(VTREEVERBOSE) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~
 
-VocabTree_test.o: VocabTree_test.cpp
-	$(CXX) $(VTREEVERBOSE) $(DYNMATVERBOSE) $(CXXFLAGS) -c $< -o $@
+DynamicMat_test.o: DynamicMat_test.cpp
+	$(CXX) $(VTREEVERBOSE) $(CXXFLAGS) -c $< -o $@

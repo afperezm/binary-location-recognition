@@ -193,30 +193,49 @@ void FunctionUtils::split(const std::string &s, char delim,
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(image* descriptorsIndices,
+DynamicMat::DynamicMat(std::vector<image>& descriptorsIndices,
 		std::vector<std::string>& keysFilenames, int descriptorCount,
 		int descriptorLength, int descriptorType) :
 		m_descriptorsIndices(descriptorsIndices), m_keysFilenames(
 				keysFilenames), rows(descriptorCount), cols(descriptorLength), m_descriptorType(
 				descriptorType) {
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "Instantiation DynamicMat\n");
+#endif
+
 }
 
 // --------------------------------------------------------------------------
 
 DynamicMat::~DynamicMat() {
-	delete[] m_descriptorsIndices;
+#if DYNMATVERBOSE
+	fprintf(stdout, "Destroying DynamicMat\n");
+#endif
 }
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(const DynamicMat& other) :
-		m_keysFilenames(DEFAULT_VECTOR) {
+DynamicMat::DynamicMat(const DynamicMat& other) {
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "Copying DynamicMat\n");
+#endif
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "  Copying key point files names\n");
+#endif
 	m_keysFilenames = other.getKeysFilenames();
-	// Deep copy
-	m_descriptorsIndices = new image[other.getKeysFilenames().size()];
-	for (size_t i = 0; i < other.getKeysFilenames().size(); i++) {
-		m_descriptorsIndices[0] = other.getDescriptorsIndices()[0];
-	}
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "  Copying descriptors indices\n");
+#endif
+	m_descriptorsIndices = other.getDescriptorsIndices();
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "  Copying rows, columns and type information\n");
+#endif
+
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
@@ -225,21 +244,35 @@ DynamicMat::DynamicMat(const DynamicMat& other) :
 // --------------------------------------------------------------------------
 
 DynamicMat& DynamicMat::operator =(const DynamicMat& other) {
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "Assigning DynamicMat\n");
+	fprintf(stdout, "  Copying key point files names\n");
+#endif
 	m_keysFilenames = other.getKeysFilenames();
-	// Deep copy
-	m_descriptorsIndices = new image[other.getKeysFilenames().size()];
-	for (size_t i = 0; i < other.getKeysFilenames().size(); i++) {
-		m_descriptorsIndices[0] = other.getDescriptorsIndices()[0];
-	}
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "  Copying descriptors indices\n");
+#endif
+	m_descriptorsIndices = other.getDescriptorsIndices();
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "  Copying rows, columns and type information\n");
+#endif
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
+
 	return *this;
 }
 
 // --------------------------------------------------------------------------
 
 cv::Mat DynamicMat::row(int descriptorIdx) {
+
+#if DYNMATVERBOSE
+	fprintf(stdout, "[DynamicMat::row] Obtaining descriptor [%d]\n", descriptorIdx);
+#endif
 
 	cv::Mat descriptor(1, cols, m_descriptorType);
 
@@ -254,7 +287,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 
 	// Index relative to the matrix of descriptors it belongs to
 	int relDescIdx = descriptorIdx
-			- m_descriptorsIndices[descriptorIdx].startIdx + 1;
+			- m_descriptorsIndices[descriptorIdx].startIdx;
 
 	// Obtain descriptor
 	imgDescriptors.row(relDescIdx).copyTo(descriptor);

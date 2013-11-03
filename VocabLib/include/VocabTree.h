@@ -112,6 +112,8 @@ public:
 	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
 };
 
+static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
+
 template<class TDescriptor, class Distance>
 class VocabTree: public VocabTreeBase {
 
@@ -198,8 +200,8 @@ public:
 	 *
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 */
-	VocabTree(DynamicMat inputData = DynamicMat(), const IndexParams& params =
-			VocabTreeParams());
+	VocabTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
+			const IndexParams& params = VocabTreeParams());
 
 	/**
 	 * Tree destructor, releases the memory used by the tree.
@@ -419,7 +421,7 @@ private:
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat inputData,
+VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 		const IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(
 				0) {
@@ -437,6 +439,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat inputData,
 	}
 
 	m_words.clear();
+
 }
 
 // --------------------------------------------------------------------------
@@ -686,27 +689,32 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 		VocabTreeNodePtr node, int* indices, int indices_length) {
 
+#if VTREEVERBOSE
+	printf("[VocabTree::build] Computing root node statistics\n");
+#endif
+
 	TDescriptor* center = new TDescriptor[m_veclen];
 
 	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
 
-	cv::Mat centroid(1, m_veclen, m_dataset.type());
+	cv::Mat centroid = cv::Mat::zeros(1, m_veclen, m_dataset.type());
+	//(1, m_veclen, m_dataset.type());
 
-	if (m_dataset.type() == CV_8U) {
-		// Compute center using majority voting over all data
-		cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
-		accVector = cv::Scalar::all(0);
-		for (size_t i = 0; (int) i < indices_length; i++) {
-			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
-		}
-		KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
-		accVector.release();
-	} else {
-		// Reduce all data set to a single row by component wise averaging it
-		for (size_t i = 0; (int) i < indices_length; i++) {
-			cv::add(m_dataset.row(indices[i]), centroid, centroid);
-		}
-	}
+//	if (m_dataset.type() == CV_8U) {
+//		// Compute center using majority voting over all data
+//		cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
+//		accVector = cv::Scalar::all(0);
+//		for (size_t i = 0; (int) i < indices_length; i++) {
+//			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
+//		}
+//		KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
+//		accVector.release();
+//	} else {
+//		// Reduce all data set to a single row by component wise averaging it
+//		for (size_t i = 0; (int) i < indices_length; i++) {
+//			cv::add(m_dataset.row(indices[i]), centroid, centroid);
+//		}
+//	}
 
 	for (size_t k = 0; k < m_veclen; ++k) {
 		center[k] = centroid.at<TDescriptor>(0, k);
@@ -745,6 +753,10 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	CentersChooser<TDescriptor, Distance>::create(m_centers_init)->chooseCenters(
 			m_branching, indices, indices_length, centers_idx, centers_length,
 			m_dataset);
+
+#if VTREEVERBOSE
+	printf("[RandomCenters::chooseCenters] Random centers chosen\n");
+#endif
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters

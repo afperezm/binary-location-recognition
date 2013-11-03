@@ -85,8 +85,7 @@ int main(int argc, char **argv) {
 	keysList.close();
 
 	// Step 2: read key files
-	DynamicMat::image* descriptorsIndices =
-			new DynamicMat::image[keysFilenames.size()];
+	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
@@ -97,15 +96,17 @@ int main(int argc, char **argv) {
 
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+
 		// Check that keypoints and descriptors have same length
 		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
 
 		if (imgDescriptors.empty() == false) {
 
 			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-				int descriptorIndex = descCount + i;
-				descriptorsIndices[descriptorIndex].imgIdx = imgIdx;
-				descriptorsIndices[descriptorIndex].startIdx = descCount;
+				image img;
+				img.imgIdx = imgIdx;
+				img.startIdx = descCount;
+				descriptorsIndices.push_back(img);
 			}
 
 			// Increase descriptors counter
@@ -130,8 +131,8 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 3: build tree
-	DynamicMat mergedDescriptors(descriptorsIndices, keysFilenames, descLen,
-			descCount, descType);
+	DynamicMat mergedDescriptors(descriptorsIndices, keysFilenames, descCount,
+			descLen, descType);
 
 	// Cluster descriptors using Vocabulary Tree
 	cvflann::VocabTreeParams params;

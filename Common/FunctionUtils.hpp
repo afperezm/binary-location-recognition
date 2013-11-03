@@ -50,20 +50,23 @@ protected:
 	std::stringstream html;
 };
 
-static std::vector<std::string> DEFAULT_VECTOR;
+struct image {
+	int imgIdx; // Index of the image it represents
+	int startIdx; // (inclusive) Starting index in the merged descriptors matrix
+	image() :
+			imgIdx(-1), startIdx(-1) {
+	}
+};
+
+static std::vector<image> DEFAULT_INDICES;
+static std::vector<std::string> DEFAULT_KEYS;
 
 class DynamicMat {
 
 public:
 
-	struct image {
-		int imgIdx; // Index of the image it represents
-		int startIdx; // (inclusive) Starting index in the merged descriptors matrix
-
-	};
-
-	DynamicMat(image* descriptorsIndices = new image[0],
-			std::vector<std::string>& keysFilenames = DEFAULT_VECTOR,
+	DynamicMat(std::vector<image>& descriptorsIndices = DEFAULT_INDICES,
+			std::vector<std::string>& keysFilenames = DEFAULT_KEYS,
 			int descriptorCount = 0, int descriptorLength = 0,
 			int descriptorType = -1);
 
@@ -75,7 +78,7 @@ public:
 
 	virtual ~DynamicMat();
 
-	image* getDescriptorsIndices() const {
+	const std::vector<image>& getDescriptorsIndices() const {
 		return m_descriptorsIndices;
 	}
 
@@ -89,12 +92,10 @@ public:
 
 	bool empty() const;
 
-private:
-
 protected:
 
-	image* m_descriptorsIndices;
-	std::vector<std::string>& m_keysFilenames;
+	std::vector<image> m_descriptorsIndices;
+	std::vector<std::string> m_keysFilenames;
 
 public:
 	int rows = 0;
