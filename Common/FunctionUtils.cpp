@@ -5,6 +5,7 @@
  *      Author: andresf
  */
 
+#include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 
 #include <bitset>
@@ -175,6 +176,8 @@ int FunctionUtils::BinToDec(const cv::Mat& binRow) {
 	return decimal;
 }
 
+// --------------------------------------------------------------------------
+
 void FunctionUtils::split(const std::string &s, char delim,
 		std::vector<std::string> &tokens) {
 
@@ -186,4 +189,88 @@ void FunctionUtils::split(const std::string &s, char delim,
 		tokens.push_back(item);
 	}
 
+}
+
+// --------------------------------------------------------------------------
+
+DynamicMat::DynamicMat(image* descriptorsIndices,
+		std::vector<std::string>& keysFilenames, int descriptorCount,
+		int descriptorLength, int descriptorType) :
+		m_descriptorsIndices(descriptorsIndices), m_keysFilenames(
+				keysFilenames), rows(descriptorCount), cols(descriptorLength), m_descriptorType(
+				descriptorType) {
+}
+
+// --------------------------------------------------------------------------
+
+DynamicMat::~DynamicMat() {
+	delete[] m_descriptorsIndices;
+}
+
+// --------------------------------------------------------------------------
+
+DynamicMat::DynamicMat(const DynamicMat& other) :
+		m_keysFilenames(DEFAULT_VECTOR) {
+	m_keysFilenames = other.getKeysFilenames();
+	// Deep copy
+	m_descriptorsIndices = new image[other.getKeysFilenames().size()];
+	for (size_t i = 0; i < other.getKeysFilenames().size(); i++) {
+		m_descriptorsIndices[0] = other.getDescriptorsIndices()[0];
+	}
+	rows = other.rows;
+	cols = other.cols;
+	m_descriptorType = other.type();
+}
+
+// --------------------------------------------------------------------------
+
+DynamicMat& DynamicMat::operator =(const DynamicMat& other) {
+	m_keysFilenames = other.getKeysFilenames();
+	// Deep copy
+	m_descriptorsIndices = new image[other.getKeysFilenames().size()];
+	for (size_t i = 0; i < other.getKeysFilenames().size(); i++) {
+		m_descriptorsIndices[0] = other.getDescriptorsIndices()[0];
+	}
+	rows = other.rows;
+	cols = other.cols;
+	m_descriptorType = other.type();
+	return *this;
+}
+
+// --------------------------------------------------------------------------
+
+cv::Mat DynamicMat::row(int descriptorIdx) {
+
+	cv::Mat descriptor(1, cols, m_descriptorType);
+
+	// Initialize keypoints and descriptors
+	std::vector<cv::KeyPoint> imgKeypoints;
+	cv::Mat imgDescriptors = cv::Mat();
+
+	// Load corresponding descriptors file
+	FileUtils::loadFeatures(
+			m_keysFilenames[m_descriptorsIndices[descriptorIdx].imgIdx],
+			imgKeypoints, imgDescriptors);
+
+	// Index relative to the matrix of descriptors it belongs to
+	int relDescIdx = descriptorIdx
+			- m_descriptorsIndices[descriptorIdx].startIdx + 1;
+
+	// Obtain descriptor
+	imgDescriptors.row(relDescIdx).copyTo(descriptor);
+	imgDescriptors.release();
+
+	return descriptor;
+}
+
+// --------------------------------------------------------------------------
+
+int DynamicMat::type() const {
+	return m_descriptorType;
+}
+
+// --------------------------------------------------------------------------
+
+bool DynamicMat::empty() const {
+	return rows == 0;
 }

@@ -24,6 +24,7 @@
 #include <VocabTree.h>
 
 #include <FileUtils.hpp>
+#include <FunctionUtils.hpp>
 
 using std::vector;
 
@@ -84,59 +85,53 @@ int main(int argc, char **argv) {
 	keysList.close();
 
 	// Step 2: read key files
-	std::vector<cv::KeyPoint> imgKeypoints;
-	cv::Mat imgDescriptors;
+	DynamicMat::image* descriptorsIndices =
+			new DynamicMat::image[keysFilenames.size()];
 
-	// TODO Method for adding descriptors to list of cv::Mat
-	// ---------------------------------------------------------------
-	std::vector<cv::Mat> descriptors;
-	descriptors.reserve(keysFilenames.size());
-	// ---------------------------------------------------------------
-
+	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
+
 		// Initialize keypoints and descriptors
-		imgKeypoints.clear();
-		imgDescriptors = cv::Mat();
+		std::vector<cv::KeyPoint> imgKeypoints;
+		cv::Mat imgDescriptors = cv::Mat();
+
+		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
 		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
 
-		// TODO Method for adding descriptors to list of cv::Mat
-		// ---------------------------------------------------------------
 		if (imgDescriptors.empty() == false) {
-			if (descriptors.empty() == false) {
-				if (descriptors[0].cols != imgDescriptors.cols) {
-					printf(
-							"descriptors[0].cols=[%d] imgDescriptors.cols=[%d]\n",
-							descriptors[0].cols, imgDescriptors.cols);
-				}
-				CV_Assert(descriptors[0].cols == imgDescriptors.cols);
-				CV_Assert(descriptors[0].type() == imgDescriptors.type());
+
+			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
+				int descriptorIndex = descCount + i;
+				descriptorsIndices[descriptorIndex].imgIdx = imgIdx;
+				descriptorsIndices[descriptorIndex].startIdx = descCount;
 			}
-			descriptors.push_back(imgDescriptors);
+
+			// Increase descriptors counter
+			descCount += imgDescriptors.rows;
+
+			// Check descriptors length
+			if (descLen != 0) {
+				CV_Assert(descLen == imgDescriptors.cols);
+			} else {
+				descLen = imgDescriptors.cols;
+			}
+
+			// Check descriptors type
+			if (descType != -1) {
+				CV_Assert(descType == imgDescriptors.type());
+			} else {
+				descType = imgDescriptors.type();
+			}
 		}
-		// ---------------------------------------------------------------
+		imgDescriptors.release();
+		imgIdx++;
 	}
 
 	// Step 3: build tree
-	// TODO Method for composing descriptors big matrix from the list of descriptors references
-	// ---------------------------------------------------------------
-	CV_Assert(descriptors.empty() == false);
-
-	int descCount = 0;
-	for (size_t i = 0; i < descriptors.size(); i++) {
-		descCount += descriptors[i].rows;
-	}
-
-	cv::Mat mergedDescriptors(descCount, descriptors[0].cols,
-			descriptors[0].type());
-	for (size_t i = 0, start = 0; i < descriptors.size(); i++) {
-		cv::Mat submut = mergedDescriptors.rowRange((int) start,
-				(int) (start + descriptors[i].rows));
-		descriptors[i].copyTo(submut);
-		start += descriptors[i].rows;
-	}
-	// ---------------------------------------------------------------
+	DynamicMat mergedDescriptors(descriptorsIndices, keysFilenames, descLen,
+			descCount, descType);
 
 	// Cluster descriptors using Vocabulary Tree
 	cvflann::VocabTreeParams params;

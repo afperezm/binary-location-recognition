@@ -50,6 +50,61 @@ protected:
 	std::stringstream html;
 };
 
+static std::vector<std::string> DEFAULT_VECTOR;
+
+class DynamicMat {
+
+public:
+
+	struct image {
+		int imgIdx; // Index of the image it represents
+		int startIdx; // (inclusive) Starting index in the merged descriptors matrix
+
+	};
+
+	DynamicMat(image* descriptorsIndices = new image[0],
+			std::vector<std::string>& keysFilenames = DEFAULT_VECTOR,
+			int descriptorCount = 0, int descriptorLength = 0,
+			int descriptorType = -1);
+
+	// Copy constructor
+	DynamicMat(const DynamicMat& other);
+
+	// Assignment operators
+	DynamicMat& operator =(const DynamicMat& other);
+
+	virtual ~DynamicMat();
+
+	image* getDescriptorsIndices() const {
+		return m_descriptorsIndices;
+	}
+
+	const std::vector<std::string>& getKeysFilenames() const {
+		return m_keysFilenames;
+	}
+
+	cv::Mat row(int descriptorIndex);
+
+	int type() const;
+
+	bool empty() const;
+
+private:
+
+protected:
+
+	image* m_descriptorsIndices;
+	std::vector<std::string>& m_keysFilenames;
+
+public:
+	int rows = 0;
+	int cols = 0;
+
+protected:
+	int m_descriptorType = -1;
+
+};
+
 namespace FunctionUtils {
 
 void printKeypoints(std::vector<cv::KeyPoint>& keypoints);

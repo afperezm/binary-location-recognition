@@ -45,6 +45,8 @@
 #include <CentersChooser.h>
 #include <KMajorityIndex.h>
 
+#include <FunctionUtils.hpp>
+
 namespace cvflann {
 
 enum WeightingType {
@@ -165,7 +167,7 @@ protected:
 	// Maximum number of iterations to use when performing k-means clustering
 	int m_iterations;
 	// The dataset used by this index
-	const cv::Mat& m_dataset;
+	DynamicMat& m_dataset;
 
 	/* Attributes useful for describing the tree */
 	// The branching factor used in the hierarchical k-means clustering
@@ -196,7 +198,7 @@ public:
 	 *
 	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
 	 */
-	VocabTree(const cv::Mat& inputData = cv::Mat(), const IndexParams& params =
+	VocabTree(DynamicMat inputData = DynamicMat(), const IndexParams& params =
 			VocabTreeParams());
 
 	/**
@@ -214,7 +216,7 @@ public:
 	/**
 	 * Builds the tree.
 	 *
-	 * @param inputData - Matrix with the data to be clustered
+	 * @param inputData - Reference to a map with the name of the files containing the data to be clustered
 	 *
 	 * @note After this method is executed m_root holds a pointer to the tree,
 	 *		 while m_words holds pointers to the leaf nodes.
@@ -293,12 +295,19 @@ public:
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			const int normType = cv::NORM_L2) const;
 
+	/**
+	 * Retrieves a DB BoW vector given its index.
+	 *
+	 * @param idx - The index of the DB image
+	 * @param dbBowVector - A reference to the matrix where BoW vector will be save
+	 */
 	void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const;
 
 	bool operator==(const VocabTree<TDescriptor, Distance> &other) const;
 
 	bool operator!=(const VocabTree<TDescriptor, Distance> &other) const;
 
+	/**** Getters ****/
 	VocabTreeNodePtr getRoot() const {
 		return m_root;
 	}
@@ -410,7 +419,7 @@ private:
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-VocabTree<TDescriptor, Distance>::VocabTree(const cv::Mat& inputData,
+VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat inputData,
 		const IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(
 				0) {
@@ -694,7 +703,9 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 		accVector.release();
 	} else {
 		// Reduce all data set to a single row by component wise averaging it
-		cv::reduce(m_dataset, centroid, 0, CV_REDUCE_AVG);
+		for (size_t i = 0; (int) i < indices_length; i++) {
+			cv::add(m_dataset.row(indices[i]), centroid, centroid);
+		}
 	}
 
 	for (size_t k = 0; k < m_veclen; ++k) {
@@ -813,8 +824,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			// Accumulate data into its corresponding cluster accumulator
 			for (size_t i = 0; (int) i < indices_length; ++i) {
 				for (size_t k = 0; k < m_veclen; ++k) {
-					dcenters.at<TDescriptor>(belongs_to[i], k) += m_dataset.at<
-							TDescriptor>(indices[i], k);
+					dcenters.at<TDescriptor>(belongs_to[i], k) += m_dataset.row(
+							indices[i]).at<TDescriptor>(1, k);
 				}
 			}
 			// Divide accumulated data by the number transaction assigned to the cluster
