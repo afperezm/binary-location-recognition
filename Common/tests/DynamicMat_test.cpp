@@ -27,25 +27,23 @@ TEST(DynamicMat, EmptyInstantiation) {
 
 TEST(DynamicMat, Instantiation) {
 
-	// Prepare keypoints and descriptors. Recall: 128 dimensions in SIFT
-	cv::Mat imgDescriptors(3000, 128, cv::DataType<float>::type);
-	cv::randn(imgDescriptors, cv::Scalar(128), cv::Scalar(128));
+	/////////////////////////////////////////////////////////////////////
+	cv::Mat imgDescriptors;
 	std::vector<cv::KeyPoint> imgKeypoints;
-	imgKeypoints.reserve(imgDescriptors.rows);
-	imgKeypoints.insert(imgKeypoints.begin(), imgDescriptors.rows,
-			cv::KeyPoint());
-	FileUtils::saveFeatures("sift_descriptors.yaml.gz", imgKeypoints,
-			imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_descriptors.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
 
 	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
+		imgDescriptors = cv::Mat();
+		imgKeypoints.clear();
 		// Load keypoints and descriptors
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
 		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
 			image img;
@@ -61,8 +59,9 @@ TEST(DynamicMat, Instantiation) {
 
 	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
 			imgDescriptors.cols, imgDescriptors.type());
+	/////////////////////////////////////////////////////////////////////
 
-	EXPECT_TRUE(data.rows == imgDescriptors.rows);
+	EXPECT_TRUE(data.rows == imgDescriptors.rows * 2);
 	EXPECT_TRUE(data.cols == imgDescriptors.cols);
 	EXPECT_TRUE(data.type() == imgDescriptors.type());
 	EXPECT_TRUE(
@@ -73,25 +72,23 @@ TEST(DynamicMat, Instantiation) {
 
 TEST(DynamicMat, InitByCopy) {
 
-	// Prepare keypoints and descriptors. Recall: 128 dimensions in SIFT
-	cv::Mat imgDescriptors(3000, 128, cv::DataType<float>::type);
-	cv::randn(imgDescriptors, cv::Scalar(128), cv::Scalar(128));
+	/////////////////////////////////////////////////////////////////////
+	cv::Mat imgDescriptors;
 	std::vector<cv::KeyPoint> imgKeypoints;
-	imgKeypoints.reserve(imgDescriptors.rows);
-	imgKeypoints.insert(imgKeypoints.begin(), imgDescriptors.rows,
-			cv::KeyPoint());
-	FileUtils::saveFeatures("sift_descriptors.yaml.gz", imgKeypoints,
-			imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_descriptors.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
 
 	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
+		imgDescriptors = cv::Mat();
+		imgKeypoints.clear();
 		// Load keypoints and descriptors
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
 		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
 			image img;
@@ -107,6 +104,7 @@ TEST(DynamicMat, InitByCopy) {
 
 	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
 			imgDescriptors.cols, imgDescriptors.type());
+	/////////////////////////////////////////////////////////////////////
 
 	DynamicMat dataCopy(data);
 
@@ -124,25 +122,23 @@ TEST(DynamicMat, InitByCopy) {
 
 TEST(DynamicMat, InitByAssignment) {
 
-	// Prepare keypoints and descriptors. Recall: 128 dimensions in SIFT
-	cv::Mat imgDescriptors(3000, 128, cv::DataType<float>::type);
-	cv::randn(imgDescriptors, cv::Scalar(128), cv::Scalar(128));
+	/////////////////////////////////////////////////////////////////////
+	cv::Mat imgDescriptors;
 	std::vector<cv::KeyPoint> imgKeypoints;
-	imgKeypoints.reserve(imgDescriptors.rows);
-	imgKeypoints.insert(imgKeypoints.begin(), imgDescriptors.rows,
-			cv::KeyPoint());
-	FileUtils::saveFeatures("sift_descriptors.yaml.gz", imgKeypoints,
-			imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_descriptors.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
 
 	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
+		imgDescriptors = cv::Mat();
+		imgKeypoints.clear();
 		// Load keypoints and descriptors
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
 		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
 			image img;
@@ -158,6 +154,7 @@ TEST(DynamicMat, InitByAssignment) {
 
 	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
 			imgDescriptors.cols, imgDescriptors.type());
+	/////////////////////////////////////////////////////////////////////
 
 	DynamicMat dataCopy = data;
 
@@ -175,26 +172,25 @@ TEST(DynamicMat, InitByAssignment) {
 
 TEST(DynamicMat, RowExtraction) {
 
-	// Prepare keypoints and descriptors. Recall: 128 dimensions in SIFT
-	cv::Mat imgDescriptors(3000, 128, cv::DataType<float>::type);
-	cv::randn(imgDescriptors, cv::Scalar(128), cv::Scalar(128));
+	/////////////////////////////////////////////////////////////////////
+	cv::Mat imgDescriptors;
 	std::vector<cv::KeyPoint> imgKeypoints;
-	imgKeypoints.reserve(imgDescriptors.rows);
-	imgKeypoints.insert(imgKeypoints.begin(), imgDescriptors.rows,
-			cv::KeyPoint());
-	FileUtils::saveFeatures("sift_descriptors.yaml.gz", imgKeypoints,
-			imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_descriptors.yaml.gz");
-	keysFilenames.push_back("sift_descriptors.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("all_souls_000000.yaml.gz");
 
 	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
+		imgDescriptors = cv::Mat();
+		imgKeypoints.clear();
 		// Load keypoints and descriptors
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
 		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
 			image img;
@@ -210,28 +206,26 @@ TEST(DynamicMat, RowExtraction) {
 
 	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
 			imgDescriptors.cols, imgDescriptors.type());
+	/////////////////////////////////////////////////////////////////////
 
-	cv::Mat rowA;
-	data.row(0).copyTo(rowA);
-	cv::Mat rowB = imgDescriptors.row(0);
+	cv::Mat rowA, rowB;
 
-	EXPECT_TRUE(rowA.rows == 1);
-	EXPECT_TRUE(rowB.rows == 1);
+	for (size_t i = 0; (int) i < data.rows; i++) {
+		data.row(i).copyTo(rowA);
+		rowB = imgDescriptors.row(i % imgDescriptors.rows);
 
-	EXPECT_TRUE(rowA.cols == rowB.cols);
+		// Check number of rows and columns and type to be equal
+		EXPECT_TRUE(rowA.rows == 1);
+		EXPECT_TRUE(rowA.rows == rowB.rows);
+		EXPECT_TRUE(rowA.cols == rowB.cols);
+		EXPECT_TRUE(rowA.type() == rowB.type());
 
-	for (size_t i = 0; (int) i < rowA.cols; i++) {
-		EXPECT_TRUE(rowA.at<float>(0, i) == rowB.at<float>(0, i));
-	}
+		for (size_t j = 0; (int) j < rowA.cols; j++) {
+			EXPECT_TRUE(rowA.at<float>(0, j) == rowB.at<float>(0, j));
+		}
 
-	data.row(imgDescriptors.rows).copyTo(rowA);
-
-	EXPECT_TRUE(rowA.rows == 1);
-
-	EXPECT_TRUE(rowA.cols == rowB.cols);
-
-	for (size_t i = 0; (int) i < rowA.cols; i++) {
-		EXPECT_TRUE(rowA.at<float>(0, i) == rowB.at<float>(0, i));
+		rowA.release();
+		rowB.release();
 	}
 
 }

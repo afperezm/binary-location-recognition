@@ -96,9 +96,9 @@ void FunctionUtils::printDescriptors(const cv::Mat& descriptors) {
 		for (int j = 0; j < descriptors.cols; j++) {
 			if (descriptors.type() == CV_8U) {
 				std::bitset<8> byte(descriptors.at<uchar>(i, j));
-				printf("%s", byte.to_string().c_str());
+				printf("%s,", byte.to_string().c_str());
 			} else {
-				printf("%f", (float) descriptors.at<float>(i, j));
+				printf("%f,", (float) descriptors.at<float>(i, j));
 			}
 		}
 //		int decimal = BinToDec(descriptors.row(i));
@@ -274,26 +274,48 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	fprintf(stdout, "[DynamicMat::row] Obtaining descriptor [%d]\n", descriptorIdx);
 #endif
 
-	cv::Mat descriptor(1, cols, m_descriptorType);
-
 	// Initialize keypoints and descriptors
 	std::vector<cv::KeyPoint> imgKeypoints;
 	cv::Mat imgDescriptors = cv::Mat();
 
-	// Load corresponding descriptors file
-	FileUtils::loadFeatures(
-			m_keysFilenames[m_descriptorsIndices[descriptorIdx].imgIdx],
-			imgKeypoints, imgDescriptors);
+	std::map<int, cv::Mat>::iterator it = descBuffer.find(
+			m_descriptorsIndices[descriptorIdx].imgIdx);
+
+	if (it != descBuffer.end()) {
+		// The matrix is loaded in memory
+		imgDescriptors = it->second;
+	} else {
+		// The matrix is not loaded in memory, then load it
+
+		// Load corresponding descriptors file
+		FileUtils::loadFeatures(
+				m_keysFilenames[m_descriptorsIndices[descriptorIdx].imgIdx],
+				imgKeypoints, imgDescriptors);
+
+		// Check buffer size, if full then pop the first element
+		if (descBuffer.size() > 10) {
+#if DYNMATVERBOSE
+			fprintf(stdout, "[DynamicMat::row] Buffer full, deleting first matrix\n",
+					descriptorIdx);
+#endif
+			// Erase the first added element from the buffer
+			descBuffer.erase(descBuffer.find(addingOrder.front()));
+			// Pop its index from the queue
+			addingOrder.pop();
+		}
+		// Add the descriptors matrix to the buffer
+		descBuffer.insert(
+				std::pair<int, cv::Mat>(
+						m_descriptorsIndices[descriptorIdx].imgIdx,
+						imgDescriptors));
+		addingOrder.push(m_descriptorsIndices[descriptorIdx].imgIdx);
+	}
 
 	// Index relative to the matrix of descriptors it belongs to
 	int relDescIdx = descriptorIdx
 			- m_descriptorsIndices[descriptorIdx].startIdx;
 
-	// Obtain descriptor
-	imgDescriptors.row(relDescIdx).copyTo(descriptor);
-	imgDescriptors.release();
-
-	return descriptor;
+	return imgDescriptors.row(relDescIdx);
 }
 
 // --------------------------------------------------------------------------

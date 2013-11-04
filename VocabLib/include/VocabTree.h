@@ -54,7 +54,7 @@ enum WeightingType {
 };
 
 struct VocabTreeParams: public IndexParams {
-	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 11,
+	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 1,
 			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM) {
 		// branching factor
 		(*this)["branching"] = branching;
@@ -429,7 +429,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
 	m_branching = get_param(params, "branching", 6);
-	m_iterations = get_param(params, "iterations", 11);
+	m_iterations = get_param(params, "iterations", 1);
 	m_depth = get_param(params, "depth", 10);
 	m_centers_init = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
 	m_numDbImages = 0;
@@ -697,25 +697,16 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 
 	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
 
+	// Checking indices to be in range, but actually is not necessary
+	// is just for avoing the unused warning
+	for (size_t i = 0; (int) i < indices_length; i++) {
+		CV_Assert(0 <= indices[i] && indices[i] < m_dataset.rows);
+	}
+
+	// Zeroing all centroid dimensions
 	cv::Mat centroid = cv::Mat::zeros(1, m_veclen, m_dataset.type());
-	//(1, m_veclen, m_dataset.type());
 
-//	if (m_dataset.type() == CV_8U) {
-//		// Compute center using majority voting over all data
-//		cv::Mat accVector(1, m_veclen * 8, cv::DataType<int>::type);
-//		accVector = cv::Scalar::all(0);
-//		for (size_t i = 0; (int) i < indices_length; i++) {
-//			KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), accVector);
-//		}
-//		KMajorityIndex::majorityVoting(accVector, centroid, indices_length);
-//		accVector.release();
-//	} else {
-//		// Reduce all data set to a single row by component wise averaging it
-//		for (size_t i = 0; (int) i < indices_length; i++) {
-//			cv::add(m_dataset.row(indices[i]), centroid, centroid);
-//		}
-//	}
-
+	// Setting the centroid
 	for (size_t k = 0; k < m_veclen; ++k) {
 		center[k] = centroid.at<TDescriptor>(0, k);
 	}
@@ -771,12 +762,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	// TODO initCentroids: assign centers based on the chosen indexes
+#if VTREEVERBOSE
+	printf("initCentroids - Start\n");
+#endif
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
 		m_dataset.row(centers_idx[i]).copyTo(
 				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
 	delete[] centers_idx;
+#if VTREEVERBOSE
+	printf("initCentroids - End\n");
+#endif
 
 	int* count = new int[m_branching];
 	for (int i = 0; i < m_branching; ++i) {
@@ -784,8 +781,15 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	//TODO quantize: assign points to clusters
+#if VTREEVERBOSE
+	printf("quantize - Start\n");
+#endif
+
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
+#if VTREEVERBOSE
+		printf("quantizing descriptor [%d]\n", indices[i]);
+#endif
 
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
@@ -802,10 +806,16 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		}
 		count[belongs_to[i]]++;
 	}
+#if VTREEVERBOSE
+	printf("quantize - End\n");
+#endif
 
 	bool converged = false;
 	int iteration = 0;
 	while (!converged && iteration < m_iterations) {
+#if VTREEVERBOSE
+		printf("iteration=[%d]\n", iteration);
+#endif
 		converged = true;
 		iteration++;
 
@@ -1257,6 +1267,9 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
 
+//	printf("BoW vector\n");
+//	FunctionUtils::printDescriptors(queryBowVector);
+
 //	std::cout << "Query BoW vector:\n" << queryBowVector << std::endl;
 
 	//	Efficient scoring query BoW vector against all DB BoW vectors
@@ -1399,6 +1412,9 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 	if (this->getVeclen() != other.getVeclen()
 			|| this->getBranching() != other.getBranching()
 			|| this->getDepth() != other.getDepth()) {
+#if VTREEVERBOSE
+		printf("[VocabTree::operator==] Vector length, branch factor or depth are not equal\n");
+#endif
 		return false;
 	}
 
@@ -1407,6 +1423,9 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 //	}
 
 	if (compareEqual(this->getRoot(), other.getRoot()) == false) {
+#if VTREEVERBOSE
+		printf("[VocabTree::operator==] Tree is not equal\n");
+#endif
 		return false;
 	}
 

@@ -9,7 +9,7 @@
 #define FUNCTIONUTILS_HPP_
 
 #include <vector>
-
+#include <queue>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <sstream>
@@ -96,6 +96,8 @@ protected:
 
 	std::vector<image> m_descriptorsIndices;
 	std::vector<std::string> m_keysFilenames;
+	std::map<int, cv::Mat> descBuffer;
+	std::queue<int> addingOrder;
 
 public:
 	int rows = 0;
