@@ -30,10 +30,12 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 BIN = VocabLearn
 
+FILEUTILSVERBOSE = -DFILEUTILSVERBOSE
+
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) -o $(CXXFLAGS) -o $(BIN) $(OBJECTS) $(LDFLAGS)
+	$(CXX) $(FILEUTILSVERBOSE) -o $(CXXFLAGS) -o $(BIN) $(OBJECTS) $(LDFLAGS)
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~

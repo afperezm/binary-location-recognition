@@ -847,7 +847,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			for (size_t i = 0; (int) i < indices_length; ++i) {
 				for (size_t k = 0; k < m_veclen; ++k) {
 					dcenters.at<TDescriptor>(belongs_to[i], k) += m_dataset.row(
-							indices[i]).at<TDescriptor>(1, k);
+							indices[i]).at<TDescriptor>(0, k);
 				}
 			}
 			// Divide accumulated data by the number transaction assigned to the cluster

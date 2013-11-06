@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
 
-		// Initialize keypoints and descriptors
+		// Declare variables for holding keypoints and descriptors
 		std::vector<cv::KeyPoint> imgKeypoints;
 		cv::Mat imgDescriptors = cv::Mat();
 
@@ -112,14 +112,16 @@ int main(int argc, char **argv) {
 			// Increase descriptors counter
 			descCount += imgDescriptors.rows;
 
-			// Check descriptors length
+			// If initialized check descriptors length
+			// Recall all the descriptors must be the same length
 			if (descLen != 0) {
 				CV_Assert(descLen == imgDescriptors.cols);
 			} else {
 				descLen = imgDescriptors.cols;
 			}
 
-			// Check descriptors type
+			// If initialized check descriptors type
+			// Recall all the descriptors must be the same type
 			if (descType != -1) {
 				CV_Assert(descType == imgDescriptors.type());
 			} else {
@@ -127,6 +129,7 @@ int main(int argc, char **argv) {
 			}
 		}
 		imgDescriptors.release();
+		// Increase images counter
 		imgIdx++;
 	}
 
