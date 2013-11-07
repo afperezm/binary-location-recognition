@@ -100,8 +100,10 @@ protected:
 	std::queue<int> addingOrder;
 
 public:
+	static const int MAX_MEM = 367000000; // ~350 MBytes
 	int rows = 0;
 	int cols = 0;
+	int m_memoryCounter = 0;
 
 protected:
 	int m_descriptorType = -1;

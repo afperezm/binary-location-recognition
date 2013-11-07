@@ -23,12 +23,10 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 BIN =  DynamicMat_test
 
-#DYNMATVERBOSE = -DDYNMATVERBOSE
-
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) $(DYNMATVERBOSE) $(CXXFLAGS) $< $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~

@@ -32,15 +32,14 @@ OBJECTS = $(SOURCES:.cpp=.o)
 BIN =  VocabTree_test
 
 #VTREEVERBOSE = -DVTREEVERBOSE
-#DYNMATVERBOSE = -DDYNMATVERBOSE
 
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) $(VTREEVERBOSE) $(DYNMATVERBOSE) $(CXXFLAGS) $< $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~
 
 VocabTree_test.o: VocabTree_test.cpp
-	$(CXX) $(VTREEVERBOSE) $(DYNMATVERBOSE) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(VTREEVERBOSE) $(CXXFLAGS) -c $< -o $@

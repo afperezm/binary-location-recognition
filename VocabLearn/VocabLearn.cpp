@@ -85,10 +85,13 @@ int main(int argc, char **argv) {
 	keysList.close();
 
 	// Step 2: read key files
+	printf("-- Reading keypoint files from [%s]\n", list_in);
 	std::vector<image> descriptorsIndices;
 
 	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
 	for (std::string keyFileName : keysFilenames) {
+
+		printf("%d/%lu\n", imgIdx + 1, keysFilenames.size());
 
 		// Declare variables for holding keypoints and descriptors
 		std::vector<cv::KeyPoint> imgKeypoints;

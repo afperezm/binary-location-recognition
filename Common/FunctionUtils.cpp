@@ -197,8 +197,8 @@ DynamicMat::DynamicMat(std::vector<image>& descriptorsIndices,
 		std::vector<std::string>& keysFilenames, int descriptorCount,
 		int descriptorLength, int descriptorType) :
 		m_descriptorsIndices(descriptorsIndices), m_keysFilenames(
-				keysFilenames), rows(descriptorCount), cols(descriptorLength), m_descriptorType(
-				descriptorType) {
+				keysFilenames), rows(descriptorCount), cols(descriptorLength), m_memoryCounter(
+				0), m_descriptorType(descriptorType) {
 
 #if DYNMATVERBOSE
 	fprintf(stdout, "Instantiation DynamicMat\n");
@@ -239,6 +239,8 @@ DynamicMat::DynamicMat(const DynamicMat& other) {
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
+	m_memoryCounter = other.m_memoryCounter;
+
 }
 
 // --------------------------------------------------------------------------
@@ -262,6 +264,7 @@ DynamicMat& DynamicMat::operator =(const DynamicMat& other) {
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
+	m_memoryCounter = other.m_memoryCounter;
 
 	return *this;
 }
@@ -293,22 +296,40 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 				imgKeypoints, imgDescriptors);
 
 		// Check buffer size, if full then pop the first element
-		if (descBuffer.size() > 10) {
+		if (m_memoryCounter > MAX_MEM) {
 #if DYNMATVERBOSE
-			fprintf(stdout, "[DynamicMat::row] Buffer full, deleting first matrix\n",
-					descriptorIdx);
+			fprintf(stdout, "[DynamicMat::row] Buffer full, deleting first matrix\n");
 #endif
-			// Erase the first added element from the buffer
-			descBuffer.erase(descBuffer.find(addingOrder.front()));
+			// Find first element
+			it = descBuffer.find(addingOrder.front());
+			// Decrease memory counter
+			if (imgDescriptors.type() == CV_8U) {
+				m_memoryCounter -=
+						(int) (it->second.rows * cols * sizeof(uchar));
+			} else {
+				m_memoryCounter -=
+						(int) (it->second.rows * cols * sizeof(float));
+			}
+			// Erase from the buffer the first added element
+			descBuffer.erase(it);
 			// Pop its index from the queue
 			addingOrder.pop();
 		}
+
 		// Add the descriptors matrix to the buffer
 		descBuffer.insert(
 				std::pair<int, cv::Mat>(
 						m_descriptorsIndices[descriptorIdx].imgIdx,
 						imgDescriptors));
 		addingOrder.push(m_descriptorsIndices[descriptorIdx].imgIdx);
+		// Increase memory counter
+		if (imgDescriptors.type() == CV_8U) {
+			m_memoryCounter +=
+					(int) (imgDescriptors.rows * cols * sizeof(uchar));
+		} else {
+			m_memoryCounter +=
+					(int) (imgDescriptors.rows * cols * sizeof(float));
+		}
 	}
 
 	// Index relative to the matrix of descriptors it belongs to

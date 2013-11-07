@@ -490,14 +490,22 @@ void VocabTree<TDescriptor, Distance>::build() {
 				" cannot proceed with clustering");
 	}
 
-	// Number of features in the dataset
+	// Number of features in the data set
+	// Note: clustered only 12% of the descriptors which are randomly chosen
+//	size_t size = m_dataset.rows * 0.12;
 	size_t size = m_dataset.rows;
 
-	//  Array of indices to vectors in the dataset
+//	cvflann::seed_random(unsigned(std::time(0)));
+//	cvflann::UniqueRandom randGen((int) size);
+
+	//  Array of randomly chosen descriptors indices
 	int* indices = new int[size];
 	for (size_t i = 0; i < size; ++i) {
+//		indices[i] = randGen.next();
 		indices[i] = int(i);
 	}
+//	// Order the array of indices in a try to avoid random memory accesses
+//	std::sort(indices, indices + size);
 
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
@@ -745,8 +753,10 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			m_branching, indices, indices_length, centers_idx, centers_length,
 			m_dataset);
 
+#if DEBUG
 #if VTREEVERBOSE
 	printf("[RandomCenters::chooseCenters] Random centers chosen\n");
+#endif
 #endif
 
 	// Recursion base case: done as well if by case got
@@ -762,8 +772,10 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	// TODO initCentroids: assign centers based on the chosen indexes
+#if DEBUG
 #if VTREEVERBOSE
 	printf("initCentroids - Start\n");
+#endif
 #endif
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
@@ -771,8 +783,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
 	delete[] centers_idx;
+
+#if DEBUG
 #if VTREEVERBOSE
 	printf("initCentroids - End\n");
+#endif
 #endif
 
 	int* count = new int[m_branching];
@@ -781,14 +796,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	//TODO quantize: assign points to clusters
+#if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - Start\n");
+#endif
 #endif
 
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
+#if DEBUG
 #if VTREEVERBOSE
 		printf("quantizing descriptor [%d]\n", indices[i]);
+#endif
 #endif
 
 		DistanceType sq_dist = m_distance(
@@ -806,15 +825,19 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		}
 		count[belongs_to[i]]++;
 	}
+#if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - End\n");
+#endif
 #endif
 
 	bool converged = false;
 	int iteration = 0;
 	while (!converged && iteration < m_iterations) {
+#if DEBUG
 #if VTREEVERBOSE
 		printf("iteration=[%d]\n", iteration);
+#endif
 #endif
 		converged = true;
 		iteration++;
@@ -1360,8 +1383,10 @@ template<class TDescriptor, class Distance>
 bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
 		const VocabTreeNodePtr b) const {
 
+#if DEBUG
 #if VTREEVERBOSE
 	printf("[VocabTree::compareEqual] Comparing tree roots\n");
+#endif
 #endif
 
 	// Assert both nodes are interior or leaf nodes
@@ -1412,8 +1437,10 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 	if (this->getVeclen() != other.getVeclen()
 			|| this->getBranching() != other.getBranching()
 			|| this->getDepth() != other.getDepth()) {
+#if DEBUG
 #if VTREEVERBOSE
 		printf("[VocabTree::operator==] Vector length, branch factor or depth are not equal\n");
+#endif
 #endif
 		return false;
 	}
@@ -1423,8 +1450,10 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 //	}
 
 	if (compareEqual(this->getRoot(), other.getRoot()) == false) {
+#if DEBUG
 #if VTREEVERBOSE
 		printf("[VocabTree::operator==] Tree is not equal\n");
+#endif
 #endif
 		return false;
 	}
