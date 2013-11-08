@@ -145,7 +145,6 @@ private:
 			if (node.center != NULL) {
 				// Deep copy
 				center = new TDescriptor[m_veclen];
-				m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
 				for (size_t k = 0; k < m_veclen; ++k) {
 					center[k] = node.center[k];
 				}
@@ -190,8 +189,6 @@ protected:
 	/* Attributes used by several methods */
 	// The distance
 	Distance m_distance;
-	// Memory occupied by the index
-	int m_memoryCounter;
 
 public:
 
@@ -423,8 +420,7 @@ private:
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 		const IndexParams& params) :
-		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()), m_memoryCounter(
-				0) {
+		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()) {
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
@@ -491,21 +487,13 @@ void VocabTree<TDescriptor, Distance>::build() {
 	}
 
 	// Number of features in the data set
-	// Note: clustered only 12% of the descriptors which are randomly chosen
-//	size_t size = m_dataset.rows * 0.12;
 	size_t size = m_dataset.rows;
 
-//	cvflann::seed_random(unsigned(std::time(0)));
-//	cvflann::UniqueRandom randGen((int) size);
-
-	//  Array of randomly chosen descriptors indices
+	//  Array of descriptors indices
 	int* indices = new int[size];
 	for (size_t i = 0; i < size; ++i) {
-//		indices[i] = randGen.next();
 		indices[i] = int(i);
 	}
-//	// Order the array of indices in a try to avoid random memory accesses
-//	std::sort(indices, indices + size);
 
 	m_root = new VocabTreeNode();
 	computeNodeStatistics(m_root, indices, (int) size);
@@ -545,7 +533,6 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 	fs << "depth" << m_depth;
 	fs << "vectorLength" << (int) m_veclen;
 	fs << "numDbImages" << (int) m_numDbImages;
-	fs << "memoryCounter" << m_memoryCounter;
 
 	fs << "root";
 
@@ -603,7 +590,6 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 	m_depth = (int) fs["depth"];
 	m_veclen = (int) fs["vectorLength"];
 	m_numDbImages = (int) fs["numDbImages"];
-	m_memoryCounter = (int) fs["memoryCounter"];
 
 	cv::FileNode root = fs["root"];
 
@@ -627,7 +613,6 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 
 	// Deep copy
 	node->center = new TDescriptor[m_veclen];
-	m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
 	for (size_t k = 0; k < m_veclen; ++k) {
 		node->center[k] = center.at<TDescriptor>(0, k);
 	}
@@ -703,8 +688,6 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 
 	TDescriptor* center = new TDescriptor[m_veclen];
 
-	m_memoryCounter += int(m_veclen * sizeof(TDescriptor));
-
 	// Checking indices to be in range, but actually is not necessary
 	// is just for avoing the unused warning
 	for (size_t i = 0; (int) i < indices_length; i++) {
@@ -749,20 +732,25 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	int* centers_idx = new int[m_branching];
 	int centers_length;
 
+#if DEBUG
+#if VTREEVERBOSE
+	printf("randomCenters - Start\n");
+#endif
+#endif
+
 	CentersChooser<TDescriptor, Distance>::create(m_centers_init)->chooseCenters(
 			m_branching, indices, indices_length, centers_idx, centers_length,
 			m_dataset);
 
 #if DEBUG
 #if VTREEVERBOSE
-	printf("[RandomCenters::chooseCenters] Random centers chosen\n");
+	printf("randomCenters - End\n");
 #endif
 #endif
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
 	if (centers_length < m_branching) {
-//		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
 		node->word_id = m_words.size();
 		node->weight = 1.0;
@@ -771,12 +759,12 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		return;
 	}
 
-	// TODO initCentroids: assign centers based on the chosen indexes
 #if DEBUG
 #if VTREEVERBOSE
 	printf("initCentroids - Start\n");
 #endif
 #endif
+
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
 	for (int i = 0; i < centers_length; i++) {
 		m_dataset.row(centers_idx[i]).copyTo(
@@ -795,7 +783,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		count[i] = 0;
 	}
 
-	//TODO quantize: assign points to clusters
 #if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - Start\n");
@@ -804,11 +791,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
-#if DEBUG
-#if VTREEVERBOSE
-		printf("quantizing descriptor [%d]\n", indices[i]);
-#endif
-#endif
 
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
@@ -825,6 +807,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		}
 		count[belongs_to[i]]++;
 	}
+
 #if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - End\n");
@@ -839,10 +822,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		printf("iteration=[%d]\n", iteration);
 #endif
 #endif
+
 		converged = true;
 		iteration++;
 
 		// TODO: computeCentroids compute the new cluster centers
+
+#if DEBUG
+#if VTREEVERBOSE
+		printf("computeCentroids - Start\n");
+#endif
+#endif
+
 		// Zeroing all the centroids dimensions
 		dcenters = cv::Scalar::all(0);
 
@@ -881,8 +872,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				}
 			}
 		}
+#if DEBUG
+#if VTREEVERBOSE
+		printf("computeCentroids - End\n");
+#endif
+#endif
 
-		// TODO quantize: reassign points to clusters
+#if DEBUG
+#if VTREEVERBOSE
+		printf("quantize - Start\n");
+#endif
+#endif
+
 		for (int i = 0; i < indices_length; ++i) {
 			DistanceType sq_dist = m_distance(
 					(TDescriptor*) m_dataset.row(indices[i]).data,
@@ -906,6 +907,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			}
 		}
 
+#if DEBUG
+#if VTREEVERBOSE
+		printf("quantize - End\n");
+#endif
+#endif
+
+#if DEBUG
+#if VTREEVERBOSE
+		printf("handleEmptyClusters - Start\n");
+#endif
+#endif
+
 		// Handle empty clusters
 		for (int i = 0; i < m_branching; ++i) {
 			// if one cluster converges to an empty cluster,
@@ -928,13 +941,18 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			}
 		}
 
+#if DEBUG
+#if VTREEVERBOSE
+		printf("handleEmptyClusters - End\n");
+#endif
+#endif
+
 	}
 
 	TDescriptor** centers = new TDescriptor*[m_branching];
 
 	for (int i = 0; i < m_branching; ++i) {
 		centers[i] = new TDescriptor[m_veclen];
-		m_memoryCounter += (int) (m_veclen * sizeof(TDescriptor));
 		for (size_t k = 0; k < m_veclen; ++k) {
 			centers[i][k] = dcenters.at<TDescriptor>(i, k);
 		}
@@ -945,6 +963,13 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	int start = 0;
 	int end = start;
 	for (int c = 0; c < m_branching; ++c) {
+
+#if VTREEVERBOSE
+		printf(
+				"[VocabTree::computeClustering] Clustering over resulting clusters, level=[%d] branch=[%d]\n",
+				level, c);
+#endif
+
 		// Re-order indices by chunks in clustering order
 		for (int i = 0; i < indices_length; ++i) {
 			if (belongs_to[i] == c) {

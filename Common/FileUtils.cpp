@@ -40,6 +40,12 @@ void FileUtils::saveFeatures(const std::string &filename,
 		const std::vector<cv::KeyPoint>& keypoints,
 		const cv::Mat& descriptors) {
 
+#if FILEUTILSVERBOSE
+	printf(
+			"-- Saving feature descriptors to [%s] using OpenCV FileStorage\n",
+			filename.c_str());
+#endif
+
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
 	if (!fs.isOpened()) {

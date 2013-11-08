@@ -31,7 +31,8 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 BIN =  VocabTree_test
 
-#VTREEVERBOSE = -DVTREEVERBOSE
+DEBUG = -DDEBUG
+VTREEVERBOSE = -DVTREEVERBOSE
 
 all: $(BIN)
 
@@ -42,4 +43,4 @@ clean:
 	rm -rf $(OBJECTS) $(BIN) *~
 
 VocabTree_test.o: VocabTree_test.cpp
-	$(CXX) $(VTREEVERBOSE) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(VTREEVERBOSE) $(DEBUG) $(CXXFLAGS) -c $< -o $@
