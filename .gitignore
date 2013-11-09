@@ -1,6 +1,7 @@
 *~
 main
 FeatureExtract/FeatureExtract
+FeatureSelect/FeatureSelect
 VocabLearn/VocabLearn
 VocabBuildDB/VocabBuildDB
 VocabMatch/VocabMatch
@@ -27,3 +28,4 @@ VocabMatch/VocabMatch
 VocabMatch/candidates.txt
 VocabMatch/matches.txt
 VocabMatch/results.html
+SelectDescriptors/SelectDescriptors

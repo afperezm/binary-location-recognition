@@ -476,7 +476,7 @@ void VocabTree<TDescriptor, Distance>::build() {
 				" must be at least 2");
 	}
 
-	if (m_depth <= 2) {
+	if (m_depth < 2) {
 		throw std::runtime_error("[VocabTree::build] Error, depth"
 				" must be at least 2");
 	}
@@ -638,9 +638,9 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		node->image_list.clear();
 		for (cv::FileNodeIterator it = images.begin(); it != images.end();
 				++it) {
-			size_t index = (int) (*it)["m_index"];
-			ImageCount* img = new ImageCount(index, (float) (*it)["m_count"]);
-			node->image_list.push_back(*img);
+			size_t index = int((*it)["m_index"]);
+			ImageCount img(index, float((*it)["m_count"]));
+			node->image_list.push_back(img);
 		}
 
 		m_words.push_back(node);
@@ -720,6 +720,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->word_id = m_words.size();
 		node->weight = 1.0;
 		this->m_words.push_back(node);
+		printf(
+				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
+				level, indices_length);
 		return;
 	}
 
@@ -756,6 +759,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->weight = 1.0;
 		this->m_words.push_back(node);
 		delete[] centers_idx;
+		printf(
+				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
+				level, indices_length);
 		return;
 	}
 
@@ -1014,7 +1020,7 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 		if (wordIdx > m_words.size() - 1) {
 			throw std::runtime_error(
-					"[VocabTree::scoreQuery] Feature quantized into a non-existent word");
+					"[VocabTree::transform] Feature quantized into a non-existent word");
 		}
 
 		bowVector.at<float>(0, wordIdx) += (float) wordWeight;
@@ -1254,7 +1260,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 				mags[index] += pow(dim, 2);
 			} else {
 				throw std::runtime_error(
-						"[VocabTree::scoreQuery] Unknown scoring method");
+						"[VocabTree::normalizeDatabase] Unknown scoring method");
 			}
 		}
 	}
