@@ -21,6 +21,7 @@
 #include <FileUtils.hpp>
 
 #include <FunctionUtils.hpp>
+#include <HtmlResultsWriter.hpp>
 
 double mytime;
 
