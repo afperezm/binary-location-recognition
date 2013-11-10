@@ -6,11 +6,12 @@
  */
 
 #include <gtest/gtest.h>
-#include <VocabTree.h>
-#include <opencv2/core/core.hpp>
 #include <limits.h>
 
+#include <opencv2/core/core.hpp>
+
 #include <FileUtils.hpp>
+#include <VocabTree.h>
 
 TEST(VocabTree, Instantiation) {
 	cv::Ptr<cvflann::VocabTreeBase> tree;

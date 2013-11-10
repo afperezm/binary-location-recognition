@@ -14,7 +14,7 @@ CXXFLAGS += -I../include
 LDFLAGS += -lvocab
 
 # Common
-CXXFLAGS += -I../../Common/
+CXXFLAGS += -I../../Common/include/
 LDFLAGS += -lcommon
 
 # OpenCV

@@ -6,7 +6,7 @@ CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../lib/ -lboost_regex
 
 # Common
-CXXFLAGS += -I../Common/
+CXXFLAGS += -I../Common/include/
 LDFLAGS += -lcommon
 
 # KMajority

@@ -10,7 +10,7 @@ CXXFLAGS += -I../OpenCVExtensions/include
 LDFLAGS += -lopencv_extensions
 
 # Common
-CXXFLAGS += -I../Common/
+CXXFLAGS += -I../Common/include/
 LDFLAGS += -lcommon
 
 # DBrief

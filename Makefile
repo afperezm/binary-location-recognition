@@ -10,6 +10,8 @@ default:
 	cd VocabLib; $(MAKE)
 # Make program
 	cd FeatureExtract; $(MAKE)
+	cd FeatureSelect; $(MAKE)
+	cd SelectDescriptors; $(MAKE)
 	cd VocabLearn; $(MAKE)
 	cd VocabBuildDB; $(MAKE)
 	cd VocabMatch; $(MAKE)
@@ -23,6 +25,8 @@ clean:
 	cd VocabLib; $(MAKE) clean
 # Clean program
 	cd FeatureExtract; $(MAKE) clean
+	cd FeatureSelect; $(MAKE) clean
+	cd SelectDescriptors; $(MAKE) clean
 	cd VocabLearn; $(MAKE) clean
 	cd VocabBuildDB; $(MAKE) clean
 	cd VocabMatch; $(MAKE) clean

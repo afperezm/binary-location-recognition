@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include <DynamicMat.hpp>
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 

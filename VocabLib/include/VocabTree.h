@@ -43,9 +43,9 @@
 #include <opencv2/flann/flann.hpp>
 
 #include <CentersChooser.h>
-#include <KMajorityIndex.h>
-
+#include <DynamicMat.hpp>
 #include <FunctionUtils.hpp>
+#include <KMajorityIndex.h>
 
 namespace cvflann {
 

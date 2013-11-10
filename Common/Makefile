@@ -2,14 +2,14 @@
 
 CXX = g++
 
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./
+CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./include/
 LDFLAGS =
 
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
-SOURCES = $(wildcard *.cpp)
+SOURCES = $(wildcard src/*.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 
 BINLIB=../lib

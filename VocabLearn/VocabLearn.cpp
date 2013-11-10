@@ -21,10 +21,9 @@
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 
-#include <VocabTree.h>
-
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
+#include <VocabTree.h>
 
 using std::vector;
 

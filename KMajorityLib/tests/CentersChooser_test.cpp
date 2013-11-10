@@ -5,8 +5,4 @@
  *      Author: andresf
  */
 
-#include "CentersChooser.h"
-
-namespace cv {
-
-} /* namespace cv */
+#include <CentersChooser.h>

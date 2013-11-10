@@ -9,6 +9,8 @@
 #define CENTERSCHOOSER_H_
 
 #include <opencv2/flann/flann.hpp>
+
+#include <DynamicMat.hpp>
 #include <FunctionUtils.hpp>
 
 //namespace cv {

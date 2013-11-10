@@ -6,7 +6,7 @@ CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../lib/
 
 # Common
-CXXFLAGS += -I../Common/
+CXXFLAGS += -I../Common/include/
 LDFLAGS += -lcommon
 
 # OpenCV (this goes last: beware of the linking order)

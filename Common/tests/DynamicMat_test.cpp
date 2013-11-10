@@ -5,13 +5,15 @@
  *      Author: andresf
  */
 
-#include <vector>
 #include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
-#include <FunctionUtils.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
+#include <DynamicMat.hpp>
 #include <FileUtils.hpp>
+#include <FunctionUtils.hpp>
 
 TEST(DynamicMat, EmptyInstantiation) {
 
