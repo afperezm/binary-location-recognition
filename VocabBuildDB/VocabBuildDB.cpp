@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		imgDescriptors = cv::Mat();
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 

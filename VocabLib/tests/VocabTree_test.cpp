@@ -39,7 +39,7 @@ TEST(VocabTree, LoadSaveReal) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -93,7 +93,7 @@ TEST(VocabTree, LoadSaveBinary) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -147,7 +147,7 @@ TEST(VocabTree, TestDatabase) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -179,7 +179,7 @@ TEST(VocabTree, TestDatabase) {
 	for (std::string keyFileName : keysFilenames) {
 		try {
 			imgDescriptors = cv::Mat();
-			imgKeypoints.clear();
+			std::vector<cv::KeyPoint>().swap(imgKeypoints);
 			FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 			tree->addImageToDatabase(i, imgDescriptors);
 		} catch (const std::runtime_error& error) {
@@ -206,7 +206,7 @@ TEST(VocabTree, TestDatabase) {
 		cv::Mat scores;
 
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		tree->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
 		// Check that scores has the right type

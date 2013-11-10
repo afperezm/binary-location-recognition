@@ -43,7 +43,7 @@ TEST(DynamicMat, Instantiation) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -88,7 +88,7 @@ TEST(DynamicMat, InitByCopy) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -138,7 +138,7 @@ TEST(DynamicMat, InitByAssignment) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length
@@ -190,7 +190,7 @@ TEST(DynamicMat, RowExtraction) {
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
 		// Check that keypoints and descriptors have same length

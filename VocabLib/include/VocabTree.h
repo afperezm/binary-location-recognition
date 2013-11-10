@@ -139,7 +139,6 @@ private:
 		std::vector<ImageCount> image_list;
 		VocabTreeNode() :
 				center(NULL), children(NULL), word_id(-1), weight(0.0) {
-			image_list.clear();
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
 			if (node.center != NULL) {
@@ -434,8 +433,6 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 		m_iterations = (std::numeric_limits<int>::max)();
 	}
 
-	m_words.clear();
-
 }
 
 // --------------------------------------------------------------------------
@@ -635,7 +632,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		}
 
 		node->children = NULL;
-		node->image_list.clear();
+		std::vector<ImageCount>().swap(node->image_list);
 		for (cv::FileNodeIterator it = images.begin(); it != images.end();
 				++it) {
 			size_t index = int((*it)["m_index"]);
@@ -1150,7 +1147,7 @@ void VocabTree<TDescriptor, Distance>::createDatabase() {
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::clearDatabase() {
 	for (VocabTreeNodePtr& word : m_words) {
-		word->image_list.clear();
+		std::vector<ImageCount>().swap(word->image_list);
 	}
 }
 

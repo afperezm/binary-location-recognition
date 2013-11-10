@@ -116,7 +116,7 @@ int FunctionUtils::BinToDec(const cv::Mat& binRow) {
 void FunctionUtils::split(const std::string &s, char delim,
 		std::vector<std::string> &tokens) {
 
-	tokens.clear();
+	std::vector<std::string>().swap(tokens);
 
 	std::stringstream ss(s);
 	std::string item;

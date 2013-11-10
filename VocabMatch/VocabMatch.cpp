@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < query_filenames.size(); i++) {
 		// Initialize keypoints and descriptors
-		imgKeypoints.clear();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		imgDescriptors = cv::Mat();
 
 		// Load query keypoints and descriptors

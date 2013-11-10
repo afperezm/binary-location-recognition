@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 			// Clean descriptors matrix and keypoints vector
 			imgDescriptors.release();
 			imgDescriptors = cv::Mat::zeros(DESC_CHUNK, descLen, descType);
-			imgKeypoints.clear();
+			std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		}
 
 		cv::Mat submat = imgDescriptors.rowRange(i % DESC_CHUNK,

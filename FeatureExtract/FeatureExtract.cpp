@@ -201,7 +201,7 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
 				detectorType);
 
-		keypoints.clear();
+		std::vector<cv::KeyPoint>().swap(keypoints);
 		// Detect the keypoints
 		printf("   Detecting keypoints from image [%s]\n", imgName.c_str());
 		detector->detect(img, keypoints);
