@@ -1,10 +1,6 @@
 *~
-main
-FeatureExtract/FeatureExtract
-FeatureSelect/FeatureSelect
-VocabLearn/VocabLearn
-VocabBuildDB/VocabBuildDB
-VocabMatch/VocabMatch
+
+# Eclipse project settings
 .settings/*
 
 # Compiled Object files
@@ -20,7 +16,13 @@ VocabMatch/VocabMatch
 *.lai
 *.la
 *.a
-/test_descriptors
+
+# Executables
+FeatureExtract/FeatureExtract
+FeatureSelect/FeatureSelect
+VocabLearn/VocabLearn
+VocabBuildDB/VocabBuildDB
+VocabMatch/VocabMatch
 
 # Executables output files
 *.xml.gz
@@ -29,3 +31,4 @@ VocabMatch/candidates.txt
 VocabMatch/matches.txt
 VocabMatch/results.html
 SelectDescriptors/SelectDescriptors
+
