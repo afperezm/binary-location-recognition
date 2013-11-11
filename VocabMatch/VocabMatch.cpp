@@ -37,18 +37,18 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	char *tree_in = argv[1];
-	char *db_list_in = argv[2];
-	char *query_list_in = argv[3];
-	char *ranked_files_folder = argv[4];
+	char *db_filepath = argv[1];
+	char *db_gt_list_filepath = argv[2];
+	char *query_list_filepath = argv[3];
+	char *ranked_files_folderpath = argv[4];
 	uint num_nbrs = atoi(argv[5]);
-	bool isDescriptorBinary = true;
+	bool is_binary = true;
 	char *matches_out = const_cast<char*>("matches.txt");
 	const char *output_html = const_cast<char*>("results.html");
 	const char *candidates_out = const_cast<char*>("candidates.txt");
 
 	if (argc >= 7) {
-		isDescriptorBinary = atoi(argv[6]);
+		is_binary = atoi(argv[6]);
 	}
 
 	if (argc >= 8) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 	// Verifying input parameters
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
-	if (boost::regex_match(std::string(tree_in), expression) == false) {
+	if (boost::regex_match(std::string(db_filepath), expression) == false) {
 		fprintf(stderr,
 				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
@@ -75,16 +75,16 @@ int main(int argc, char **argv) {
 	// Step 1/4: load tree
 	cv::Ptr<cvflann::VocabTreeBase> tree;
 
-	if (isDescriptorBinary == true) {
+	if (is_binary == true) {
 		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
 	} else {
 		tree = new cvflann::VocabTree<float, cvflann::L2<float> >();
 	}
 
-	printf("-- Reading tree from [%s]\n", tree_in);
+	printf("-- Reading tree from [%s]\n", db_filepath);
 
 	mytime = cv::getTickCount();
-	tree->load(std::string(tree_in));
+	tree->load(std::string(db_filepath));
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
@@ -94,16 +94,17 @@ int main(int argc, char **argv) {
 	printf("-- Loading file of DB images ground truth\n");
 	std::vector<std::string> db_filenames;
 	std::vector<int> db_landmarks;
-	std::ifstream keysList(db_list_in, std::fstream::in);
+	std::ifstream keys_list(db_gt_list_filepath, std::fstream::in);
 
-	if (keysList.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n", db_list_in);
+	if (keys_list.is_open() == false) {
+		fprintf(stderr, "Error opening file [%s] for reading\n",
+				db_gt_list_filepath);
 		return EXIT_FAILURE;
 	}
 
 	// Loading db keypoint filename and landmark id into a set
 	std::string line;
-	while (getline(keysList, line)) {
+	while (getline(keys_list, line)) {
 
 		// Verifying line format
 		if (boost::regex_match(line, boost::regex("^(.+)\\s(.+)$")) == false) {
@@ -138,20 +139,21 @@ int main(int argc, char **argv) {
 		db_landmarks.push_back(landmark);
 	}
 	// Close file
-	keysList.close();
+	keys_list.close();
 
 	// Step 3/4: read the query keyfiles
 	printf("-- Loading query keyfiles names\n");
 	std::vector<std::string> query_filenames;
-	keysList.open(query_list_in, std::fstream::in);
+	keys_list.open(query_list_filepath, std::fstream::in);
 
-	if (keysList.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n", db_list_in);
+	if (keys_list.is_open() == false) {
+		fprintf(stderr, "Error opening file [%s] for reading\n",
+				query_list_filepath);
 		return EXIT_FAILURE;
 	}
 
 	// Loading file names in list into a vector
-	while (getline(keysList, line)) {
+	while (getline(keys_list, line)) {
 
 		// Checking that file exists, if not print error and exit
 		struct stat buffer;
@@ -172,7 +174,7 @@ int main(int argc, char **argv) {
 		query_filenames.push_back(line);
 	}
 	// Close file
-	keysList.close();
+	keys_list.close();
 
 	// Step 4/4: score each query keyfile
 	int normType = cv::NORM_L1;
@@ -222,10 +224,10 @@ int main(int argc, char **argv) {
 				imgDescriptors);
 
 		// Check type of descriptors
-		if ((imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
+		if ((imgDescriptors.type() == CV_8U) != is_binary) {
 			fprintf(stderr,
 					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
-					isDescriptorBinary == true ? "binary" : "non-binary",
+					is_binary == true ? "binary" : "non-binary",
 					imgDescriptors.type() == CV_8U ? "binary" : "real");
 			return EXIT_FAILURE;
 		}
@@ -306,7 +308,7 @@ int main(int argc, char **argv) {
 
 		std::stringstream ranked_list_fname;
 		printf("%lu) %s\n", i, query_filenames[i].c_str());
-		ranked_list_fname << ranked_files_folder << "/query_" << i
+		ranked_list_fname << ranked_files_folderpath << "/query_" << i
 				<< "_ranked.txt";
 
 		FILE *f_ranked_list = fopen(ranked_list_fname.str().c_str(), "w");
