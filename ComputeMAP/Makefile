@@ -14,10 +14,15 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 BIN = ComputeMAP
 
+MAPVERBOSE = -DMAPVERBOSE
+
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CXX) -o $(CXXFLAGS) -o $(BIN) $(OBJECTS) $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o $(BIN) $(LDFLAGS)
+
+.cpp.o:
+	$(CXX) $(MAPVERBOSE) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~
