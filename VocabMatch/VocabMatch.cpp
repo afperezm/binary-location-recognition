@@ -25,14 +25,15 @@
 
 double mytime;
 
+const static boost::regex DESCRIPTOR_REGEX("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
+
 int main(int argc, char **argv) {
 
-	if (argc < 6 || argc > 10) {
+	if (argc < 6 || argc > 8) {
 		printf(
 				"\nUsage:\n"
 						"\t%s <in.db> <in.db.gt.list> <in.query.list> <out.ranked.files.folder>"
-						" <in.num.neighbors> [in.type.binary:1] [out.matches:matches.txt]"
-						" [out.results:results.html] [out.candidates:candidates.txt]\n\n",
+						" <in.num.neighbors> [in.type.binary:1] [out.results:results.html]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
 	}
@@ -43,30 +44,19 @@ int main(int argc, char **argv) {
 	char *ranked_files_folderpath = argv[4];
 	uint num_nbrs = atoi(argv[5]);
 	bool is_binary = true;
-	char *matches_out = const_cast<char*>("matches.txt");
 	const char *output_html = const_cast<char*>("results.html");
-	const char *candidates_out = const_cast<char*>("candidates.txt");
 
 	if (argc >= 7) {
 		is_binary = atoi(argv[6]);
 	}
 
 	if (argc >= 8) {
-		matches_out = argv[7];
+		output_html = argv[7];
 	}
 
-	if (argc >= 9) {
-		output_html = argv[8];
-	}
-
-	if (argc >= 10) {
-		candidates_out = argv[9];
-	}
-
-	// Verifying input parameters
-	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
-
-	if (boost::regex_match(std::string(db_filepath), expression) == false) {
+	// Checking that DB filename refers to a compressed yaml or xml file
+	if (boost::regex_match(std::string(db_filepath), DESCRIPTOR_REGEX)
+			== false) {
 		fprintf(stderr,
 				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
@@ -93,7 +83,6 @@ int main(int argc, char **argv) {
 	// Step 2/4: read the database keyfiles
 	printf("-- Loading file of DB images ground truth\n");
 	std::vector<std::string> db_filenames;
-	std::vector<int> db_landmarks;
 	std::ifstream keys_list(db_gt_list_filepath, std::fstream::in);
 
 	if (keys_list.is_open() == false) {
@@ -120,7 +109,8 @@ int main(int argc, char **argv) {
 		sscanf(line.c_str(), "%s %d", filename, &landmark);
 
 		// Checking that filename refers to a compressed yaml or xml file
-		if (boost::regex_match(std::string(filename), expression) == false) {
+		if (boost::regex_match(std::string(filename), DESCRIPTOR_REGEX)
+				== false) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
 					filename);
@@ -136,7 +126,6 @@ int main(int argc, char **argv) {
 		}
 
 		db_filenames.push_back(std::string(filename));
-		db_landmarks.push_back(landmark);
 	}
 	// Close file
 	keys_list.close();
@@ -164,7 +153,7 @@ int main(int argc, char **argv) {
 		}
 
 		// Checking that line refers to a compressed yaml or xml file
-		if (boost::regex_match(line, expression) == false) {
+		if (boost::regex_match(line, DESCRIPTOR_REGEX) == false) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
 					line.c_str());
@@ -188,29 +177,13 @@ int main(int argc, char **argv) {
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
 
-	int max_ld = *std::max_element(db_landmarks.begin(), db_landmarks.end());
 	// Compute the number of candidates
 	int top = MIN (num_nbrs, db_filenames.size());
-
-	FILE *f_match = fopen(matches_out, "w");
-	if (f_match == NULL) {
-		fprintf(stderr, "Error opening file [%s] for writing\n",
-				candidates_out);
-		return EXIT_FAILURE;
-	}
-
-	FILE *f_candidates = fopen(candidates_out, "w");
-	if (f_candidates == NULL) {
-		fprintf(stderr, "Error opening file [%s] for writing\n",
-				candidates_out);
-		return EXIT_FAILURE;
-	}
 
 	FILE *f_html = fopen(output_html, "w");
 	HtmlResultsWriter::getInstance().writeHeader(f_html, top);
 	if (f_html == NULL) {
-		fprintf(stderr, "Error opening file [%s] for writing\n",
-				candidates_out);
+		fprintf(stderr, "Error opening file [%s] for writing\n", output_html);
 		return EXIT_FAILURE;
 	}
 
@@ -277,35 +250,6 @@ int main(int argc, char **argv) {
 		//   img6  --->  img6 ld2
 		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_DESCENDING);
 
-		// Initialize votes vector
-		// Note: size is maximum landmark id plus one because landmark index is zero-based
-		std::vector<int> votes(max_ld + 1, 0);
-
-		// Accumulating landmark votes for the top scored images
-		// Note: recall that images might refer to the same landmark
-		for (size_t j = 0; (int) j < top; j++) {
-			votes[db_landmarks[perm.at<int>(0, j)]]++;
-		}
-
-		// Finding max voted landmark and the number of votes it got
-		int max_votes = 0;
-		int max_landmark = -1;
-		for (int j = 0; j < max_ld + 1; j++) {
-			if (votes[j] > max_votes) {
-				max_votes = votes[j];
-				max_landmark = j;
-			}
-		}
-
-		// Print to a file the ranked list of candidates ordered by score
-		fprintf(f_candidates, "%s", query_filenames[i].c_str());
-		for (int j = 0; j < top; j++) {
-			std::string d_base = db_filenames[perm.at<int>(0, j)];
-			fprintf(f_candidates, " %s", d_base.c_str());
-		}
-		fprintf(f_candidates, "\n");
-		fflush(f_candidates);
-
 		std::stringstream ranked_list_fname;
 		printf("%lu) %s\n", i, query_filenames[i].c_str());
 		ranked_list_fname << ranked_files_folderpath << "/query_" << i
@@ -324,11 +268,6 @@ int main(int argc, char **argv) {
 		}
 		fclose(f_ranked_list);
 
-		// Print to a file the max voted landmark information
-		fprintf(f_match, "%lu %d %d\n", i, max_landmark, max_votes);
-		fflush(f_match);
-		fflush(stdout);
-
 		// Print to a file the ranked list of candidates ordered by score in HTML format
 		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i],
 				scores, perm, top, db_filenames);
@@ -336,8 +275,6 @@ int main(int argc, char **argv) {
 		perm.release();
 	}
 
-	fclose(f_candidates);
-	fclose(f_match);
 	HtmlResultsWriter::getInstance().writeFooter(f_html);
 	fclose(f_html);
 
