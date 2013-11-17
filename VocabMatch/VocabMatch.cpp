@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 	if (argc < 6 || argc > 8) {
 		printf(
 				"\nUsage:\n"
-						"\t%s <in.db> <in.db.gt.list> <in.query.list> <out.ranked.files.folder>"
+						"\t%s <in.db> <in.db.list> <in.query.list> <out.ranked.files.folder>"
 						" <in.num.neighbors> [in.type.binary:1] [out.results:results.html]\n\n",
 				argv[0]);
 		return EXIT_FAILURE;
@@ -103,10 +103,10 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
-		// Extracting filename and landmark from line
+		// Extracting DB image keypoints filename
 		char filename[256];
-		int landmark;
-		sscanf(line.c_str(), "%s %d", filename, &landmark);
+
+		sscanf(line.c_str(), "%s", filename);
 
 		// Checking that filename refers to a compressed yaml or xml file
 		if (boost::regex_match(std::string(filename), DESCRIPTOR_REGEX)
@@ -114,14 +114,6 @@ int main(int argc, char **argv) {
 			fprintf(stderr,
 					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
 					filename);
-			return EXIT_FAILURE;
-		}
-
-		// Check that landmark id is valid
-		if (landmark < 0) {
-			fprintf(stderr,
-					"Landmark id [%d] extracted from line [%s] should be greater than or equal to zero\n",
-					landmark, line.c_str());
 			return EXIT_FAILURE;
 		}
 

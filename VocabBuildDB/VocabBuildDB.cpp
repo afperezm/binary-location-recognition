@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 
 	if (argc < 4 || argc > 7) {
 		printf("\nUsage:\n"
-				"\t%s <in.list> <in.tree> <out.db> [in.type.binary:1]"
+				"\t%s <in.db.list> <in.tree> <out.db> [in.type.binary:1]"
 				" [in.use.tfidf:1] [in.normalize:1]\n\n", argv[0]);
 		return EXIT_FAILURE;
 	}
