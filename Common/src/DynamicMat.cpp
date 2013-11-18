@@ -25,6 +25,70 @@ DynamicMat::DynamicMat(std::vector<image>& descriptorsIndices,
 
 // --------------------------------------------------------------------------
 
+DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
+
+	cv::Mat imgDescriptors;
+	std::vector<cv::KeyPoint> imgKeypoints;
+
+	std::vector<image> descriptorsIndices;
+
+	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
+	for (std::string keyFileName : keysFilenames) {
+
+#if DYNMATVERBOSE
+		printf("%d/%lu\n", imgIdx + 1, keysFilenames.size());
+#endif
+
+		// Initialize keypoints and descriptors
+		imgDescriptors = cv::Mat();
+		std::vector<cv::KeyPoint>().swap(imgKeypoints);
+
+		// Load keypoints and descriptors
+		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+
+		// Check that keypoints and descriptors have same length
+		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
+
+		if (imgDescriptors.empty() == false) {
+			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
+				image img;
+				img.imgIdx = imgIdx;
+				img.startIdx = descCount;
+				descriptorsIndices.push_back(img);
+			}
+			// Increase descriptors counter
+			descCount += imgDescriptors.rows;
+
+			// If initialized check descriptors length
+			// Recall all the descriptors must be the same length
+			if (descLen != 0) {
+				CV_Assert(descLen == imgDescriptors.cols);
+			} else {
+				descLen = imgDescriptors.cols;
+			}
+			// If initialized check descriptors type
+			// Recall all the descriptors must be the same type
+			if (descType != -1) {
+				CV_Assert(descType == imgDescriptors.type());
+			} else {
+				descType = imgDescriptors.type();
+			}
+		}
+		imgDescriptors.release();
+		// Increase images counter
+		imgIdx++;
+	}
+
+	m_descriptorsIndices = descriptorsIndices;
+	m_keysFilenames = keysFilenames;
+	rows = descCount;
+	cols = descLen;
+	m_memoryCounter = 0;
+	m_descriptorType = descType;
+}
+
+// --------------------------------------------------------------------------
+
 DynamicMat::~DynamicMat() {
 #if DYNMATVERBOSE
 	fprintf(stdout, "Destroying DynamicMat\n");

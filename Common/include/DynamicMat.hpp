@@ -37,6 +37,9 @@ public:
 			int descriptorCount = 0, int descriptorLength = 0,
 			int descriptorType = -1);
 
+	//  = DEFAULT_KEYS
+	DynamicMat(std::vector<std::string>& keysFilenames);
+
 	// Copy constructor
 	DynamicMat(const DynamicMat& other);
 
