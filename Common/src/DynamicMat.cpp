@@ -10,12 +10,9 @@
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(std::vector<image>& descriptorsIndices,
-		std::vector<std::string>& keysFilenames, int descriptorCount,
-		int descriptorLength, int descriptorType) :
-		m_descriptorsIndices(descriptorsIndices), m_keysFilenames(
-				keysFilenames), rows(descriptorCount), cols(descriptorLength), m_memoryCounter(
-				0), m_descriptorType(descriptorType) {
+DynamicMat::DynamicMat() :
+		m_descriptorsIndices(DEFAULT_INDICES), m_keysFilenames(DEFAULT_KEYS), rows(
+				0), cols(0), m_memoryCounter(0), m_descriptorType(-1) {
 
 #if DYNMATVERBOSE
 	fprintf(stdout, "Instantiation DynamicMat\n");

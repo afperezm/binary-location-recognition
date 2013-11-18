@@ -85,59 +85,9 @@ int main(int argc, char **argv) {
 
 	// Step 2: read key files
 	printf("-- Reading keypoint files from [%s]\n", list_in);
-	std::vector<image> descriptorsIndices;
-
-	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
-	for (std::string keyFileName : keysFilenames) {
-
-		printf("%d/%lu\n", imgIdx + 1, keysFilenames.size());
-
-		// Declare variables for holding keypoints and descriptors
-		std::vector<cv::KeyPoint> imgKeypoints;
-		cv::Mat imgDescriptors = cv::Mat();
-
-		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
-
-		// Check that keypoints and descriptors have same length
-		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
-
-		if (imgDescriptors.empty() == false) {
-
-			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-				image img;
-				img.imgIdx = imgIdx;
-				img.startIdx = descCount;
-				descriptorsIndices.push_back(img);
-			}
-
-			// Increase descriptors counter
-			descCount += imgDescriptors.rows;
-
-			// If initialized check descriptors length
-			// Recall all the descriptors must be the same length
-			if (descLen != 0) {
-				CV_Assert(descLen == imgDescriptors.cols);
-			} else {
-				descLen = imgDescriptors.cols;
-			}
-
-			// If initialized check descriptors type
-			// Recall all the descriptors must be the same type
-			if (descType != -1) {
-				CV_Assert(descType == imgDescriptors.type());
-			} else {
-				descType = imgDescriptors.type();
-			}
-		}
-		imgDescriptors.release();
-		// Increase images counter
-		imgIdx++;
-	}
 
 	// Step 3: build tree
-	DynamicMat mergedDescriptors(descriptorsIndices, keysFilenames, descCount,
-			descLen, descType);
+	DynamicMat mergedDescriptors(keysFilenames);
 
 	// Cluster descriptors using Vocabulary Tree
 	cvflann::VocabTreeParams params;
@@ -181,7 +131,7 @@ int main(int argc, char **argv) {
 			* 1000;
 	printf(
 			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
-			descCount, mytime, tree->size());
+			mergedDescriptors.cols, mytime, tree->size());
 
 	printf("-- Saving tree to [%s]\n", tree_out);
 

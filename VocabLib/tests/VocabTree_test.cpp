@@ -26,37 +26,11 @@ TEST(VocabTree, Instantiation) {
 TEST(VocabTree, LoadSaveReal) {
 
 	/////////////////////////////////////////////////////////////////////
-	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
-
 	std::vector<std::string> keysFilenames;
 	keysFilenames.push_back("all_souls_000000.yaml.gz");
 	keysFilenames.push_back("all_souls_000001.yaml.gz");
 
-	std::vector<image> descriptorsIndices;
-
-	int descCount = 0, imgIdx = 0;
-	for (std::string keyFileName : keysFilenames) {
-		// Initialize keypoints and descriptors
-		imgDescriptors = cv::Mat();
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
-		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
-		// Check that keypoints and descriptors have same length
-		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-			image img;
-			img.imgIdx = imgIdx;
-			img.startIdx = descCount;
-			descriptorsIndices.push_back(img);
-		}
-		// Increase descriptors counter
-		descCount += imgDescriptors.rows;
-		// Increase images counter
-		imgIdx++;
-	}
-
-	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
-			imgDescriptors.cols, imgDescriptors.type());
+	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Ptr<cvflann::VocabTree<float, cv::L2<float> > > tree =
@@ -80,37 +54,11 @@ TEST(VocabTree, LoadSaveReal) {
 TEST(VocabTree, LoadSaveBinary) {
 
 	/////////////////////////////////////////////////////////////////////
-	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
-
 	std::vector<std::string> keysFilenames;
 	keysFilenames.push_back("all_souls_000002.yaml.gz");
 	keysFilenames.push_back("all_souls_000003.yaml.gz");
 
-	std::vector<image> descriptorsIndices;
-
-	int descCount = 0, imgIdx = 0;
-	for (std::string keyFileName : keysFilenames) {
-		// Initialize keypoints and descriptors
-		imgDescriptors = cv::Mat();
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
-		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
-		// Check that keypoints and descriptors have same length
-		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-			image img;
-			img.imgIdx = imgIdx;
-			img.startIdx = descCount;
-			descriptorsIndices.push_back(img);
-		}
-		// Increase descriptors counter
-		descCount += imgDescriptors.rows;
-		// Increase images counter
-		imgIdx++;
-	}
-
-	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
-			imgDescriptors.cols, imgDescriptors.type());
+	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Ptr<cvflann::VocabTree<uchar, cv::Hamming> > tree;
@@ -141,30 +89,7 @@ TEST(VocabTree, TestDatabase) {
 	keysFilenames.push_back("all_souls_000000.yaml.gz");
 	keysFilenames.push_back("all_souls_000001.yaml.gz");
 
-	std::vector<image> descriptorsIndices;
-
-	int descCount = 0, imgIdx = 0;
-	for (std::string keyFileName : keysFilenames) {
-		// Initialize keypoints and descriptors
-		imgDescriptors = cv::Mat();
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
-		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
-		// Check that keypoints and descriptors have same length
-		for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-			image img;
-			img.imgIdx = imgIdx;
-			img.startIdx = descCount;
-			descriptorsIndices.push_back(img);
-		}
-		// Increase descriptors counter
-		descCount += imgDescriptors.rows;
-		// Increase images counter
-		imgIdx++;
-	}
-
-	DynamicMat data(descriptorsIndices, keysFilenames, descCount,
-			imgDescriptors.cols, imgDescriptors.type());
+	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Ptr<cvflann::VocabTreeBase> tree = new cvflann::VocabTree<float,

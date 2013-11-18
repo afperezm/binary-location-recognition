@@ -71,59 +71,8 @@ int main(int argc, char **argv) {
 
 	// Step 2: read key files
 	printf("-- Reading keypoint files\n");
-	std::vector<image> descriptorsIndices;
 
-	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
-	for (std::string keyFileName : keysFilenames) {
-
-		printf("   %04d/%04lu %s\n", imgIdx + 1, keysFilenames.size(),
-				keyFileName.c_str());
-
-		// Declare variables for holding keypoints and descriptors
-		std::vector<cv::KeyPoint> imgKeypoints;
-		cv::Mat imgDescriptors = cv::Mat();
-
-		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
-
-		// Check that keypoints and descriptors have same length
-		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
-
-		if (imgDescriptors.empty() == false) {
-
-			for (size_t i = 0; int(i) < imgDescriptors.rows; i++) {
-				image img;
-				img.imgIdx = imgIdx;
-				img.startIdx = descCount;
-				descriptorsIndices.push_back(img);
-			}
-
-			// Increase descriptors counter
-			descCount += imgDescriptors.rows;
-
-			// If initialized check descriptors length
-			// Recall all the descriptors must be the same length
-			if (descLen != 0) {
-				CV_Assert(descLen == imgDescriptors.cols);
-			} else {
-				descLen = imgDescriptors.cols;
-			}
-
-			// If initialized check descriptors type
-			// Recall all the descriptors must be the same type
-			if (descType != -1) {
-				CV_Assert(descType == imgDescriptors.type());
-			} else {
-				descType = imgDescriptors.type();
-			}
-		}
-		imgDescriptors.release();
-		// Increase images counter
-		imgIdx++;
-	}
-
-	DynamicMat mergedDescriptors(descriptorsIndices, keysFilenames, descCount,
-			descLen, descType);
+	DynamicMat mergedDescriptors(keysFilenames);
 
 	// Step 3: randomly select a percentage of the descriptors
 
@@ -148,7 +97,8 @@ int main(int argc, char **argv) {
 
 	// Declare variables for holding keypoints and descriptors
 	std::vector<cv::KeyPoint> imgKeypoints;
-	cv::Mat imgDescriptors = cv::Mat::zeros(DESC_CHUNK, descLen, descType);
+	cv::Mat imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
+			mergedDescriptors.type());
 
 	for (size_t i = 0; i < indices.size(); i++) {
 
@@ -183,7 +133,8 @@ int main(int argc, char **argv) {
 
 			// Clean descriptors matrix and keypoints vector
 			imgDescriptors.release();
-			imgDescriptors = cv::Mat::zeros(DESC_CHUNK, descLen, descType);
+			imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
+					mergedDescriptors.type());
 			std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		}
 

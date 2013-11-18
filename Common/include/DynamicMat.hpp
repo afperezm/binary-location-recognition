@@ -32,12 +32,8 @@ class DynamicMat {
 
 public:
 
-	DynamicMat(std::vector<image>& descriptorsIndices = DEFAULT_INDICES,
-			std::vector<std::string>& keysFilenames = DEFAULT_KEYS,
-			int descriptorCount = 0, int descriptorLength = 0,
-			int descriptorType = -1);
+	DynamicMat();
 
-	//  = DEFAULT_KEYS
 	DynamicMat(std::vector<std::string>& keysFilenames);
 
 	// Copy constructor
