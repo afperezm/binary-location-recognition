@@ -12,7 +12,7 @@
 
 DynamicMat::DynamicMat() :
 		m_descriptorsIndices(DEFAULT_INDICES), m_keysFilenames(DEFAULT_KEYS), rows(
-				0), cols(0), m_memoryCounter(0), m_descriptorType(-1) {
+				0), cols(0), m_memoryCount(0), m_descriptorType(-1) {
 
 #if DYNMATVERBOSE
 	fprintf(stdout, "Instantiation DynamicMat\n");
@@ -40,8 +40,11 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 		imgDescriptors = cv::Mat();
 		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 
+//		double mytime = cv::getTickCount();
 		// Load keypoints and descriptors
 		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+//		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency() * 1000.0;
+//		printf("Loaded descriptors matrix in [%lf] ms\n", mytime);
 
 		// Check that keypoints and descriptors have same length
 		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
@@ -71,7 +74,6 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 				descType = imgDescriptors.type();
 			}
 		}
-		imgDescriptors.release();
 		// Increase images counter
 		imgIdx++;
 	}
@@ -80,7 +82,7 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 	m_keysFilenames = keysFilenames;
 	rows = descCount;
 	cols = descLen;
-	m_memoryCounter = 0;
+	m_memoryCount = 0;
 	m_descriptorType = descType;
 }
 
@@ -117,7 +119,7 @@ DynamicMat::DynamicMat(const DynamicMat& other) {
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
-	m_memoryCounter = other.m_memoryCounter;
+	m_memoryCount = other.m_memoryCount;
 
 }
 
@@ -142,7 +144,7 @@ DynamicMat& DynamicMat::operator =(const DynamicMat& other) {
 	rows = other.rows;
 	cols = other.cols;
 	m_descriptorType = other.type();
-	m_memoryCounter = other.m_memoryCounter;
+	m_memoryCount = other.m_memoryCount;
 
 	return *this;
 }
@@ -159,10 +161,10 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	std::vector<cv::KeyPoint> imgKeypoints;
 	cv::Mat imgDescriptors = cv::Mat();
 
-	std::map<int, cv::Mat>::iterator it = descBuffer.find(
+	std::map<int, cv::Mat>::iterator it = descriptorCache.find(
 			m_descriptorsIndices[descriptorIdx].imgIdx);
 
-	if (it != descBuffer.end()) {
+	if (it != descriptorCache.end()) {
 		// The matrix is loaded in memory
 		imgDescriptors = it->second;
 	} else {
@@ -173,41 +175,33 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 				m_keysFilenames[m_descriptorsIndices[descriptorIdx].imgIdx],
 				imgKeypoints, imgDescriptors);
 
-		// Check buffer size, if full then pop the first element
-		if (m_memoryCounter > MAX_MEM) {
+		// Check buffer size. If full then pop the first element
+		if (m_memoryCount != 0 && m_memoryCount + computeUsedMemory(imgDescriptors) > MAX_MEM) {
+
 #if DYNMATVERBOSE
 			fprintf(stdout, "[DynamicMat::row] Buffer full, deleting first matrix\n");
 #endif
+
 			// Find first element
-			it = descBuffer.find(addingOrder.front());
+			it = descriptorCache.find(addingOrder.front());
 			// Decrease memory counter
-			if (imgDescriptors.type() == CV_8U) {
-				m_memoryCounter -=
-						(int) (it->second.rows * cols * sizeof(uchar));
-			} else {
-				m_memoryCounter -=
-						(int) (it->second.rows * cols * sizeof(float));
-			}
+			m_memoryCount -= computeUsedMemory(it->second);
+
 			// Erase from the buffer the first added element
-			descBuffer.erase(it);
+			descriptorCache.erase(it);
 			// Pop its index from the queue
 			addingOrder.pop();
 		}
 
 		// Add the descriptors matrix to the buffer
-		descBuffer.insert(
+		descriptorCache.insert(
 				std::pair<int, cv::Mat>(
 						m_descriptorsIndices[descriptorIdx].imgIdx,
 						imgDescriptors));
 		addingOrder.push(m_descriptorsIndices[descriptorIdx].imgIdx);
+
 		// Increase memory counter
-		if (imgDescriptors.type() == CV_8U) {
-			m_memoryCounter +=
-					(int) (imgDescriptors.rows * cols * sizeof(uchar));
-		} else {
-			m_memoryCounter +=
-					(int) (imgDescriptors.rows * cols * sizeof(float));
-		}
+		m_memoryCount += computeUsedMemory(imgDescriptors);
 	}
 
 	// Index relative to the matrix of descriptors it belongs to

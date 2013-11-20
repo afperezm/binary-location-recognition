@@ -113,6 +113,8 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 	int idx = 0;
 
+	cv::Mat featureVector;
+
 	for (cv::FileNodeIterator it = keypointsSequence.begin();
 			it != keypointsSequence.end(); it++, idx++) {
 
@@ -121,10 +123,9 @@ void FileUtils::loadFeatures(const std::string& filename,
 						(float) (*it)["size"], (float) (*it)["angle"],
 						(float) (*it)["response"], (int) (*it)["octave"]));
 
-		cv::Mat descriptor;
-		(*it)["descriptor"] >> descriptor;
+		featureVector = descriptors.row(idx);
 
-		descriptor.copyTo(descriptors.row(idx));
+		(*it)["descriptor"] >> featureVector;
 
 	}
 

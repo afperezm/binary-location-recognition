@@ -58,20 +58,33 @@ public:
 
 	bool empty() const;
 
+	/**
+	 * Returns the count of memory used by the matrices loaded in cache.
+	 *
+	 * @return memory count in Bytes
+	 */
+	int getMemoryCount() const {
+		return m_memoryCount;
+	}
+
 protected:
 
 	std::vector<image> m_descriptorsIndices;
 	std::vector<std::string> m_keysFilenames;
-	std::map<int, cv::Mat> descBuffer;
+	std::map<int, cv::Mat> descriptorCache;
 	std::queue<int> addingOrder;
 
+	static int computeUsedMemory(cv::Mat& descriptors) {
+		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
+	}
+
 public:
-	static const int MAX_MEM = 367000000; // ~350 MBytes
 	int rows = 0;
 	int cols = 0;
-	int m_memoryCounter = 0;
 
-protected:
+private:
+	static const int MAX_MEM = 524288000; // ~500 MBytes
+	int m_memoryCount = 0;
 	int m_descriptorType = -1;
 
 };

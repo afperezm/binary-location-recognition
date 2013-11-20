@@ -116,24 +116,37 @@ TEST(DynamicMat, RowExtraction) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Mat rowA, rowB;
+	cv::Mat extractedRow, originalRow;
 
-	for (size_t i = 0; (int) i < data.rows; i++) {
-		data.row(i).copyTo(rowA);
-		rowB = imgDescriptors.row(i % imgDescriptors.rows);
+	for (int i = 0; i < data.rows; i++) {
 
-		// Check number of rows and columns and type to be equal
-		EXPECT_TRUE(rowA.rows == 1);
-		EXPECT_TRUE(rowA.rows == rowB.rows);
-		EXPECT_TRUE(rowA.cols == rowB.cols);
-		EXPECT_TRUE(rowA.type() == rowB.type());
+		extractedRow = cv::Mat();
+		originalRow = cv::Mat();
 
-		for (size_t j = 0; (int) j < rowA.cols; j++) {
-			EXPECT_TRUE(rowA.at<float>(0, j) == rowB.at<float>(0, j));
+		double mytime = cv::getTickCount();
+
+		extractedRow = data.row(i);
+
+		// Check that rowA is continuous thought it was extracted using Mat::row
+		EXPECT_TRUE(extractedRow.isContinuous());
+
+		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
+				* 1000.0;
+
+		printf("Row extracted in [%lf] ms, memory used [%d] Megabytes\n",
+				mytime, data.getMemoryCount() / 1024 / 1024);
+
+		originalRow = imgDescriptors.row(i % imgDescriptors.rows);
+
+		// Check number of rows, columns and type are equal
+		EXPECT_TRUE(extractedRow.rows == 1);
+		EXPECT_TRUE(extractedRow.rows == originalRow.rows);
+		EXPECT_TRUE(extractedRow.cols == originalRow.cols);
+		EXPECT_TRUE(extractedRow.type() == originalRow.type());
+
+		for (int j = 0; j < extractedRow.cols; j++) {
+			EXPECT_TRUE(extractedRow.at<float>(0, j) == originalRow.at<float>(0, j));
 		}
-
-		rowA.release();
-		rowB.release();
 	}
 
 }
