@@ -32,9 +32,8 @@ TEST(DynamicMat, Instantiation) {
 
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
 
-	FileUtils::loadFeatures("all_souls_000000.yaml.gz", imgKeypoints,
+	FileUtils::loadDescriptors("all_souls_000000.yaml.gz",
 			imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
@@ -105,9 +104,8 @@ TEST(DynamicMat, RowExtraction) {
 
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
 
-	FileUtils::loadFeatures("all_souls_000000.yaml.gz", imgKeypoints,
+	FileUtils::loadDescriptors("all_souls_000000.yaml.gz",
 			imgDescriptors);
 
 	std::vector<std::string> keysFilenames(5008, "all_souls_000000.yaml.gz");

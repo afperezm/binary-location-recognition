@@ -135,6 +135,54 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
+void FileUtils::saveDescriptors(const std::string& filename, const cv::Mat& descriptors){
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (!fs.isOpened()) {
+		throw std::runtime_error("Could not open file [" + filename + "]");
+	}
+
+/*
+	fs << "Total" << descriptors.rows;
+	fs << "Size" << descriptors.cols; // In Bytes for binary descriptors
+	fs << "Type" << descriptors.type(); // CV_8U = 0 for binary descriptors
+*/
+
+	fs << "Descriptors" << descriptors;
+
+	fs.release();
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptors(const std::string& filename, cv::Mat& descriptors){
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("Could not open file [" + filename + "]");
+	}
+
+/*
+	int rows, cols, type;
+
+	rows = (int) fs["Total"];
+	cols = (int) fs["Size"];
+	type = (int) fs["Type"];
+
+	descriptors.create(rows, cols, type);
+*/
+
+	fs["Descriptors"] >> descriptors;
+
+	fs.release();
+
+}
+
+// --------------------------------------------------------------------------
+
 bool FileUtils::checkFileExist(const std::string& fname) {
 	struct stat buffer;
 	return stat(fname.c_str(), &buffer) == 0;

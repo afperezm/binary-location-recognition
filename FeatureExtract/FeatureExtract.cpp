@@ -170,8 +170,7 @@ int main(int argc, char **argv) {
 					descriptorFileName.c_str());
 
 			try {
-				FileUtils::saveFeatures(descriptorFileName, keypoints,
-						descriptors);
+				FileUtils::saveDescriptors(descriptorFileName, descriptors);
 			} catch (const std::runtime_error& error) {
 				fprintf(stderr, "%s\n", error.what());
 				return EXIT_FAILURE;

@@ -41,6 +41,24 @@ void loadFeatures(const std::string& filename,
 		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
 /**
+ *
+ * Saves a set of descriptors onto a plain text file using OpenCV FileStorage API.
+ *
+ * @param filename - The path to the file where to save the descriptors
+ * @param descriptors - The descriptors to be saved
+ */
+void saveDescriptors(const std::string& filename, const cv::Mat& descriptors);
+
+/**
+ *
+ * Loads a set of descriptors from a plain text file using OpenCV FileStorage API.
+ *
+ * @param filename - The path to the file where to load the descriptors from
+ * @param descriptors - The matrix where to save the loaded descriptors
+ */
+void loadDescriptors(const std::string& filename, cv::Mat& descriptors);
+
+/**
  * Checks whether the file indicated by fname exists.
  *
  * @param fname - Name of the file to check

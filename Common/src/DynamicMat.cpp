@@ -25,7 +25,6 @@ DynamicMat::DynamicMat() :
 DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 
 	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
 
 	std::vector<image> descriptorsIndices;
 
@@ -36,18 +35,14 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 		printf("%d/%lu\n", imgIdx + 1, keysFilenames.size());
 #endif
 
-		// Initialize keypoints and descriptors
+		// Initialize descriptors
 		imgDescriptors = cv::Mat();
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 
 //		double mytime = cv::getTickCount();
 		// Load keypoints and descriptors
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 //		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency() * 1000.0;
 //		printf("Loaded descriptors matrix in [%lf] ms\n", mytime);
-
-		// Check that keypoints and descriptors have same length
-		CV_Assert((int )imgKeypoints.size() == imgDescriptors.rows);
 
 		if (imgDescriptors.empty() == false) {
 			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
@@ -157,8 +152,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	fprintf(stdout, "[DynamicMat::row] Obtaining descriptor [%d]\n", descriptorIdx);
 #endif
 
-	// Initialize keypoints and descriptors
-	std::vector<cv::KeyPoint> imgKeypoints;
+	// Initialize descriptors
 	cv::Mat imgDescriptors = cv::Mat();
 
 	std::map<int, cv::Mat>::iterator it = descriptorCache.find(
@@ -171,9 +165,9 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 		// The matrix is not loaded in memory, then load it
 
 		// Load corresponding descriptors file
-		FileUtils::loadFeatures(
+		FileUtils::loadDescriptors(
 				m_keysFilenames[m_descriptorsIndices[descriptorIdx].imgIdx],
-				imgKeypoints, imgDescriptors);
+				imgDescriptors);
 
 		// Check buffer size. If full then pop the first element
 		if (m_memoryCount != 0 && m_memoryCount + computeUsedMemory(imgDescriptors) > MAX_MEM) {
