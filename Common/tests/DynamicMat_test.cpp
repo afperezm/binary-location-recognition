@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/flann/logger.h>
 
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
@@ -100,6 +101,8 @@ TEST(DynamicMat, InitByAssignment) {
 
 TEST(DynamicMat, RowExtraction) {
 
+	cvflann::Logger::setDestination("row_access.log");
+
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 	std::vector<cv::KeyPoint> imgKeypoints;
@@ -107,11 +110,10 @@ TEST(DynamicMat, RowExtraction) {
 	FileUtils::loadFeatures("all_souls_000000.yaml.gz", imgKeypoints,
 			imgDescriptors);
 
-	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	std::vector<std::string> keysFilenames(5008, "all_souls_000000.yaml.gz");
+
+	fprintf(stdout, "Created a keypoint filenames vector of size [%lu]\n",
+			keysFilenames.size());
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -133,7 +135,8 @@ TEST(DynamicMat, RowExtraction) {
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
 				* 1000.0;
 
-		printf("Row extracted in [%lf] ms, memory used [%d] Megabytes\n",
+		cvflann::Logger::log(0,
+				"Row extracted in [%lf] ms, memory used [%d] Megabytes\n",
 				mytime, data.getMemoryCount() / 1024 / 1024);
 
 		originalRow = imgDescriptors.row(i % imgDescriptors.rows);
@@ -144,6 +147,7 @@ TEST(DynamicMat, RowExtraction) {
 		EXPECT_TRUE(extractedRow.cols == originalRow.cols);
 		EXPECT_TRUE(extractedRow.type() == originalRow.type());
 
+		// Check row elements are equal
 		for (int j = 0; j < extractedRow.cols; j++) {
 			EXPECT_TRUE(extractedRow.at<float>(0, j) == originalRow.at<float>(0, j));
 		}
