@@ -18,18 +18,18 @@ CXXFLAGS += -Wextra -pthread
 LDFLAGS += -L/home/andresf/workspace-cpp/gtest-1.7.0/make
 LDFLAGS += -lgtest_main -lpthread
 
-SOURCES = DynamicMat_test.cpp
+SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
+EXECUTABLES = $(OBJECTS:.o=)
 
-BIN =  DynamicMat_test
+all: $(EXECUTABLES)
 
-all: $(BIN)
+$(EXECUTABLES): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $@.o $(LDFLAGS) -o $@
 
-$(BIN): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
+.cpp.o:
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJECTS) $(BIN) *~
+	rm -rf $(OBJECTS) $(EXECUTABLES) *.log *~
 
-DynamicMat_test.o: DynamicMat_test.cpp
-	$(CXX) $(DYNMATVERBOSE) $(CXXFLAGS) -c $< -o $@
