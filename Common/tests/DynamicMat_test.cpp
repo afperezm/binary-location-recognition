@@ -1,5 +1,5 @@
 /*
- * FunctionUtils.cpp
+ * DynamicMat_test.cpp
  *
  *  Created on: Nov 3, 2013
  *      Author: andresf
