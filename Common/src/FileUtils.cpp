@@ -143,12 +143,6 @@ void FileUtils::saveDescriptors(const std::string& filename, const cv::Mat& desc
 		throw std::runtime_error("Could not open file [" + filename + "]");
 	}
 
-/*
-	fs << "Total" << descriptors.rows;
-	fs << "Size" << descriptors.cols; // In Bytes for binary descriptors
-	fs << "Type" << descriptors.type(); // CV_8U = 0 for binary descriptors
-*/
-
 	fs << "Descriptors" << descriptors;
 
 	fs.release();
@@ -165,20 +159,76 @@ void FileUtils::loadDescriptors(const std::string& filename, cv::Mat& descriptor
 		throw std::runtime_error("Could not open file [" + filename + "]");
 	}
 
-/*
-	int rows, cols, type;
-
-	rows = (int) fs["Total"];
-	cols = (int) fs["Size"];
-	type = (int) fs["Type"];
-
-	descriptors.create(rows, cols, type);
-*/
-
 	fs["Descriptors"] >> descriptors;
 
 	fs.release();
 
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::saveDescriptorsToBin(const std::string& filename,
+		const cv::Mat& descriptors) {
+
+	cv::Ptr<FILE> filePtr = fopen(filename.c_str(), "wb");
+
+	if (filePtr.empty() == true) {
+		throw std::runtime_error("Could not open file [" + filename + "]");
+	}
+
+	fwrite(descriptors.data, descriptors.rows * descriptors.cols,
+			descriptors.elemSize(), filePtr);
+
+}
+
+// --------------------------------------------------------------------------
+
+void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
+		int descriptorLength) {
+
+	FILE * filePtr;
+	long lSize;
+	char * buffer;
+	size_t result;
+
+	filePtr = fopen(filename.c_str(), "rb");
+	if (filePtr == NULL) {
+		throw std::runtime_error("Could not open file [" + filename + "]");
+	}
+
+	// Obtain file size
+	fseek(filePtr, 0, SEEK_END);
+	lSize = ftell(filePtr);
+	rewind(filePtr);
+
+	// Allocate memory to contain the whole file
+	buffer = (char*) malloc(sizeof(char) * lSize);
+
+	if (buffer == NULL) {
+		throw std::runtime_error("Memory error");
+	}
+
+	// Copy the file into the buffer
+	result = fread(buffer, 1, lSize, filePtr);
+
+	if (long(result) != lSize) {
+		throw std::runtime_error("Reading error");
+	}
+
+	// clean up
+	fclose(filePtr);
+	free(buffer);
+
+	descriptors = cv::Mat();
+
+//	Mat image;
+//	uint16_t *imageMap = (uint16_t*) buffer;
+//	image.create(rows, cols, CV_16UC1);
+//	memcpy(image.data, imageMap, rows * cols * sizeof(uint16_t));
+
+//	float* data = new float[100 * 100];
+//	Mat src(100, 100, CV_32FC1, data);
+//	delete [] data;
 }
 
 // --------------------------------------------------------------------------
