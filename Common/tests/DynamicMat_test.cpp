@@ -20,9 +20,7 @@ TEST(DynamicMat, EmptyInstantiation) {
 
 	DynamicMat data;
 
-	EXPECT_TRUE(data.rows == 0);
-	EXPECT_TRUE(data.cols == 0);
-	EXPECT_TRUE(data.type() == -1);
+	EXPECT_TRUE(data.empty());
 	EXPECT_TRUE(data.getDescriptorsIndices().size() == 0);
 	EXPECT_TRUE(data.getKeysFilenames().size() == 0);
 
@@ -43,6 +41,7 @@ TEST(DynamicMat, Instantiation) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
+	EXPECT_FALSE(data.empty());
 	EXPECT_TRUE(data.rows == imgDescriptors.rows * 2);
 	EXPECT_TRUE(data.cols == imgDescriptors.cols);
 	EXPECT_TRUE(data.type() == imgDescriptors.type());
@@ -62,6 +61,7 @@ TEST(DynamicMat, InitByCopy) {
 
 	DynamicMat dataCopy(data);
 
+	EXPECT_FALSE(data.empty());
 	EXPECT_TRUE(data.rows == dataCopy.rows);
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
@@ -86,6 +86,7 @@ TEST(DynamicMat, InitByAssignment) {
 
 	DynamicMat dataCopy = data;
 
+	EXPECT_FALSE(data.empty());
 	EXPECT_TRUE(data.rows == dataCopy.rows);
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
@@ -108,10 +109,7 @@ TEST(DynamicMat, RowExtraction) {
 	FileUtils::loadDescriptors("all_souls_000000.yaml.gz",
 			imgDescriptors);
 
-	std::vector<std::string> keysFilenames(5008, "all_souls_000000.yaml.gz");
-
-	fprintf(stdout, "Created a keypoint filenames vector of size [%lu]\n",
-			keysFilenames.size());
+	std::vector<std::string> keysFilenames(10, "all_souls_000000.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -133,9 +131,7 @@ TEST(DynamicMat, RowExtraction) {
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
 				* 1000.0;
 
-		cvflann::Logger::log(0,
-				"Row extracted in [%lf] ms, memory used [%d] Megabytes\n",
-				mytime, data.getMemoryCount() / 1024 / 1024);
+		cvflann::Logger::log(0, "%lf\n", mytime);
 
 		originalRow = imgDescriptors.row(i % imgDescriptors.rows);
 

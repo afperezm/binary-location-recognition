@@ -58,6 +58,8 @@ public:
 
 	bool empty() const;
 
+	void release();
+
 	/**
 	 * Returns the count of memory used by the matrices loaded in cache.
 	 *
@@ -67,16 +69,12 @@ public:
 		return m_memoryCount;
 	}
 
-protected:
+private:
 
 	std::vector<image> m_descriptorsIndices;
 	std::vector<std::string> m_keysFilenames;
-	std::map<int, cv::Mat> descriptorCache;
+	std::vector<cv::Mat> m_descriptorCache;
 	std::queue<int> addingOrder;
-
-	static int computeUsedMemory(cv::Mat& descriptors) {
-		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
-	}
 
 public:
 	int rows = 0;
@@ -87,6 +85,9 @@ private:
 	int m_memoryCount = 0;
 	int m_descriptorType = -1;
 
+	static int computeUsedMemory(cv::Mat& descriptors) {
+		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
+	}
 };
 
 #endif /* DYNAMICMAT_HPP_ */
