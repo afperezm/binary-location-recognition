@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <opencv2/core/core.hpp>
+#include <opencv2/flann/logger.h>
 
 #include <FileUtils.hpp>
 
@@ -14,8 +15,8 @@ TEST(IODescriptors, LoadSave) {
 
 	cv::Mat original;
 	FileUtils::loadDescriptors("all_souls_000000.yaml.gz", original);
-
 	FileUtils::saveDescriptors("sift_desc_tmp.yaml.gz", original);
+
 	cv::Mat loaded;
 	FileUtils::loadDescriptors("sift_desc_tmp.yaml.gz", loaded);
 
@@ -33,3 +34,20 @@ TEST(IODescriptors, LoadSave) {
 
 }
 
+TEST(IODescriptors, LoadStress) {
+
+	cvflann::Logger::setDestination("load_times.log");
+
+	cv::Mat descriptors;
+
+	for (size_t i = 0; i < 5008; i++) {
+		descriptors = cv::Mat();
+
+		double mytime = cv::getTickCount();
+		FileUtils::loadDescriptors("all_souls_000000.yaml.gz", descriptors);
+		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
+				* 1000.0;
+
+		cvflann::Logger::log(0, "%lf\n", mytime);
+	}
+}
