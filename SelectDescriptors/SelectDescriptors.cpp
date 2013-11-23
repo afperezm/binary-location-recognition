@@ -96,7 +96,6 @@ int main(int argc, char **argv) {
 			folder_out);
 
 	// Declare variables for holding keypoints and descriptors
-	std::vector<cv::KeyPoint> imgKeypoints;
 	cv::Mat imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
 			mergedDescriptors.type());
 
@@ -121,21 +120,17 @@ int main(int argc, char **argv) {
 									+ (((indices.size() - 1) % DESC_CHUNK == 0) ?
 											0 : 1)), buffer);
 
-			// Prepare dummy list of keypoints
-			imgKeypoints.resize(imgDescriptors.rows, cv::KeyPoint());
-			CV_Assert(imgKeypoints.size() == DESC_CHUNK);
 			CV_Assert(imgDescriptors.rows == (int )DESC_CHUNK);
 
 			// Save features
-			FileUtils::saveFeatures(
+			FileUtils::saveDescriptors(
 					std::string(folder_out) + "/" + std::string(buffer),
-					imgKeypoints, imgDescriptors);
+					imgDescriptors);
 
 			// Clean descriptors matrix and keypoints vector
 			imgDescriptors.release();
 			imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
 					mergedDescriptors.type());
-			std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		}
 
 		cv::Mat submat = imgDescriptors.rowRange(i % DESC_CHUNK,

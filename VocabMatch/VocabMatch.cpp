@@ -165,7 +165,6 @@ int main(int argc, char **argv) {
 			normType == cv::NORM_L1 ? "L1-norm" :
 			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
 
-	std::vector<cv::KeyPoint> imgKeypoints;
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
 
@@ -181,12 +180,10 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < query_filenames.size(); i++) {
 		// Initialize keypoints and descriptors
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		imgDescriptors = cv::Mat();
 
 		// Load query keypoints and descriptors
-		FileUtils::loadFeatures(query_filenames[i], imgKeypoints,
-				imgDescriptors);
+		FileUtils::loadDescriptors(query_filenames[i], imgDescriptors);
 
 		// Check type of descriptors
 		if ((imgDescriptors.type() == CV_8U) != is_binary) {

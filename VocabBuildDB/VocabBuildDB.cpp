@@ -123,15 +123,13 @@ int main(int argc, char **argv) {
 	tree->clearDatabase();
 	printf("   Clearing Inverted Files\n");
 
-	std::vector<cv::KeyPoint> imgKeypoints;
 	cv::Mat imgDescriptors;
 	uint imgIdx = 0;
 
 	for (std::string keyFileName : keysFilenames) {
 		// Initialize keypoints and descriptors
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
 		imgDescriptors = cv::Mat();
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 
 		// Check type of descriptors
 		if ((imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
