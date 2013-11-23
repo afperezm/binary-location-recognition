@@ -1,7 +1,5 @@
 # Makefile for Common
 
-CXX = g++
-
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./include/
 LDFLAGS =
 
@@ -17,7 +15,7 @@ BINLIB=../lib
 LIB = libcommon
 
 #FILEUTILSVERBOSE = -DFILEUTILSVERBOSE
-#DYNMATVERBOSE = -DDYNMATVERBOSE
+DYNMATVERBOSE = -DDYNMATVERBOSE
 
 all: $(LIB).so
 

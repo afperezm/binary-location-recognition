@@ -1,7 +1,5 @@
 # Makefile for Common Tests
 
-CXX = g++
-
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../../lib/
 

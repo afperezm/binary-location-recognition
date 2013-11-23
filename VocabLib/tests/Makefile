@@ -40,7 +40,7 @@ $(BIN): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 clean:
-	rm -rf $(OBJECTS) $(BIN) *~
+	rm -rf $(OBJECTS) $(BIN) test_tree.yaml.gz *~
 
 VocabTree_test.o: VocabTree_test.cpp
 	$(CXX) $(VTREEVERBOSE) $(DEBUG) $(CXXFLAGS) -c $< -o $@
