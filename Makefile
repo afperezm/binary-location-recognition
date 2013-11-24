@@ -17,6 +17,14 @@ default:
 	cd VocabMatch; $(MAKE)
 	cd ComputeMAP; $(MAKE)
 
+tests:
+	cd VocabLib/tests; $(MAKE)
+	cd Common/tests; $(MAKE)
+
+clean-tests:
+	cd VocabLib/tests; $(MAKE) clean
+	cd Common/tests; $(MAKE) clean
+
 clean:
 # Clean libraries
 	cd OpenCVExtensions; $(MAKE) clean

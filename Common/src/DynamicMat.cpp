@@ -5,6 +5,8 @@
  *      Author: andresf
  */
 
+#include <stdexcept>
+
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
 
@@ -76,8 +78,7 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 	cols = descLen;
 	m_memoryCount = 0;
 	m_descriptorType = descType;
-	m_descriptorCache.reserve(descriptorsIndices.size());
-	release();
+	m_descriptorCache.resize(imgIdx, cv::Mat());
 }
 
 // --------------------------------------------------------------------------
@@ -151,13 +152,20 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	fprintf(stdout, "[DynamicMat::row] Obtaining descriptor [%d]\n", descriptorIdx);
 #endif
 
+	if (descriptorIdx < 0 || descriptorIdx > int(m_descriptorsIndices.size())) {
+		std::stringstream ss;
+		ss << "[DynamicMat::row] Descriptor index should be in the range"
+				" [0, " << m_descriptorsIndices.size() << "]";
+		throw std::out_of_range(ss.str());
+	}
+
 	// Initialize descriptors
 	cv::Mat imgDescriptors = cv::Mat();
 
 	std::vector<cv::Mat>::iterator it = m_descriptorCache.begin()
 			+ m_descriptorsIndices[descriptorIdx].imgIdx;
 
-	if (it != m_descriptorCache.end() && (*it).empty() == false) {
+	if ((*it).empty() == false) {
 		// The matrix is loaded in memory
 		imgDescriptors = *it;
 	} else {
@@ -169,7 +177,9 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 				imgDescriptors);
 
 		// Check buffer size. If full then pop the first element
-		if (m_memoryCount != 0 && m_memoryCount + computeUsedMemory(imgDescriptors) > MAX_MEM) {
+		if (m_memoryCount != 0
+				&& m_memoryCount + computeUsedMemory(imgDescriptors)
+						> MAX_MEM) {
 
 #if DYNMATVERBOSE
 			fprintf(stdout, "[DynamicMat::row] Buffer full, deleting first matrix\n");
@@ -186,7 +196,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 			addingOrder.pop();
 		}
 
-		// Add the descriptors matrix to the buffer
+		// Add matrix to the cache
 		it = m_descriptorCache.begin()
 				+ m_descriptorsIndices[descriptorIdx].imgIdx;
 		m_descriptorCache.insert(it, imgDescriptors);

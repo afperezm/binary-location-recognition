@@ -31,12 +31,11 @@ TEST(DynamicMat, Instantiation) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 
-	FileUtils::loadDescriptors("all_souls_000000.yaml.gz",
-			imgDescriptors);
+	FileUtils::loadDescriptors("sift_0.yaml.gz", imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -53,8 +52,8 @@ TEST(DynamicMat, InitByCopy) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -78,8 +77,8 @@ TEST(DynamicMat, InitByAssignment) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -106,10 +105,9 @@ TEST(DynamicMat, RowExtraction) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 
-	FileUtils::loadDescriptors("all_souls_000000.yaml.gz",
-			imgDescriptors);
+	FileUtils::loadDescriptors("sift_0.yaml.gz", imgDescriptors);
 
-	std::vector<std::string> keysFilenames(10, "all_souls_000000.yaml.gz");
+	std::vector<std::string> keysFilenames(10, "sift_0.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////

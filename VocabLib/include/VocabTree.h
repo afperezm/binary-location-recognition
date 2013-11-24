@@ -1,6 +1,6 @@
 /***********************************************************************
  *
- * bin_hierarchical_clustering_index.h
+ * VocabTree.h
  *
  *  Created on: Sep 18, 2013
  *      Author: andresf

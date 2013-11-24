@@ -5,9 +5,10 @@
  *      Author: andresf
  */
 
-#include <gtest/gtest.h>
+#include <ctime>
 #include <limits.h>
 
+#include <gtest/gtest.h>
 #include <opencv2/core/core.hpp>
 
 #include <FileUtils.hpp>
@@ -27,8 +28,8 @@ TEST(VocabTree, LoadSaveReal) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000001.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_1.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -36,6 +37,7 @@ TEST(VocabTree, LoadSaveReal) {
 	cv::Ptr<cvflann::VocabTree<float, cv::L2<float> > > tree =
 			new cvflann::VocabTree<float, cv::L2<float> >(data);
 
+	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
@@ -55,8 +57,8 @@ TEST(VocabTree, LoadSaveBinary) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000002.yaml.gz");
-	keysFilenames.push_back("all_souls_000003.yaml.gz");
+	keysFilenames.push_back("brief_0.yaml.gz");
+	keysFilenames.push_back("brief_1.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -83,11 +85,10 @@ TEST(VocabTree, TestDatabase) {
 
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
-	std::vector<cv::KeyPoint> imgKeypoints;
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("all_souls_000000.yaml.gz");
-	keysFilenames.push_back("all_souls_000001.yaml.gz");
+	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_1.yaml.gz");
 
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -104,10 +105,10 @@ TEST(VocabTree, TestDatabase) {
 	for (std::string keyFileName : keysFilenames) {
 		try {
 			imgDescriptors = cv::Mat();
-			std::vector<cv::KeyPoint>().swap(imgKeypoints);
-			FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+			FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 			tree->addImageToDatabase(i, imgDescriptors);
 		} catch (const std::runtime_error& error) {
+			fprintf(stdout, "%s\n", error.what());
 			gotException = true;
 		}
 		i++;
@@ -131,8 +132,7 @@ TEST(VocabTree, TestDatabase) {
 		cv::Mat scores;
 
 		imgDescriptors = cv::Mat();
-		std::vector<cv::KeyPoint>().swap(imgKeypoints);
-		FileUtils::loadFeatures(keyFileName, imgKeypoints, imgDescriptors);
+		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 		tree->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
