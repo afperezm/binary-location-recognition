@@ -44,12 +44,12 @@ public:
 
 	virtual ~DynamicMat();
 
-	const std::vector<image>& getDescriptorsIndices() const {
-		return m_descriptorsIndices;
+	const std::vector<image>& getDescriptorsIndex() const {
+		return m_descriptorsIndex;
 	}
 
 	const std::vector<std::string>& getKeysFilenames() const {
-		return m_keysFilenames;
+		return m_descriptorsFilenames;
 	}
 
 	cv::Mat row(int descriptorIndex);
@@ -71,9 +71,9 @@ public:
 
 private:
 
-	std::vector<image> m_descriptorsIndices;
-	std::vector<std::string> m_keysFilenames;
-	std::vector<cv::Mat> m_descriptorCache;
+	std::vector<image> m_descriptorsIndex;
+	std::vector<std::string> m_descriptorsFilenames;
+	std::vector<cv::Mat> m_descriptorsCache;
 	std::queue<int> addingOrder;
 
 public:

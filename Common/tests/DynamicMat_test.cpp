@@ -21,7 +21,7 @@ TEST(DynamicMat, EmptyInstantiation) {
 	DynamicMat data;
 
 	EXPECT_TRUE(data.empty());
-	EXPECT_TRUE(data.getDescriptorsIndices().size() == 0);
+	EXPECT_TRUE(data.getDescriptorsIndex().size() == 0);
 	EXPECT_TRUE(data.getKeysFilenames().size() == 0);
 
 }
@@ -65,8 +65,8 @@ TEST(DynamicMat, InitByCopy) {
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
 	EXPECT_TRUE(
-			data.getDescriptorsIndices().size()
-					== dataCopy.getDescriptorsIndices().size());
+			data.getDescriptorsIndex().size()
+					== dataCopy.getDescriptorsIndex().size());
 	EXPECT_TRUE(
 			data.getKeysFilenames().size()
 					== dataCopy.getKeysFilenames().size());
@@ -90,8 +90,8 @@ TEST(DynamicMat, InitByAssignment) {
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
 	EXPECT_TRUE(
-			data.getDescriptorsIndices().size()
-					== dataCopy.getDescriptorsIndices().size());
+			data.getDescriptorsIndex().size()
+					== dataCopy.getDescriptorsIndex().size());
 	EXPECT_TRUE(
 			data.getKeysFilenames().size()
 					== dataCopy.getKeysFilenames().size());
