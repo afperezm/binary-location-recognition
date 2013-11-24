@@ -24,18 +24,21 @@ DynamicMat::DynamicMat() :
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
+DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) :
+		m_keysFilenames(keysFilenames) {
 
 	cv::Mat imgDescriptors;
 
-	std::vector<image> descriptorsIndices;
+	m_descriptorsIndices.clear();
 
 	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
+
+	double mytime = cv::getTickCount();
+
 	for (std::string keyFileName : keysFilenames) {
 
-#if DYNMATVERBOSE
-		printf("%d/%lu\n", imgIdx + 1, keysFilenames.size());
-#endif
+		printf("Loading descriptor file [%d/%lu]\n", imgIdx + 1,
+				keysFilenames.size());
 
 		// Initialize descriptors
 		imgDescriptors = cv::Mat();
@@ -48,7 +51,7 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 				image img;
 				img.imgIdx = imgIdx;
 				img.startIdx = descCount;
-				descriptorsIndices.push_back(img);
+				m_descriptorsIndices.push_back(img);
 			}
 			// Increase descriptors counter
 			descCount += imgDescriptors.rows;
@@ -72,8 +75,10 @@ DynamicMat::DynamicMat(std::vector<std::string>& keysFilenames) {
 		imgIdx++;
 	}
 
-	m_descriptorsIndices = descriptorsIndices;
-	m_keysFilenames = keysFilenames;
+	mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("Initialized descriptors index in [%lf] ms\n", mytime);
+
 	rows = descCount;
 	cols = descLen;
 	m_memoryCount = 0;
