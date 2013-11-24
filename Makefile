@@ -18,12 +18,14 @@ default:
 	cd ComputeMAP; $(MAKE)
 
 tests:
-	cd VocabLib/tests; $(MAKE)
+	cd Common; $(MAKE)
 	cd Common/tests; $(MAKE)
+	cd VocabLib; $(MAKE)
+	cd VocabLib/tests; $(MAKE)
 
 clean-tests:
-	cd VocabLib/tests; $(MAKE) clean
 	cd Common/tests; $(MAKE) clean
+	cd VocabLib/tests; $(MAKE) clean
 
 clean:
 # Clean libraries
