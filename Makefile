@@ -19,11 +19,13 @@ default:
 
 tests:
 	cd Common; $(MAKE)
-	cd Common/tests; $(MAKE)
 	cd VocabLib; $(MAKE)
+	cd Common/tests; $(MAKE)
 	cd VocabLib/tests; $(MAKE)
 
-clean-tests:
+tests-clean:
+	cd Common; $(MAKE) clean
+	cd VocabLib; $(MAKE) clean
 	cd Common/tests; $(MAKE) clean
 	cd VocabLib/tests; $(MAKE) clean
 

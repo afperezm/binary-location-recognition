@@ -161,7 +161,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	if (descriptorIdx < 0 || descriptorIdx > int(m_descriptorsIndex.size())) {
 		std::stringstream ss;
 		ss << "[DynamicMat::row] Descriptor index should be in the range"
-				" [0, " << m_descriptorsIndex.size() << "]";
+				" [0, " << m_descriptorsIndex.size() << ")";
 		throw std::out_of_range(ss.str());
 	}
 
@@ -205,7 +205,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 		// Add matrix to the cache
 		it = m_descriptorsCache.begin()
 				+ m_descriptorsIndex[descriptorIdx].imgIdx;
-		m_descriptorsCache.insert(it, imgDescriptors);
+		*it = imgDescriptors;
 		addingOrder.push(m_descriptorsIndex[descriptorIdx].imgIdx);
 
 		// Increase memory counter
@@ -213,9 +213,16 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 	}
 
 	// Index relative to the matrix of descriptors it belongs to
-	int relDescIdx = descriptorIdx - m_descriptorsIndex[descriptorIdx].startIdx;
+	int relIdx = descriptorIdx - m_descriptorsIndex[descriptorIdx].startIdx;
 
-	return imgDescriptors.row(relDescIdx);
+	if (relIdx < 0 || relIdx > imgDescriptors.rows) {
+		std::stringstream ss;
+		ss << "Relative descriptor index [" << relIdx << "]"
+				" should be in the range [0, " << imgDescriptors.rows << ")";
+		throw std::out_of_range(ss.str());
+	}
+
+	return imgDescriptors.row(relIdx);
 }
 
 // --------------------------------------------------------------------------
@@ -231,6 +238,6 @@ bool DynamicMat::empty() const {
 }
 
 void DynamicMat::release() {
-	std::fill(m_descriptorsCache.begin(),
-			m_descriptorsCache.begin() + m_descriptorsCache.size(), cv::Mat());
+	std::vector<cv::Mat>(m_descriptorsCache.size(), cv::Mat()).swap(
+			m_descriptorsCache);
 }

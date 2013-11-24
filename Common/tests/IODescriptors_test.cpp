@@ -14,7 +14,7 @@
 TEST(IODescriptors, LoadSave) {
 
 	cv::Mat original;
-	FileUtils::loadDescriptors("all_souls_000000.yaml.gz", original);
+	FileUtils::loadDescriptors("sift_0.yaml.gz", original);
 	FileUtils::saveDescriptors("sift_desc_tmp.yaml.gz", original);
 
 	cv::Mat loaded;
@@ -44,7 +44,7 @@ TEST(IODescriptors, LoadStress) {
 		descriptors = cv::Mat();
 
 		double mytime = cv::getTickCount();
-		FileUtils::loadDescriptors("all_souls_000000.yaml.gz", descriptors);
+		FileUtils::loadDescriptors("sift_0.yaml.gz", descriptors);
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
 				* 1000.0;
 

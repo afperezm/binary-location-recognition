@@ -56,8 +56,16 @@ public:
 
 	int type() const;
 
+	/**
+	 * Returns true if the matrix is empty.
+	 *
+	 * @return true if rows counter is zero, false otherwise
+	 */
 	bool empty() const;
 
+	/**
+	 * Swaps the cache content by a vector of the same size whose values are empty matrices.
+	 */
 	void release();
 
 	/**

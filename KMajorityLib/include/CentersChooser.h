@@ -13,8 +13,6 @@
 #include <DynamicMat.hpp>
 #include <FunctionUtils.hpp>
 
-//namespace cv {
-
 template<typename TDescriptor, typename Distance>
 class CentersChooser {
 public:
@@ -463,7 +461,5 @@ cv::Ptr<CentersChooser<TDescriptor, Distance> > CentersChooser<TDescriptor,
 
 	return cc;
 }
-
-//} /* namespace cv */
 
 #endif /* CENTERSCHOOSER_H_ */
