@@ -66,7 +66,7 @@ public:
 	/**
 	 * Swaps the cache content by a vector of the same size whose values are empty matrices.
 	 */
-	void release();
+	void clearCache();
 
 	/**
 	 * Returns the count of memory used by the matrices loaded in cache.

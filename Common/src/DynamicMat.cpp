@@ -237,7 +237,9 @@ bool DynamicMat::empty() const {
 	return rows == 0;
 }
 
-void DynamicMat::release() {
+void DynamicMat::clearCache() {
 	std::vector<cv::Mat>(m_descriptorsCache.size(), cv::Mat()).swap(
 			m_descriptorsCache);
+	addingOrder = std::queue<int>();
+	m_memoryCount = 0;
 }
