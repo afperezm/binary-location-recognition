@@ -85,9 +85,8 @@ DynamicMat::DynamicMat(std::vector<std::string>& descriptorsFilenames) :
 	// Initialize descriptors index
 	for (std::string descriptorsFilename : descriptorsFilenames) {
 
-#if DYNMATVERBOSE
-		printf("[DynamicMat] Loading descriptors file [%d/%lu]\n", imgIdx + 1, descriptorsFilenames.size());
-#endif
+		printf("[DynamicMat] Loading descriptors file [%d/%lu]\n", imgIdx + 1,
+				descriptorsFilenames.size());
 
 		// Clear descriptors matrix
 		imgDescriptors = cv::Mat();
