@@ -168,33 +168,18 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 			+ descriptorIdx;
 
 	if ((*it).empty() == false) {
-#if DYNMATVERBOSE
-		printf("[DynamicMat] The descriptor is loaded in cache\n");
-#endif
 		// The descriptor is loaded in cache
 		descriptor = *it;
 	} else {
-#if DYNMATVERBOSE
-		printf("[DynamicMat] The descriptor is not loaded in cache\n");
-#endif
 		// The descriptor is not loaded in cache
 
 		// Load corresponding descriptors matrix if it isn't loaded
-		if (m_cachedMatStartIdx == -1
-				|| (descriptorIdx < m_cachedMatStartIdx
-						&& descriptorIdx
-								>= m_cachedMatStartIdx + m_cachedMat.rows)) {
+		if (m_cachedMatStartIdx == -1 || descriptorIdx < m_cachedMatStartIdx
+				|| descriptorIdx >= m_cachedMatStartIdx + m_cachedMat.rows) {
 			FileUtils::loadDescriptors(
 					m_descriptorsFilenames[m_descriptorsIndex[descriptorIdx].imgIdx],
 					m_cachedMat);
-#if DYNMATVERBOSE
-			printf("[DynamicMat] Descriptors matrix successfully loaded\n");
-#endif
 			m_cachedMatStartIdx = m_descriptorsIndex[descriptorIdx].startIdx;
-		} else {
-#if DYNMATVERBOSE
-			printf("[DynamicMat] Descriptors matrix is already loaded\n");
-#endif
 		}
 
 		// Compute descriptor index relative to the descriptors matrix it belongs to
@@ -216,7 +201,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 				&& m_memoryCount + computeUsedMemory(descriptor) > MAX_MEM) {
 
 #if DYNMATVERBOSE
-			printf("[DynamicMat] Buffer full, deleting first matrix\n");
+			printf("[DynamicMat] Cache full, deleting first descriptor\n");
 #endif
 
 			// Remove descriptor from the cache
