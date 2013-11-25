@@ -183,11 +183,11 @@ void FileUtils::saveDescriptorsToBin(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
+void FileUtils::loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
 		int descriptorLength) {
 
 	FILE * filePtr;
-	long lSize;
+	long fileSize;
 	char * buffer;
 	size_t result;
 
@@ -198,20 +198,20 @@ void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
 
 	// Obtain file size
 	fseek(filePtr, 0, SEEK_END);
-	lSize = ftell(filePtr);
+	fileSize = ftell(filePtr);
 	rewind(filePtr);
 
 	// Allocate memory to contain the whole file
-	buffer = (char*) malloc(sizeof(char) * lSize);
+	buffer = (char*) malloc(sizeof(char) * fileSize);
 
 	if (buffer == NULL) {
 		throw std::runtime_error("Memory error");
 	}
 
 	// Copy the file into the buffer
-	result = fread(buffer, 1, lSize, filePtr);
+	result = fread(buffer, 1, fileSize, filePtr);
 
-	if (long(result) != lSize) {
+	if (long(result) != fileSize) {
 		throw std::runtime_error("Reading error");
 	}
 

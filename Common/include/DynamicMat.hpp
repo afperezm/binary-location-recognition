@@ -26,29 +26,32 @@ struct image {
 };
 
 static std::vector<image> DEFAULT_INDICES;
-static std::vector<std::string> DEFAULT_KEYS;
+static std::vector<std::string> DEFAULT_FILENAMES;
 
 class DynamicMat {
 
 public:
 
+	// Empty constructor
 	DynamicMat();
-
-	DynamicMat(std::vector<std::string>& keysFilenames);
 
 	// Copy constructor
 	DynamicMat(const DynamicMat& other);
 
-	// Assignment operators
-	DynamicMat& operator =(const DynamicMat& other);
+	// Assignment operator
+	DynamicMat& operator=(const DynamicMat& other);
 
+	// Constructor
+	DynamicMat(std::vector<std::string>& keysFilenames);
+
+	// Destructor
 	virtual ~DynamicMat();
 
 	const std::vector<image>& getDescriptorsIndex() const {
 		return m_descriptorsIndex;
 	}
 
-	const std::vector<std::string>& getKeysFilenames() const {
+	const std::vector<std::string>& getDescriptorsFilenames() const {
 		return m_descriptorsFilenames;
 	}
 
@@ -64,7 +67,7 @@ public:
 	bool empty() const;
 
 	/**
-	 * Swaps the cache content by a vector of the same size whose values are empty matrices.
+	 * Swaps the cache content by an empty vector of the same size.
 	 */
 	void clearCache();
 
@@ -78,24 +81,28 @@ public:
 	}
 
 private:
+	static int computeUsedMemory(cv::Mat& descriptors) {
+		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
+	}
+
+private:
+	static const int MAX_MEM = 524288000; // ~500 MBytes
 
 	std::vector<image> m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
+
 	std::vector<cv::Mat> m_descriptorsCache;
-	std::queue<int> addingOrder;
+	cv::Mat m_cachedMat;
+	int m_cachedMatStartIdx;
+	std::queue<int> m_cachingOrder;
+
+	int m_memoryCount = 0;
+	int m_descriptorType = -1;
 
 public:
 	int rows = 0;
 	int cols = 0;
 
-private:
-	static const int MAX_MEM = 524288000; // ~500 MBytes
-	int m_memoryCount = 0;
-	int m_descriptorType = -1;
-
-	static int computeUsedMemory(cv::Mat& descriptors) {
-		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
-	}
 };
 
 #endif /* DYNAMICMAT_HPP_ */
