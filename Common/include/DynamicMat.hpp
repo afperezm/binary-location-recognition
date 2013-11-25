@@ -86,7 +86,7 @@ private:
 	}
 
 private:
-	static const int MAX_MEM = 524288000; // ~500 MBytes
+	static const int MAX_MEM = 1075000000; // ~1GB
 
 	std::vector<image> m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
