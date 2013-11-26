@@ -10,10 +10,11 @@
 
 #include <map>
 #include <sstream>
+#include <stack>
 #include <stdio.h>
 #include <string>
 #include <vector>
-#include <queue>
+//#include <queue>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
@@ -94,7 +95,8 @@ private:
 	std::vector<cv::Mat> m_descriptorsCache;
 	cv::Mat m_cachedMat;
 	int m_cachedMatStartIdx;
-	std::queue<int> m_cachingOrder;
+	std::stack<int> m_cachingOrder;
+//	std::queue<int> m_cachingOrder;
 
 	int m_memoryCount = 0;
 	int m_descriptorType = -1;
