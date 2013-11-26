@@ -36,7 +36,6 @@ DynamicMat::DynamicMat(const DynamicMat& other) {
 	m_cachedMat = cv::Mat();
 	m_cachedMatStartIdx = -1;
 	m_cachingOrder = std::stack<int>();
-//	m_cachingOrder = std::queue<int>();
 	m_memoryCount = other.m_memoryCount;
 	m_descriptorType = other.type();
 	rows = other.rows;
@@ -58,7 +57,6 @@ DynamicMat& DynamicMat::operator=(const DynamicMat& other) {
 	m_cachedMat = cv::Mat();
 	m_cachedMatStartIdx = -1;
 	m_cachingOrder = std::stack<int>();
-//	m_cachingOrder = std::queue<int>();
 	m_memoryCount = other.m_memoryCount;
 	m_descriptorType = other.type();
 	rows = other.rows;
@@ -207,10 +205,10 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 
 			// Remove descriptor from the cache
 			it = m_descriptorsCache.begin() + m_cachingOrder.top();
-//			it = m_descriptorsCache.begin() + m_cachingOrder.front();
-			*it = cv::Mat();
 			// Decrease memory counter
 			m_memoryCount -= computeUsedMemory(*it);
+			// De-reference data
+			*it = cv::Mat();
 			// Pop its index from the stack
 			m_cachingOrder.pop();
 		}
@@ -218,9 +216,9 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 		// Add descriptor to the cache
 		std::vector<cv::Mat>::iterator it = m_descriptorsCache.begin()
 				+ descriptorIdx;
-		descriptor.copyTo(*it);
 		// Increase memory counter
 		m_memoryCount += computeUsedMemory(*it);
+		descriptor.copyTo(*it);
 		// Push its index to the stack
 		m_cachingOrder.push(descriptorIdx);
 	}
@@ -244,6 +242,5 @@ void DynamicMat::clearCache() {
 	std::vector<cv::Mat>(m_descriptorsIndex.size(), cv::Mat()).swap(
 			m_descriptorsCache);
 	m_cachingOrder = std::stack<int>();
-//	m_cachingOrder = std::queue<int>();
 	m_memoryCount = 0;
 }
