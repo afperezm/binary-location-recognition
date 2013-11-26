@@ -709,6 +709,22 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		int* indices, int indices_length, int level) {
 
+	// Sort descriptors, caching levearges this fact
+	// Note: it doesn't affect the clustering process since all descriptors referenced by indices belong to the same cluster
+	if (level > 0) {
+		std::sort(indices, indices + indices_length);
+	}
+
+	// If the number of descriptors to cluster is less than 2 million then pre-load them
+/*
+ 	if (level == 1 && indices_length < 2000000) {
+		m_dataset.clearCache();
+		for (int i = 0; i < indices_length; i++) {
+			m_dataset.row(indices[i]);
+		}
+	}
+ */
+
 	// Recursion base case: done when the last level is reached
 	// or when there are less data than clusters
 	if (level == m_depth - 1 || indices_length < m_branching) {
