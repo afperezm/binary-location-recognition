@@ -715,20 +715,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		std::sort(indices, indices + indices_length);
 	}
 
-	// If the number of descriptors to cluster is less than 2 million then pre-load them
-/*
- 	if (level == 1 && indices_length < 2000000) {
-		m_dataset.clearCache();
-		for (int i = 0; i < indices_length; i++) {
-			m_dataset.row(indices[i]);
-		}
-	}
- */
-
 	// Recursion base case: done when the last level is reached
 	// or when there are less data than clusters
 	if (level == m_depth - 1 || indices_length < m_branching) {
-//		std::sort(node->indices, node->indices + indices_length);
 		node->children = NULL;
 		node->word_id = m_words.size();
 		node->weight = 1.0;
@@ -802,6 +791,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		count[i] = 0;
 	}
 
+	// Preparing cache for clustering
+	if (level == 1 && indices_length < 2000000) {
+		m_dataset.clearCache();
+	}
+
 #if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - Start\n");
@@ -810,7 +804,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
-
+		printf("descriptor=[%d]\n", indices[i]);
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
 				(TDescriptor*) dcenters.row(0).data, m_veclen);
