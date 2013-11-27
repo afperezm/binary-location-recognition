@@ -95,14 +95,6 @@ int main(int argc, char **argv) {
 	std::string line;
 	while (getline(keys_list, line)) {
 
-		// Verifying line format
-		if (boost::regex_match(line, boost::regex("^(.+)\\s(.+)$")) == false) {
-			fprintf(stderr,
-					"Line [%s] should be formatted as: <key.file> <landmark.id>\n",
-					line.c_str());
-			return EXIT_FAILURE;
-		}
-
 		// Extracting DB image keypoints filename
 		char filename[256];
 
