@@ -792,6 +792,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	// Preparing cache for clustering
+	// TODO Implement condition for clearing cache: when descriptors
+	// at some level fit in memory but they didn't on the previous one
 	if (level == 1 && indices_length < 2000000) {
 		m_dataset.clearCache();
 	}
@@ -838,8 +840,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 		converged = true;
 		iteration++;
-
-		// TODO: computeCentroids compute the new cluster centers
 
 #if DEBUG
 #if VTREEVERBOSE
