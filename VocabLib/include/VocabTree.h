@@ -84,7 +84,7 @@ public:
 
 class VocabTreeBase {
 public:
-	// Virtual destructor to enable destruction from a subclass
+	// Virtual destroyer to enable destruction from a subclass
 	virtual ~VocabTreeBase() {
 	}
 
@@ -166,7 +166,7 @@ protected:
 	cvflann::flann_centers_init_t m_centers_init;
 	// Maximum number of iterations to use when performing k-means clustering
 	int m_iterations;
-	// The dataset used by this index
+	// The data set used by this index
 	DynamicMat& m_dataset;
 
 	/* Attributes useful for describing the tree */
@@ -200,12 +200,12 @@ public:
 			const IndexParams& params = VocabTreeParams());
 
 	/**
-	 * Tree destructor, releases the memory used by the tree.
+	 * Tree destroyer, releases the memory used by the tree.
 	 */
 	virtual ~VocabTree();
 
 	/**
-	 * Returns the size of the tree.
+	 * Returns the vocabulary size.
 	 *
 	 * @return number of leaf nodes in the tree
 	 */
@@ -237,6 +237,14 @@ public:
 	 * @param stream - The stream from which the tree is loaded
 	 */
 	void load(const std::string& filename);
+
+	void saveInvertedIndex(const std::string& filename) const;
+
+	void loadInvertedIndex(const std::string& filename);
+
+	void saveDirectIndex(const std::string& filename) const;
+
+	void loadDirectIndex(const std::string& filename);
 
 	/**
 	 * Pushes DB image features down the tree until a leaf node,
@@ -519,7 +527,7 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
-	if (!fs.isOpened()) {
+	if (fs.isOpened() == false) {
 		throw std::runtime_error(
 				"[VocabTree::save] Error opening file " + filename
 						+ " for writing");
@@ -549,8 +557,6 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 	fs << "center"
 			<< cv::Mat(1, m_veclen, cv::DataType<TDescriptor>::type,
 					(uchar*) node->center);
-	fs << "weight" << node->weight;
-	fs << "wordId" << node->word_id;
 
 	fs << "children" << "[";
 	if (node->children != NULL) {
@@ -558,13 +564,6 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 		for (size_t i = 0; (int) i < m_branching; i++) {
 			save_tree(fs, node->children[i]);
 		}
-	}
-	fs << "]";
-
-	fs << "imageList" << "[";
-	for (ImageCount img : node->image_list) {
-		fs << "{:" << "m_index" << (int) img.m_index << "m_count" << img.m_count
-				<< "}";
 	}
 	fs << "]";
 
@@ -578,7 +577,7 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
-	if (!fs.isOpened()) {
+	if (fs.isOpened() == false) {
 		throw std::runtime_error("Could not open file " + filename);
 	}
 
@@ -615,30 +614,17 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	}
 	center.release();
 
-	node->weight = (double) fs["weight"];
-	node->word_id = (int) fs["wordId"];
+	node->weight = 0;
+	node->word_id = -1;
 
 	cv::FileNode children = fs["children"];
 
 	if (children.size() == 0) {
 		// Node has no children then it's a leaf node
-		cv::FileNode images = fs["imageList"];
-
-		// Verifying that imageList is a sequence
-		if (children.type() != cv::FileNode::NONE
-				&& images.type() != cv::FileNode::SEQ) {
-			throw std::runtime_error("Error while parsing tree,"
-					" fetched element 'images' should be a sequence");
-		}
 
 		node->children = NULL;
+
 		std::vector<ImageCount>().swap(node->image_list);
-		for (cv::FileNodeIterator it = images.begin(); it != images.end();
-				++it) {
-			size_t index = int((*it)["m_index"]);
-			ImageCount img(index, float((*it)["m_count"]));
-			node->image_list.push_back(img);
-		}
 
 		m_words.push_back(node);
 
@@ -670,6 +656,133 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 			load_tree(child, node->children[c]);
 		}
 	}
+
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
+		const std::string& filename) const {
+
+	if (empty()) {
+		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
+				"Error while saving weights, vocabulary is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
+				"Error while saving weights, unable to open file "
+				"[" + filename + "] for writing");
+	}
+
+	fs << "Words" << "[";
+
+	for (VocabTreeNodePtr node : m_words) {
+		fs << "{";
+
+		fs << "wordId" << node->word_id;
+		fs << "weight" << node->weight;
+		fs << "imageList" << "[";
+		for (ImageCount img : node->image_list) {
+			fs << "{:" << "m_index" << (int) img.m_index << "m_count"
+					<< img.m_count << "}";
+		}
+		fs << "]";
+
+		fs << "}";
+	}
+
+	fs << "]";
+
+	fs.release();
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
+		const std::string& filename) {
+
+	if (m_words.empty() == true) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Error while loading weights, vocabulary is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Error while loading weights, unable to open file "
+				"[" + filename + "] for reading");
+	}
+
+	cv::FileNode words = fs["Words"];
+
+	// Verify that 'Words' is a sequence
+	if (words.type() != cv::FileNode::SEQ) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Error while parsing inverted index, "
+				"fetched element 'Words' should be a sequence");
+	}
+
+	if (words.size() != m_words.size()) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Error while loading weights, vocabulary size "
+				"is different than inverted file length");
+	}
+
+	if (words.type() != cv::FileNode::SEQ) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Error while parsing inverted index, "
+				"fetched element 'Words' is not a sequence");
+	}
+
+	int wordId = 0;
+
+	cv::FileNode images;
+
+	for (cv::FileNodeIterator word = words.begin(); word != words.end();
+			word++, wordId++) {
+
+		m_words[wordId]->word_id = int((*word)["wordId"]);
+		m_words[wordId]->weight = double((*word)["weight"]);
+
+		images = (*word)["imageList"];
+
+		// Verify that imageList is a sequence
+		if (images.type() != cv::FileNode::SEQ) {
+			throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+					"Error while parsing inverted index, "
+					"fetched element 'imageList' is not a sequence");
+		}
+
+		for (cv::FileNodeIterator image = images.begin(); image != images.end();
+				++image) {
+			size_t index = int((*image)["m_index"]);
+			ImageCount img(index, float((*image)["m_count"]));
+			m_words[wordId]->image_list.push_back(img);
+		}
+	}
+
+	fs.release();
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::saveDirectIndex(
+		const std::string& filename) const {
+
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::loadDirectIndex(
+		const std::string& filename) {
 
 }
 
