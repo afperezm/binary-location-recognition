@@ -55,7 +55,8 @@ enum WeightingType {
 
 struct VocabTreeParams: public IndexParams {
 	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 1,
-			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM) {
+			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
+			int levels_up = 2) {
 		// branching factor
 		(*this)["branching"] = branching;
 		// max iterations to perform in one kmeans clustering (kmeans tree)
@@ -64,6 +65,8 @@ struct VocabTreeParams: public IndexParams {
 		(*this)["depth"] = depth;
 		// algorithm used for picking the initial cluster centers for kmeans tree
 		(*this)["centers_init"] = centers_init;
+		// Levels to go up the tree to select nodes to store in the direct index
+		(*this)["levels_up"] = levels_up;
 	}
 };
 
@@ -184,6 +187,13 @@ protected:
 	std::vector<VocabTreeNodePtr> m_words;
 	// Number of DB images, used for creating the scores matrix
 	uint m_numDbImages;
+
+	/* Attributes for holding the direct index */
+	// Level at which nodes are stored to construct the direct index
+	int m_directIndexLevel;
+	// List of images holding the nodes where its descriptors fall at some level
+	// and the features associated to each of them
+	std::vector<std::map<int, std::vector<int> > > m_directIndex;
 
 	/* Attributes used by several methods */
 	// The distance
@@ -382,8 +392,10 @@ private:
 	 * @param feature - Row vector representing the feature vector to quantize
 	 * @param id - The id of the found word
 	 * @param weight - The weight of the found word
+	 * @param nodeAtL - Pointer to a tree node at level l in the path down the tree
 	 */
-	void quantize(const cv::Mat& feature, uint &id, double &weight) const;
+	void quantize(const cv::Mat& feature, uint &id, double &weight,
+			int &nodeAtL) const;
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -402,6 +414,11 @@ private:
 	 * @note Images are added in sequence
 	 */
 	void addFeatureToInvertedFile(uint wordIdx, uint imgIdx);
+
+	/**
+	 * Updates the direct index of the given image by adding the pair <node,featureIdi>
+	 */
+	void addFeatureToDirectIndex(uint imgIdx, int nodeId, int featureId);
 
 	/**
 	 * Transforms a set of data (representing a single image) into a BoW vector.
@@ -435,6 +452,12 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	m_iterations = get_param(params, "iterations", 1);
 	m_depth = get_param(params, "depth", 10);
 	m_centers_init = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
+	m_directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
+	if (m_directIndexLevel < 0) {
+		m_directIndexLevel = 0;
+	} else if (m_directIndexLevel >= m_depth - 1) {
+		m_directIndexLevel = m_depth;
+	}
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
@@ -1135,7 +1158,8 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 //		printf("  Quantizing vector [%lu]\n", i);
 //		std::cout << featuresVector.row(i) << std::endl;
-		quantize(featuresVector.row(i), wordIdx, wordWeight);
+		int nodeAtL;
+		quantize(featuresVector.row(i), wordIdx, wordWeight, nodeAtL);
 //		getchar();
 
 		if (wordIdx > m_words.size() - 1) {
@@ -1154,7 +1178,7 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
-		uint &word_id, double &weight) const {
+		uint &word_id, double &weight, int &nodeAtL) const {
 
 	VocabTreeNodePtr best_node = m_root;
 
@@ -1307,6 +1331,9 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 						" vocabulary is empty");
 	}
 
+	// Add new entry to the direct index
+	this->m_directIndex.push_back(std::map<int, std::vector<int>>());
+
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
 		uint wordIdx;
 		double wordWeight; // not needed
@@ -1314,7 +1341,8 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		// w is the Inverse Document Frequency if IDF, 1 if BINARY
 //		printf("  Quantizing vector [%lu]\n", i);
 //		std::cout << imgFeatures.row(i) << std::endl;
-		quantize(imgFeatures.row(i), wordIdx, wordWeight);
+		int nodeAtL;
+		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
 //		getchar();
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 	}
@@ -1347,6 +1375,14 @@ void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 					ImageCount(imgIdx, (float) 1.0));
 		}
 	}
+
+}
+
+// --------------------------------------------------------------------------
+
+template<class TDescriptor, class Distance>
+void VocabTree<TDescriptor, Distance>::addFeatureToDirectIndex(uint imgIdx,
+		int nodeId, int featureId) {
 
 }
 
