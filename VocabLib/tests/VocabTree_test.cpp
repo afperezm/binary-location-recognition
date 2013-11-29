@@ -41,11 +41,13 @@ TEST(VocabTree, LoadSaveReal) {
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
+	tree->saveInvertedIndex("test_idf.yaml.gz");
 
 	cv::Ptr<cvflann::VocabTree<float, cv::L2<float> > > treeLoad =
 			new cvflann::VocabTree<float, cv::L2<float> >();
 
 	treeLoad->load("test_tree.yaml.gz");
+	treeLoad->loadInvertedIndex("test_idf.yaml.gz");
 
 	ASSERT_TRUE(tree->size() == treeLoad->size());
 
@@ -69,11 +71,13 @@ TEST(VocabTree, LoadSaveBinary) {
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
+	tree->saveInvertedIndex("test_idf.yaml.gz");
 
 	cv::Ptr<cvflann::VocabTree<uchar, cv::Hamming> > treeLoad =
 			new cvflann::VocabTree<uchar, cv::Hamming>();
 
 	treeLoad->load("test_tree.yaml.gz");
+	treeLoad->loadInvertedIndex("test_idf.yaml.gz");
 
 	ASSERT_TRUE(tree->size() == treeLoad->size());
 
