@@ -12,6 +12,7 @@
 #include <opencv2/core/core.hpp>
 
 #include <FileUtils.hpp>
+#include <FunctionUtils.hpp>
 #include <VocabTree.h>
 
 TEST(VocabTree, Instantiation) {
@@ -124,17 +125,27 @@ TEST(VocabTree, TestDatabase) {
 		i++;
 	}
 
+	// Assert all images where inserted without any problem
 	ASSERT_FALSE(gotException);
+
+	cv::Mat dbBowVector, sumResult;
+
+	// Asserting inverted files are not empty anymore
+	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); imgIdx++) {
+		db->getDbBoWVector(imgIdx, dbBowVector);
+		cv::reduce(dbBowVector, sumResult, 1, CV_REDUCE_SUM);
+		ASSERT_TRUE(sumResult.rows == 1);
+		ASSERT_TRUE(sumResult.cols == 1);
+		ASSERT_TRUE(sumResult.at<float>(0, 0) != 0);
+	}
 
 	db->computeWordsWeights(cvflann::TF_IDF);
 
 	db->createDatabase();
-	// TODO assert inverted files are not empty anymore
 
 	db->normalizeDatabase(cv::NORM_L1);
 
 	// Asserting DB BoW vectors values are in the range [0,1]
-	cv::Mat dbBowVector;
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); imgIdx++) {
 		db->getDbBoWVector(imgIdx, dbBowVector);
 		ASSERT_TRUE(dbBowVector.rows == 1);
