@@ -159,6 +159,8 @@ void FileUtils::loadDescriptors(const std::string& filename, cv::Mat& descriptor
 		throw std::runtime_error("Could not open file [" + filename + "]");
 	}
 
+	descriptors = cv::Mat();
+
 	fs["Descriptors"] >> descriptors;
 
 	fs.release();

@@ -99,6 +99,10 @@ public:
 
 	virtual void load(const std::string& filename) = 0;
 
+	virtual void saveInvertedIndex(const std::string& filename) const = 0;
+
+	virtual void loadInvertedIndex(const std::string& filename) = 0;
+
 	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
 
 	virtual void computeWordsWeights(WeightingType weighting) = 0;
@@ -113,6 +117,7 @@ public:
 			const int normType = cv::NORM_L2) const = 0;
 
 	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
+
 };
 
 static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
@@ -580,6 +585,7 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 	fs << "center"
 			<< cv::Mat(1, m_veclen, cv::DataType<TDescriptor>::type,
 					(uchar*) node->center);
+	fs << "wordId" << node->word_id;
 
 	fs << "children" << "[";
 	if (node->children != NULL) {
@@ -637,8 +643,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	}
 	center.release();
 
-	node->weight = 0;
-	node->word_id = -1;
+	node->word_id = (int) fs["wordId"];
 
 	cv::FileNode children = fs["children"];
 
@@ -706,7 +711,6 @@ void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
 	for (VocabTreeNodePtr node : m_words) {
 		fs << "{";
 
-		fs << "wordId" << node->word_id;
 		fs << "weight" << node->weight;
 		fs << "imageList" << "[";
 		for (ImageCount img : node->image_list) {
@@ -770,7 +774,6 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 	for (cv::FileNodeIterator word = words.begin(); word != words.end();
 			word++, wordId++) {
 
-		m_words[wordId]->word_id = int((*word)["wordId"]);
 		m_words[wordId]->weight = double((*word)["weight"]);
 
 		images = (*word)["imageList"];
@@ -858,9 +861,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->word_id = m_words.size();
 		node->weight = 1.0;
 		this->m_words.push_back(node);
+#if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
 				level, indices_length);
+#endif
 		return;
 	}
 
@@ -897,9 +902,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->weight = 1.0;
 		this->m_words.push_back(node);
 		delete[] centers_idx;
+#if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
 				level, indices_length);
+#endif
 		return;
 	}
 
@@ -942,7 +949,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
+#if VTREEVERBOSE
+#if DEBUG
 		printf("descriptor=[%d]\n", indices[i]);
+#endif
+#endif
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
 				(TDescriptor*) dcenters.row(0).data, m_veclen);
@@ -1325,7 +1336,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		throw std::runtime_error(ss.str());
 	}
 
-	if (empty()) {
+	if (this->m_words.empty() == true) {
 		throw std::runtime_error(
 				"[VocabTree::addImageToDatabase] Error while adding image,"
 						" vocabulary is empty");
@@ -1594,15 +1605,6 @@ bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
 
 	if (a->children == NULL) {
 		// Base case: both are leaf nodes since have no children
-		if (a->word_id != b->word_id) {
-			return false;
-		}
-		if (a->weight != b->weight) {
-			return false;
-		}
-		if (a->image_list.size() != a->image_list.size()) {
-			return false;
-		}
 
 		return true;
 	} else {
