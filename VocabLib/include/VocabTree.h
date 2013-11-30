@@ -43,6 +43,7 @@
 #include <opencv2/flann/flann.hpp>
 
 #include <CentersChooser.h>
+#include <DirectIndex.hpp>
 #include <DynamicMat.hpp>
 #include <FunctionUtils.hpp>
 #include <KMajorityIndex.h>
@@ -171,7 +172,9 @@ private:
 
 	typedef VocabTreeNode* VocabTreeNodePtr;
 
-	typedef std::vector<std::map<int, std::vector<int> > > DirectIndex;
+	typedef std::vector<int> FeatureVector;
+	typedef std::map<int, FeatureVector> TreeNode;
+	typedef std::vector<TreeNode> DirectIndex;
 
 protected:
 
@@ -1207,7 +1210,8 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 	VocabTreeNodePtr best_node = m_root;
 
-//	int level = 0, k;
+	int level = 0;
+//	int k;
 	while (best_node->children != NULL) {
 
 		VocabTreeNodePtr node = best_node;
@@ -1248,10 +1252,13 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 				best_distance = d;
 				best_node = node->children[j];
 //				k = j;
+				if (level == m_directIndexLevel) {
+					nodeAtL = j;
+				}
 			}
 		}
 //		printf("\nlevel=[%d] node=[%d]\n", level, k);
-//		level++;
+		level++;
 	}
 
 	// Turn node id into word id
@@ -1356,9 +1363,6 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 						" vocabulary is empty");
 	}
 
-	// Add new entry to the direct index
-	m_directIndex.push_back(std::map<int, std::vector<int>>());
-
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
 		uint wordIdx;
 		double wordWeight; // not needed
@@ -1370,11 +1374,11 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
 //		getchar();
 		addFeatureToInvertedFile(wordIdx, imgIdx);
+		addFeatureToDirectIndex(imgIdx, nodeAtL, i);
 	}
 
 	// Increasing the counter of images in the DB
 	m_numDbImages++;
-
 }
 
 // --------------------------------------------------------------------------
@@ -1409,6 +1413,26 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::addFeatureToDirectIndex(uint imgIdx,
 		int nodeId, int featureId) {
 
+	// Lookup image in the direct index
+	// Note: recall that features are added in images order
+	if (imgIdx + 1 != m_directIndex.size()) {
+		// Add new entry to the direct index
+		m_directIndex.push_back(TreeNode());
+	}
+	TreeNode& nodeMap = m_directIndex.back();
+
+	// Lookup node in the image index
+	TreeNode::iterator it = nodeMap.find(nodeId);
+
+	if (it == nodeMap.end()) {
+		// Insert new node with empty features vector and obtain an iterator to it
+		it = nodeMap.insert(
+				std::pair<int, FeatureVector>(nodeId, FeatureVector())).first;
+	}
+	// Obtain a reference to the features vector of the node
+	FeatureVector& fv = (*it).second;
+
+	fv.push_back(featureId);
 }
 
 // --------------------------------------------------------------------------
@@ -1421,13 +1445,13 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 				" normalizing DB BoW vectors, vocabulary is empty");
 	}
 
-	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
+// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
 	std::vector<float> mags(m_numDbImages, 0.0);
 
-	// Computing DB BoW vectors magnitude
+// Computing DB BoW vectors magnitude
 
-	// Summing vector elements
+// Summing vector elements
 	for (VocabTreeNodePtr& word : m_words) {
 		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
@@ -1446,14 +1470,14 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 		}
 	}
 
-	// Applying power over sum result
+// Applying power over sum result
 	if (normType == cv::NORM_L2) {
 		for (size_t i = 0; i < mags.size(); i++) {
 			mags[i] = sqrt(mags[i]);
 		}
 	}
 
-	// Normalizing database
+// Normalizing database
 	for (VocabTreeNodePtr& word : m_words) {
 		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
@@ -1572,7 +1596,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::getDbBoWVector(uint idx,
 		cv::Mat& dbBowVector) const {
 
-	if (empty()) {
+	if (m_words.empty() == true) {
 		throw std::runtime_error(
 				"[VocabTree::getDbBoWVector] Error while obtaining DB BoW vectors,"
 						" vocabulary is empty");
@@ -1601,7 +1625,7 @@ bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
 #endif
 #endif
 
-	// Assert both nodes are interior or leaf nodes
+// Assert both nodes are interior or leaf nodes
 	if ((a->children != NULL && b->children == NULL)
 			|| (a->children == NULL && b->children != NULL)) {
 		return false;
