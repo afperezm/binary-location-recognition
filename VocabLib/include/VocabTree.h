@@ -133,6 +133,8 @@ private:
 	 * Structure representing a node in the hierarchical k-means tree.
 	 */
 	struct VocabTreeNode {
+		// The node id
+		int node_id;
 		// The cluster center
 		TDescriptor* center;
 		// Children nodes (only for non-terminal nodes)
@@ -146,9 +148,11 @@ private:
 		// Inverse document/image list (only for terminal nodes)
 		std::vector<ImageCount> image_list;
 		VocabTreeNode() :
-				center(NULL), children(NULL), word_id(-1), weight(0.0) {
+				node_id(-1), center(NULL), children(NULL), word_id(-1), weight(
+						0.0) {
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
+			node_id = node.node_id;
 			if (node.center != NULL) {
 				// Deep copy
 				center = new TDescriptor[m_veclen];
@@ -167,6 +171,8 @@ private:
 
 	typedef VocabTreeNode* VocabTreeNodePtr;
 
+	typedef std::vector<std::map<int, std::vector<int> > > DirectIndex;
+
 protected:
 
 	/* Attributes useful for clustering */
@@ -184,6 +190,8 @@ protected:
 	int m_depth;
 	// Length of each feature.
 	size_t m_veclen;
+	// Number of nodes in the tree
+	size_t m_size;
 
 	/* Attributes actually holding the tree */
 	// The root node in the tree.
@@ -198,7 +206,7 @@ protected:
 	int m_directIndexLevel;
 	// List of images holding the nodes where its descriptors fall at some level
 	// and the features associated to each of them
-	std::vector<std::map<int, std::vector<int> > > m_directIndex;
+	DirectIndex m_directIndex;
 
 	/* Attributes used by several methods */
 	// The distance
@@ -449,7 +457,8 @@ private:
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 		const IndexParams& params) :
-		m_dataset(inputData), m_veclen(0), m_root(NULL), m_distance(Distance()) {
+		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
+				Distance()) {
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
@@ -585,6 +594,7 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 	fs << "center"
 			<< cv::Mat(1, m_veclen, cv::DataType<TDescriptor>::type,
 					(uchar*) node->center);
+	fs << "nodeId" << node->node_id;
 	fs << "wordId" << node->word_id;
 
 	fs << "children" << "[";
@@ -643,6 +653,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	}
 	center.release();
 
+	node->node_id = (int) fs["nodeId"];
 	node->word_id = (int) fs["wordId"];
 
 	cv::FileNode children = fs["children"];
@@ -848,6 +859,9 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		int* indices, int indices_length, int level) {
 
+	node->node_id = m_size;
+	m_size++;
+
 	// Sort descriptors, caching levearges this fact
 	// Note: it doesn't affect the clustering process since all descriptors referenced by indices belong to the same cluster
 	if (level > 0) {
@@ -860,7 +874,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->children = NULL;
 		node->word_id = m_words.size();
 		node->weight = 1.0;
-		this->m_words.push_back(node);
+		m_words.push_back(node);
 #if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
@@ -900,7 +914,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->children = NULL;
 		node->word_id = m_words.size();
 		node->weight = 1.0;
-		this->m_words.push_back(node);
+		m_words.push_back(node);
 		delete[] centers_idx;
 #if VTREEVERBOSE
 		printf(
@@ -1226,7 +1240,7 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 
 //		size_t j;
 		// Looking for a better child
-		for (size_t j = 1; (int) j < this->m_branching; j++) {
+		for (size_t j = 1; (int) j < m_branching; j++) {
 			DistanceType d = m_distance((TDescriptor*) feature.data,
 					node->children[j]->center, m_veclen);
 //			printf("d(%d)=%f ", j, d);
@@ -1336,14 +1350,14 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		throw std::runtime_error(ss.str());
 	}
 
-	if (this->m_words.empty() == true) {
+	if (m_words.empty() == true) {
 		throw std::runtime_error(
 				"[VocabTree::addImageToDatabase] Error while adding image,"
 						" vocabulary is empty");
 	}
 
 	// Add new entry to the direct index
-	this->m_directIndex.push_back(std::map<int, std::vector<int>>());
+	m_directIndex.push_back(std::map<int, std::vector<int>>());
 
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
 		uint wordIdx;
@@ -1623,9 +1637,9 @@ template<class TDescriptor, class Distance>
 bool VocabTree<TDescriptor, Distance>::operator==(
 		const VocabTree<TDescriptor, Distance> &other) const {
 
-	if (this->getVeclen() != other.getVeclen()
-			|| this->getBranching() != other.getBranching()
-			|| this->getDepth() != other.getDepth()) {
+	if (getVeclen() != other.getVeclen()
+			|| getBranching() != other.getBranching()
+			|| getDepth() != other.getDepth()) {
 #if DEBUG
 #if VTREEVERBOSE
 		printf("[VocabTree::operator==] Vector length, branch factor or depth are not equal\n");
@@ -1634,11 +1648,11 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 		return false;
 	}
 
-//	if (this->m_words.size() != other.size()) {
+//	if (m_words.size() != other.size()) {
 //		return false;
 //	}
 
-	if (compareEqual(this->getRoot(), other.getRoot()) == false) {
+	if (compareEqual(getRoot(), other.getRoot()) == false) {
 #if DEBUG
 #if VTREEVERBOSE
 		printf("[VocabTree::operator==] Tree is not equal\n");
