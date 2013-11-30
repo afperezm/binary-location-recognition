@@ -28,6 +28,7 @@ void FunctionUtils::printKeypoints(std::vector<cv::KeyPoint>& keypoints) {
 
 void FunctionUtils::printDescriptors(const cv::Mat& descriptors) {
 	for (int i = 0; i < descriptors.rows; i++) {
+		printf("[");
 		for (int j = 0; j < descriptors.cols; j++) {
 			if (descriptors.type() == CV_8U) {
 				std::bitset<8> byte(descriptors.at<uchar>(i, j));
@@ -40,7 +41,7 @@ void FunctionUtils::printDescriptors(const cv::Mat& descriptors) {
 //		if (descriptors.type() == CV_8U) {
 //			printf(" = %ld (%d)", decimal, NumberOfSetBits(decimal));
 //		}
-		printf("\n");
+		printf("]\n");
 	}
 }
 
