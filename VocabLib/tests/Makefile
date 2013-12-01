@@ -1,7 +1,5 @@
 # Makefile for VocabLib Tests
 
-CXX = g++
-
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../../lib/
 
@@ -26,21 +24,20 @@ CXXFLAGS += -Wextra -pthread
 LDFLAGS += -L/home/andresf/workspace-cpp/gtest-1.7.0/make
 LDFLAGS += -lgtest_main -lpthread
 
-SOURCES = VocabTree_test.cpp
+SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
-
-BIN =  VocabTree_test
+EXECUTABLES = $(OBJECTS:.o=)
 
 #DEBUG = -DDEBUG
 #VTREEVERBOSE = -DVTREEVERBOSE
 
-all: $(BIN)
+all: $(EXECUTABLES)
 
-$(BIN): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) -o $@
+$(EXECUTABLES): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $@.o $(LDFLAGS) -o $@
+
+.cpp.o:
+	$(CXX) $(VTREEVERBOSE) $(DEBUG) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJECTS) $(BIN) test_tree.yaml.gz *~
-
-VocabTree_test.o: VocabTree_test.cpp
-	$(CXX) $(VTREEVERBOSE) $(DEBUG) $(CXXFLAGS) -c $< -o $@
+	rm -rf $(OBJECTS) $(EXECUTABLES) test_tree.yaml.gz test_idf.yaml.gz test_di.yaml.gz *~
