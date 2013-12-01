@@ -252,7 +252,7 @@ void FileUtils::saveKeypoints(const std::string& filename,
 
 	fs << "KeyPoints" << "[";
 
-	for (int i = 0; i < keypoints.size(); i++) {
+	for (size_t i = 0; i < keypoints.size(); i++) {
 		cv::KeyPoint k = keypoints[i];
 		fs << "{:";
 		fs << "x" << k.pt.x;
