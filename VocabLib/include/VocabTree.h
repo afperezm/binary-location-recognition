@@ -182,7 +182,7 @@ private:
 
 protected:
 
-	/* Attributes useful for clustering */
+	/** Attributes useful for clustering **/
 	// The function used for choosing the cluster centers
 	cvflann::flann_centers_init_t m_centers_init;
 	// Maximum number of iterations to use when performing k-means clustering
@@ -190,7 +190,7 @@ protected:
 	// The data set used by this index
 	DynamicMat& m_dataset;
 
-	/* Attributes useful for describing the tree */
+	/** Attributes of the tree **/
 	// The branching factor used in the hierarchical k-means clustering
 	int m_branching;
 	// Depth levels
@@ -199,19 +199,19 @@ protected:
 	size_t m_veclen;
 	// Number of nodes in the tree
 	size_t m_size;
-
-	/* Attributes actually holding the tree */
 	// The root node in the tree.
 	VocabTreeNodePtr m_root;
+
+	/** Attributes of the database **/
 	// Words of the vocabulary
 	std::vector<VocabTreeNodePtr> m_words;
 	// Number of DB images, used for creating the scores matrix
 	uint m_numDbImages;
 
-	/* Attributes holding the direct index */
+	/** Attributes holding the indices **/
 	bfeat::DirectIndex* m_directIndex;
 
-	/* Attributes used by several methods */
+	/** Attributes used by several methods **/
 	// The distance
 	Distance m_distance;
 
@@ -969,7 +969,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	// Prepare cache for clustering, clear it if descriptors
 	// didn't fit in memory at previous level but they do at this one
-	if (fitted == false && indices_length <= 2000000) {
+	if (fitted == false && indices_length <= m_dataset.getCapacity()) {
 		m_dataset.clearCache();
 		fitted = true;
 	}

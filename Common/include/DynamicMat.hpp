@@ -9,6 +9,7 @@
 #define DYNAMICMAT_HPP_
 
 #include <map>
+#include <math.h>
 #include <sstream>
 #include <stack>
 #include <stdio.h>
@@ -35,6 +36,7 @@ private:
 
 	static const int MAX_MEM = 1075000000; // ~1GB
 
+	double m_capacity = 0.0;
 	int m_descriptorType = -1;
 	std::vector<Image> m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
@@ -112,6 +114,16 @@ public:
 	 * Swaps the cache content by an empty vector of the same size.
 	 */
 	void clearCache();
+
+	/**
+	 * Returns the maximum number of descriptors that can be stored
+	 * given the maximum size of the cache
+	 *
+	 * @return cache capacity in number of descriptors
+	 */
+	double getCapacity() const {
+		return m_capacity;
+	}
 
 	/** Getters **/
 
