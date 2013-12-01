@@ -11,13 +11,27 @@
 #include <vector>
 
 class InvertedIndex: public std::vector<int> {
-public:
-	InvertedIndex();
-	virtual ~InvertedIndex();
-
-	bool operator==(const InvertedIndex &other) const;
 
 protected:
+
+public:
+	/**
+	 * Class constructor.
+	 */
+	InvertedIndex();
+
+	/**
+	 * Class destroyer.
+	 */
+	virtual ~InvertedIndex();
+
+	/**
+	 * Equality operator.
+	 *
+	 * @param other
+	 * @return true if indexes are equal, false otherwise
+	 */
+	bool operator==(const InvertedIndex &other) const;
 
 };
 

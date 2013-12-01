@@ -37,7 +37,7 @@ public:
 	DirectIndex(int level);
 
 	/**
-	 * Class destroyer
+	 * Class destroyer.
 	 */
 	virtual ~DirectIndex();
 
@@ -49,7 +49,7 @@ public:
 	size_t size() const;
 
 	/**
-	 * Return the level of the tree at which nodes are stored
+	 * Return the level of the tree at which nodes are stored.
 	 *
 	 * @return level
 	 */

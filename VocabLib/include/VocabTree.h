@@ -214,15 +214,16 @@ protected:
 public:
 
 	/**
-	 * Tree constructor
+	 * Class constructor.
 	 *
-	 * @param params - Parameters passed to the binary hierarchical k-means algorithm
+	 * @inputData - Reference to the matrix with the data to be clustered
+	 * @param params - Parameters to the hierarchical k-means algorithm
 	 */
 	VocabTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
 			const IndexParams& params = VocabTreeParams());
 
 	/**
-	 * Tree destroyer, releases the memory used by the tree.
+	 * Class destroyer, releases the memory used by the tree.
 	 */
 	virtual ~VocabTree();
 
