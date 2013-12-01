@@ -40,7 +40,7 @@ TEST(IODescriptors, LoadStress) {
 
 	cv::Mat descriptors;
 
-	for (size_t i = 0; i < 5008; i++) {
+	for (size_t i = 0; i < 50; i++) {
 		descriptors = cv::Mat();
 
 		double mytime = cv::getTickCount();
