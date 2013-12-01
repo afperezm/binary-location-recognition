@@ -104,6 +104,10 @@ public:
 
 	virtual void loadInvertedIndex(const std::string& filename) = 0;
 
+	virtual void saveDirectIndex(const std::string& filename) const = 0;
+
+	virtual void loadDirectIndex(const std::string& filename) = 0;
+
 	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
 
 	virtual void computeWordsWeights(WeightingType weighting) = 0;
@@ -248,25 +252,45 @@ public:
 	void build();
 
 	/**
-	 * Saves the tree to a stream.
+	 * Saves the tree to a file stream.
 	 *
-	 * @param stream - The stream to save the tree to
+	 * @param filename - The name of the file stream where to save the tree
 	 */
 	void save(const std::string& filename) const;
 
 	/**
-	 * Loads the tree from a stream.
+	 * Loads the tree from a file stream.
 	 *
-	 * @param stream - The stream from which the tree is loaded
+	 * @param filename - The name of the file stream from where to load the tree
 	 */
 	void load(const std::string& filename);
 
+	/**
+	 * Saves the inverted index to a file stream.
+	 *
+	 * @param filename - The name of the file stream where to save the index
+	 */
 	void saveInvertedIndex(const std::string& filename) const;
 
+	/**
+	 * Loads the inverted index from a file stream.
+	 *
+	 * @param filename - The name of the file stream from where to load the index
+	 */
 	void loadInvertedIndex(const std::string& filename);
 
+	/**
+	 * Saves the direct index to a file stream.
+	 *
+	 * @param filename - The name of the file stream where to save the index
+	 */
 	void saveDirectIndex(const std::string& filename) const;
 
+	/**
+	 * Loads the direct index from a file stream.
+	 *
+	 * @param filename - The name of the file stream from where to load the index
+	 */
 	void loadDirectIndex(const std::string& filename);
 
 	/**
@@ -802,21 +826,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::saveDirectIndex(
 		const std::string& filename) const {
 
-	if (m_directIndex->size() == 0) {
-		throw std::runtime_error("[VocabTree::saveDirectIndex] "
-				"Index is empty");
-	}
-
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
-
-	if (fs.isOpened() == false) {
-		throw std::runtime_error("[VocabTree::saveDirectIndex] "
-				"Unable to open file [" + filename + "] for writing");
-	}
-
-	m_directIndex->save(fs);
-
-	fs.release();
+	m_directIndex->save(filename);
 
 }
 
@@ -826,18 +836,9 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::loadDirectIndex(
 		const std::string& filename) {
 
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
-
-	if (fs.isOpened() == false) {
-		throw std::runtime_error("[VocabTree::loadDirectIndex] "
-				"Unable to open file [" + filename + "] for reading");
-	}
-
 	m_directIndex->clear();
 
-	m_directIndex->load(fs);
-
-	fs.release();
+	m_directIndex->load(filename);
 
 }
 

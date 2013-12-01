@@ -7,6 +7,7 @@
 
 #include <DirectIndex.hpp>
 
+#include <sstream>
 #include <stdexcept>
 
 namespace bfeat {
@@ -26,11 +27,11 @@ int DirectIndex::getLevel() const {
 	return m_level;
 }
 
-void DirectIndex::addFeature(uint imgIdx, int nodeId, int featureId) {
+void DirectIndex::addFeature(int imgIdx, int nodeId, int featureId) {
 
 	// Lookup image in the direct index
 	// Note: recall that features are added in images order
-	if (imgIdx + 1 != m_index.size()) {
+	if (imgIdx + 1 != int(m_index.size())) {
 		// Add new entry to the direct index
 		m_index.push_back(TreeNode());
 	}
@@ -50,20 +51,43 @@ void DirectIndex::addFeature(uint imgIdx, int nodeId, int featureId) {
 	fv.push_back(featureId);
 }
 
-void DirectIndex::save(cv::FileStorage& fs) const {
+const TreeNode& DirectIndex::lookUpImg(int imgIdx) const {
+	if (imgIdx < 0 || imgIdx >= int(m_index.size())) {
+		std::stringstream ss;
+		ss << "[DirectIndex::lookUpImg] "
+				"Image index should be in the range [0, " << m_index.size()
+				<< ")";
+		throw std::out_of_range(ss.str());
+	}
+	return m_index[imgIdx];
+}
+
+void DirectIndex::save(const std::string& filename) const {
+
+	if (m_index.size() == 0) {
+		throw std::runtime_error("[DirectIndex::save] "
+				"Index is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[DirectIndex::save] "
+				"Unable to open file [" + filename + "] for writing");
+	}
 
 	int imgIdx = 0;
 
 	fs << "DirectIndex" << "[";
 	for (TreeNode node : m_index) {
 		fs << "{";
-		fs << "NodeIndex" << imgIdx;
+		fs << "ImgIndex" << imgIdx;
 		fs << "Nodes" << "[";
 		for (TreeNode::iterator it = node.begin(); it != node.end(); it++) {
 			fs << "{";
-			fs << "Features" << "[";
+			fs << "Features" << "[:";
 			for (int featIdx : it->second) {
-				fs << "{:" << "FeatureIndex" << featIdx << "}";
+				fs << featIdx;
 			}
 			fs << "]";
 			fs << "}";
@@ -74,11 +98,22 @@ void DirectIndex::save(cv::FileStorage& fs) const {
 	}
 	fs << "]";
 
+	fs.release();
+
 }
 
-void DirectIndex::load(cv::FileStorage& fs) {
+void DirectIndex::load(const std::string& filename) {
 
-	cv::FileNode directIndex = fs["DirectIndex"], nodes, features;
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[DirectIndex::load] "
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	cv::FileNode directIndex = fs["DirectIndex"], nodes;
+
+	FeatureVector features;
 
 	// Verify that 'DirectIndex' is a sequence
 	if (directIndex.type() != cv::FileNode::SEQ) {
@@ -86,13 +121,13 @@ void DirectIndex::load(cv::FileStorage& fs) {
 				"Fetched element 'DirectIndex' should be a sequence");
 	}
 
-	uint imgIdx = 0;
-	int nodeId, featureId;
+	int imgIdx = 0, nodeIdx, featureIdx;
 
 	for (cv::FileNodeIterator img = directIndex.begin();
-			img != directIndex.end(); img++, imgIdx++) {
+			img != directIndex.end(); img++) {
 
-		(*img)["NodeIndex"] >> nodeId;
+		(*img)["ImgIndex"] >> imgIdx;
+
 		nodes = (*img)["Nodes"];
 
 		// Verify that 'Nodes' is a sequence
@@ -101,20 +136,19 @@ void DirectIndex::load(cv::FileStorage& fs) {
 					"Fetched element 'Nodes' should be a sequence");
 		}
 
+		nodeIdx = 0;
 		for (cv::FileNodeIterator node = nodes.begin(); node != nodes.end();
-				node++) {
-			features = (*node)["Features"];
-			for (cv::FileNodeIterator feature = features.begin();
-					feature != features.end(); feature++) {
-				{
-					(*feature)["FeatureIndex"] >> featureId;
-					addFeature(imgIdx, nodeId, featureId);
-				}
+				node++, nodeIdx++) {
+			(*node)["Features"] >> features;
+			for (int featureIdx : features) {
+				addFeature(imgIdx, nodeIdx, featureIdx);
 			}
 
 		}
 
 	}
+
+	fs.release();
 
 }
 

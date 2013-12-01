@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <map>
+#include <stdexcept>
 #include <vector>
 
 #include <opencv2/core/core.hpp>
@@ -65,11 +66,13 @@ public:
 	 * @param nodeId
 	 * @param featureId
 	 */
-	void addFeature(uint imgIdx, int nodeId, int featureId);
+	void addFeature(int imgIdx, int nodeId, int featureId);
 
-	void save(cv::FileStorage& fs) const;
+	const TreeNode& lookUpImg(int imgIdx) const;
 
-	void load(cv::FileStorage& fs);
+	void save(const std::string& filename) const;
+
+	void load(const std::string& filename);
 
 	void clear() const;
 
