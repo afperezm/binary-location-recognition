@@ -404,7 +404,7 @@ private:
 	 * @param indices_length
 	 */
 	void computeClustering(VocabTreeNodePtr node, int* indices,
-			int indices_length, int level);
+			int indices_length, int level, bool fitted);
 
 	/**
 	 * Saves the vocabulary tree starting at a given node to a stream.
@@ -566,7 +566,7 @@ void VocabTree<TDescriptor, Distance>::build() {
 	printf("[VocabTree::build] Started clustering\n");
 #endif
 
-	computeClustering(m_root, indices, (int) size, 0);
+	computeClustering(m_root, indices, (int) size, 0, false);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Finished clustering\n");
@@ -876,7 +876,7 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
-		int* indices, int indices_length, int level) {
+		int* indices, int indices_length, int level, bool fitted) {
 
 	node->node_id = m_size;
 	m_size++;
@@ -967,11 +967,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		count[i] = 0;
 	}
 
-	// Preparing cache for clustering
-	// TODO Implement condition for clearing cache: when descriptors
-	// at some level fit in memory but they didn't on the previous one
-	if (level == 1 && indices_length < 2000000) {
+	// Prepare cache for clustering, clear it if descriptors
+	// didn't fit in memory at previous level but they do at this one
+	if (fitted == false && indices_length <= 2000000) {
 		m_dataset.clearCache();
+		fitted = true;
 	}
 
 #if DEBUG
@@ -1175,7 +1175,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->children[c] = new VocabTreeNode();
 		node->children[c]->center = centers[c];
 		computeClustering(node->children[c], indices + start, end - start,
-				level + 1);
+				level + 1, fitted);
 		start = end;
 	}
 
