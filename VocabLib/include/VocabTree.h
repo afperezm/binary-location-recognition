@@ -204,12 +204,8 @@ protected:
 	// Number of DB images, used for creating the scores matrix
 	uint m_numDbImages;
 
-	/* Attributes for holding the direct index */
-	// Level at which nodes are stored to construct the direct index
-	int m_directIndexLevel;
-	// List of images holding the nodes where its descriptors fall at some level
-	// and the features associated to each of them
-	DirectIndex m_directIndex;
+	/* Attributes holding the direct index */
+	bfeat::DirectIndex* m_directIndex;
 
 	/* Attributes used by several methods */
 	// The distance
@@ -432,11 +428,6 @@ private:
 	void addFeatureToInvertedFile(uint wordIdx, uint imgIdx);
 
 	/**
-	 * Updates the direct index of the given image by adding the pair <node,featureIdi>
-	 */
-	void addFeatureToDirectIndex(uint imgIdx, int nodeId, int featureId);
-
-	/**
 	 * Transforms a set of data (representing a single image) into a BoW vector.
 	 *
 	 * @param featuresVector - Matrix of data to quantize
@@ -469,12 +460,13 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	m_iterations = get_param(params, "iterations", 1);
 	m_depth = get_param(params, "depth", 10);
 	m_centers_init = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
-	m_directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
-	if (m_directIndexLevel < 0) {
-		m_directIndexLevel = 0;
-	} else if (m_directIndexLevel >= m_depth - 1) {
-		m_directIndexLevel = m_depth;
+	int directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
+	if (directIndexLevel < 0) {
+		directIndexLevel = 0;
+	} else if (directIndexLevel >= m_depth - 1) {
+		directIndexLevel = m_depth;
 	}
+	m_directIndex = new bfeat::DirectIndex(directIndexLevel);
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
@@ -487,6 +479,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::~VocabTree() {
+	delete m_directIndex;
 	if (m_root != NULL) {
 		free_centers(m_root);
 	}
@@ -1252,7 +1245,7 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 				best_distance = d;
 				best_node = node->children[j];
 //				k = j;
-				if (level == m_directIndexLevel) {
+				if (level == m_directIndex->getLevel()) {
 					nodeAtL = j;
 				}
 			}
@@ -1374,7 +1367,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
 //		getchar();
 		addFeatureToInvertedFile(wordIdx, imgIdx);
-		addFeatureToDirectIndex(imgIdx, nodeAtL, i);
+		m_directIndex->addFeature(imgIdx, nodeAtL, i);
 	}
 
 	// Increasing the counter of images in the DB
@@ -1405,34 +1398,6 @@ void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 		}
 	}
 
-}
-
-// --------------------------------------------------------------------------
-
-template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::addFeatureToDirectIndex(uint imgIdx,
-		int nodeId, int featureId) {
-
-	// Lookup image in the direct index
-	// Note: recall that features are added in images order
-	if (imgIdx + 1 != m_directIndex.size()) {
-		// Add new entry to the direct index
-		m_directIndex.push_back(TreeNode());
-	}
-	TreeNode& nodeMap = m_directIndex.back();
-
-	// Lookup node in the image index
-	TreeNode::iterator it = nodeMap.find(nodeId);
-
-	if (it == nodeMap.end()) {
-		// Insert new node with empty features vector and obtain an iterator to it
-		it = nodeMap.insert(
-				std::pair<int, FeatureVector>(nodeId, FeatureVector())).first;
-	}
-	// Obtain a reference to the features vector of the node
-	FeatureVector& fv = (*it).second;
-
-	fv.push_back(featureId);
 }
 
 // --------------------------------------------------------------------------

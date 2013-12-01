@@ -149,7 +149,7 @@ TEST(VocabTree, TestDatabase) {
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); imgIdx++) {
 		db->getDbBoWVector(imgIdx, dbBowVector);
 		ASSERT_TRUE(dbBowVector.rows == 1);
-		for (size_t i = 0; i < dbBowVector.cols; i++) {
+		for (int i = 0; i < dbBowVector.cols; i++) {
 			ASSERT_TRUE(dbBowVector.at<float>(0, i) >= 0);
 			ASSERT_TRUE(dbBowVector.at<float>(0, i) <= 1);
 		}
