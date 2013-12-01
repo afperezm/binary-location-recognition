@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
-//#include <queue>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
@@ -33,31 +33,74 @@ class DynamicMat {
 
 public:
 
-	// Empty constructor
+	/**
+	 * Class empty constructor.
+	 */
 	DynamicMat();
 
-	// Copy constructor
+	/**
+	 * Copy constructor.
+	 *
+	 * @param other - Reference to an instance where to copy properties from
+	 */
 	DynamicMat(const DynamicMat& other);
 
-	// Assignment operator
+	/**
+	 * Assignment operator.
+	 *
+	 * @param other - Reference to an instance where to copy properties from
+	 * @return reference to the new instance
+	 */
 	DynamicMat& operator=(const DynamicMat& other);
 
-	// Constructor
+	/**
+	 * Class constructor.
+	 *
+	 * @param keysFilenames - Reference to a vector of descriptor filenames
+	 */
 	DynamicMat(std::vector<std::string>& keysFilenames);
 
-	// Destructor
+	/**
+	 * Class destroyer.
+	 */
 	virtual ~DynamicMat();
 
+	/** Getters **/
+
+	/**
+	 * Returns a reference to the index descriptors holding the
+	 * index of image it belongs to and the starting index of the
+	 * virtual big descriptors matrix.
+	 *
+	 * @return index of descriptors
+	 */
 	const std::vector<image>& getDescriptorsIndex() const {
 		return m_descriptorsIndex;
 	}
 
+	/**
+	 * Returns a reference to the vector of descriptors filenames.
+	 *
+	 * @return descriptors filenames
+	 */
 	const std::vector<std::string>& getDescriptorsFilenames() const {
 		return m_descriptorsFilenames;
 	}
 
+	/**
+	 * Retrieves the requested descriptor by obtaining it from cache
+	 * and if necessary load the associated descriptor.
+	 *
+	 * @param descriptorIndex - Index of the descriptor to retrieve
+	 * @return requested descriptor
+	 */
 	cv::Mat row(int descriptorIndex);
 
+	/**
+	 * Returns type of descriptors held by the virtual big descriptors matrix.
+	 *
+	 * @return descriptors type
+	 */
 	int type() const;
 
 	/**
@@ -82,26 +125,34 @@ public:
 	}
 
 private:
+
+	/**
+	 * Computes used memory by the given descriptors matrix
+	 *
+	 * @param descriptors - a reference to a matrix containing descriptors
+	 * @return number of bytes used
+	 */
 	static int computeUsedMemory(cv::Mat& descriptors) {
 		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
 	}
 
 private:
+
 	static const int MAX_MEM = 1075000000; // ~1GB
 
 	std::vector<image> m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
 
+	/** Attributes of the cache **/
 	std::vector<cv::Mat> m_descriptorsCache;
 	cv::Mat m_cachedMat;
 	int m_cachedMatStartIdx;
 	std::stack<int> m_cachingOrder;
-//	std::queue<int> m_cachingOrder;
-
 	int m_memoryCount = 0;
 	int m_descriptorType = -1;
 
 public:
+
 	int rows = 0;
 	int cols = 0;
 

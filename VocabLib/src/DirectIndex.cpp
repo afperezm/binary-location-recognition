@@ -121,7 +121,7 @@ void DirectIndex::load(const std::string& filename) {
 				"Fetched element 'DirectIndex' should be a sequence");
 	}
 
-	int imgIdx = 0, nodeIdx, featureIdx;
+	int imgIdx = 0, nodeIdx;
 
 	for (cv::FileNodeIterator img = directIndex.begin();
 			img != directIndex.end(); img++) {
