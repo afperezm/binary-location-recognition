@@ -48,15 +48,15 @@
 #include <FunctionUtils.hpp>
 #include <KMajorityIndex.h>
 
-namespace cvflann {
+namespace bfeat {
 
 enum WeightingType {
 	TF_IDF, BINARY
 };
 
-struct VocabTreeParams: public IndexParams {
+struct VocabTreeParams: public cvflann::IndexParams {
 	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 1,
-			flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
+			cvflann::flann_centers_init_t centers_init = cvflann::FLANN_CENTERS_RANDOM,
 			int levels_up = 2) {
 		// branching factor
 		(*this)["branching"] = branching;
@@ -220,7 +220,7 @@ public:
 	 * @param params - Parameters to the hierarchical k-means algorithm
 	 */
 	VocabTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
-			const IndexParams& params = VocabTreeParams());
+			const cvflann::IndexParams& params = VocabTreeParams());
 
 	/**
 	 * Class destroyer, releases the memory used by the tree.
@@ -451,7 +451,7 @@ private:
 
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
-		const IndexParams& params) :
+		const cvflann::IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
 				Distance()) {
 
@@ -460,7 +460,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	m_branching = get_param(params, "branching", 6);
 	m_iterations = get_param(params, "iterations", 1);
 	m_depth = get_param(params, "depth", 10);
-	m_centers_init = get_param(params, "centers_init", FLANN_CENTERS_RANDOM);
+	m_centers_init = get_param(params, "centers_init", cvflann::FLANN_CENTERS_RANDOM);
 	int directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
 	if (directIndexLevel < 0) {
 		directIndexLevel = 0;
@@ -1271,12 +1271,12 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 				" Error while computing words weights, vocabulary is empty");
 	}
 
-	if (weighting == cvflann::BINARY) {
+	if (weighting == bfeat::BINARY) {
 		// Setting constant weight equal to 1
 		for (VocabTreeNodePtr& word : m_words) {
 			word->weight = 1.0;
 		}
-	} else if (weighting == cvflann::TF_IDF) {
+	} else if (weighting == bfeat::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (VocabTreeNodePtr& word : m_words) {

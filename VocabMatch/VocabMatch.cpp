@@ -63,12 +63,12 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree
-	cv::Ptr<cvflann::VocabTreeBase> tree;
+	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	if (is_binary == true) {
-		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
+		tree = new bfeat::VocabTree<uchar, cv::Hamming>();
 	} else {
-		tree = new cvflann::VocabTree<float, cvflann::L2<float> >();
+		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
 	}
 
 	printf("-- Reading tree from [%s]\n", db_filepath);

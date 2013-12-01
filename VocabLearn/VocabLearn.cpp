@@ -90,12 +90,12 @@ int main(int argc, char **argv) {
 	DynamicMat mergedDescriptors(keysFilenames);
 
 	// Cluster descriptors using Vocabulary Tree
-	cvflann::VocabTreeParams params;
+	bfeat::VocabTreeParams params;
 	params["branching"] = branchFactor;
 	params["iterations"] = restarts;
 	params["depth"] = depth;
 
-	cv::Ptr<cvflann::VocabTreeBase> tree;
+	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	if ((mergedDescriptors.type() == CV_8U) != isDescriptorBinary) {
 		fprintf(stderr,
@@ -106,10 +106,10 @@ int main(int argc, char **argv) {
 	}
 
 	if (isDescriptorBinary == true) {
-		tree = new cvflann::VocabTree<uchar, cv::Hamming>(mergedDescriptors,
+		tree = new bfeat::VocabTree<uchar, cv::Hamming>(mergedDescriptors,
 				params);
 	} else {
-		tree = new cvflann::VocabTree<float, cv::L2<float> >(mergedDescriptors,
+		tree = new bfeat::VocabTree<float, cv::L2<float> >(mergedDescriptors,
 				params);
 	}
 

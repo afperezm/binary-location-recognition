@@ -100,12 +100,12 @@ int main(int argc, char **argv) {
 
 	printf("-- Building DB using [%lu] images\n", keysFilenames.size());
 
-	cv::Ptr<cvflann::VocabTreeBase> tree;
+	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	if (isDescriptorBinary == true) {
-		tree = new cvflann::VocabTree<uchar, cv::Hamming>();
+		tree = new bfeat::VocabTree<uchar, cv::Hamming>();
 	} else {
-		tree = new cvflann::VocabTree<float, cv::L2<float> >();
+		tree = new bfeat::VocabTree<float, cv::L2<float> >();
 	}
 
 	printf("-- Reading tree from [%s]\n", tree_in);
@@ -161,16 +161,16 @@ int main(int argc, char **argv) {
 
 	// Step 3/4: Compute words weights and normalize DB
 
-	cvflann::WeightingType weightingScheme = cvflann::BINARY;
+	bfeat::WeightingType weightingScheme = bfeat::BINARY;
 	if (use_tfidf) {
-		weightingScheme = cvflann::TF_IDF;
+		weightingScheme = bfeat::TF_IDF;
 	} else {
-		weightingScheme = cvflann::BINARY;
+		weightingScheme = bfeat::BINARY;
 	}
 
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
-			weightingScheme == cvflann::TF_IDF ? "TF-IDF" :
-			weightingScheme == cvflann::BINARY ? "BINARY" : "UNKNOWN");
+			weightingScheme == bfeat::TF_IDF ? "TF-IDF" :
+			weightingScheme == bfeat::BINARY ? "BINARY" : "UNKNOWN");
 
 	tree->computeWordsWeights(weightingScheme);
 

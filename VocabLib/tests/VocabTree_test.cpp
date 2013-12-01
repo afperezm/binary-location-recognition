@@ -16,11 +16,11 @@
 #include <VocabTree.h>
 
 TEST(VocabTree, Instantiation) {
-	cv::Ptr<cvflann::VocabTreeBase> tree;
+	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	EXPECT_TRUE(tree == NULL);
 
-	tree = new cvflann::VocabTree<float, cv::L2<float> >();
+	tree = new bfeat::VocabTree<float, cv::L2<float> >();
 
 	EXPECT_TRUE(tree != NULL);
 }
@@ -35,16 +35,16 @@ TEST(VocabTree, LoadSaveReal) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<cvflann::VocabTree<float, cv::L2<float> > > tree =
-			new cvflann::VocabTree<float, cv::L2<float> >(data);
+	cv::Ptr<bfeat::VocabTree<float, cv::L2<float> > > tree =
+			new bfeat::VocabTree<float, cv::L2<float> >(data);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<cvflann::VocabTree<float, cv::L2<float> > > treeLoad =
-			new cvflann::VocabTree<float, cv::L2<float> >();
+	cv::Ptr<bfeat::VocabTree<float, cv::L2<float> > > treeLoad =
+			new bfeat::VocabTree<float, cv::L2<float> >();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -66,16 +66,16 @@ TEST(VocabTree, LoadSaveBinary) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<cvflann::VocabTree<uchar, cv::Hamming> > tree;
-	tree = new cvflann::VocabTree<uchar, cv::Hamming>(data);
+	cv::Ptr<bfeat::VocabTree<uchar, cv::Hamming> > tree;
+	tree = new bfeat::VocabTree<uchar, cv::Hamming>(data);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<cvflann::VocabTree<uchar, cv::Hamming> > treeLoad =
-			new cvflann::VocabTree<uchar, cv::Hamming>();
+	cv::Ptr<bfeat::VocabTree<uchar, cv::Hamming> > treeLoad =
+			new bfeat::VocabTree<uchar, cv::Hamming>();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -98,14 +98,14 @@ TEST(VocabTree, TestDatabase) {
 
 	DynamicMat data(keysFilenames);
 
-	cv::Ptr<cvflann::VocabTreeBase> tree = new cvflann::VocabTree<float,
+	cv::Ptr<bfeat::VocabTreeBase> tree = new bfeat::VocabTree<float,
 			cv::L2<float> >(data);
 
 	tree->build();
 	tree->save("test_tree.yaml.gz");
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<cvflann::VocabTreeBase> db = new cvflann::VocabTree<float,
+	cv::Ptr<bfeat::VocabTreeBase> db = new bfeat::VocabTree<float,
 			cv::L2<float> >();
 
 	db->load("test_tree.yaml.gz");
@@ -139,7 +139,7 @@ TEST(VocabTree, TestDatabase) {
 		ASSERT_TRUE(sumResult.at<float>(0, 0) != 0);
 	}
 
-	db->computeWordsWeights(cvflann::TF_IDF);
+	db->computeWordsWeights(bfeat::TF_IDF);
 
 	db->createDatabase();
 
@@ -155,7 +155,7 @@ TEST(VocabTree, TestDatabase) {
 		}
 	}
 
-	cv::Ptr<cvflann::VocabTreeBase> dbLoad = new cvflann::VocabTree<float,
+	cv::Ptr<bfeat::VocabTreeBase> dbLoad = new bfeat::VocabTree<float,
 			cv::L2<float> >();
 
 	dbLoad->load("test_tree.yaml.gz");
