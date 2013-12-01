@@ -18,18 +18,38 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-struct image {
+struct Image {
 	int imgIdx; // Index of the image it represents
 	int startIdx; // (inclusive) Starting index in the merged descriptors matrix
-	image() :
+	Image() :
 			imgIdx(-1), startIdx(-1) {
 	}
 };
 
-static std::vector<image> DEFAULT_INDICES;
+static std::vector<Image> DEFAULT_INDICES;
 static std::vector<std::string> DEFAULT_FILENAMES;
 
 class DynamicMat {
+
+private:
+
+	static const int MAX_MEM = 1075000000; // ~1GB
+
+	int m_descriptorType = -1;
+	std::vector<Image> m_descriptorsIndex;
+	std::vector<std::string> m_descriptorsFilenames;
+
+	/** Attributes of the cache **/
+	int m_memoryCount = 0;
+	cv::Mat m_cachedMat;
+	int m_cachedMatStartIdx;
+	std::stack<int> m_cachingOrder;
+	std::vector<cv::Mat> m_descriptorsCache;
+
+public:
+
+	int rows = 0;
+	int cols = 0;
 
 public:
 
@@ -39,11 +59,23 @@ public:
 	DynamicMat();
 
 	/**
+	 * Class constructor.
+	 *
+	 * @param keysFilenames - Reference to a vector of descriptor filenames
+	 */
+	DynamicMat(std::vector<std::string>& keysFilenames);
+
+	/**
 	 * Copy constructor.
 	 *
 	 * @param other - Reference to an instance where to copy properties from
 	 */
 	DynamicMat(const DynamicMat& other);
+
+	/**
+	 * Class destroyer.
+	 */
+	virtual ~DynamicMat();
 
 	/**
 	 * Assignment operator.
@@ -52,40 +84,6 @@ public:
 	 * @return reference to the new instance
 	 */
 	DynamicMat& operator=(const DynamicMat& other);
-
-	/**
-	 * Class constructor.
-	 *
-	 * @param keysFilenames - Reference to a vector of descriptor filenames
-	 */
-	DynamicMat(std::vector<std::string>& keysFilenames);
-
-	/**
-	 * Class destroyer.
-	 */
-	virtual ~DynamicMat();
-
-	/** Getters **/
-
-	/**
-	 * Returns a reference to the index descriptors holding the
-	 * index of image it belongs to and the starting index of the
-	 * virtual big descriptors matrix.
-	 *
-	 * @return index of descriptors
-	 */
-	const std::vector<image>& getDescriptorsIndex() const {
-		return m_descriptorsIndex;
-	}
-
-	/**
-	 * Returns a reference to the vector of descriptors filenames.
-	 *
-	 * @return descriptors filenames
-	 */
-	const std::vector<std::string>& getDescriptorsFilenames() const {
-		return m_descriptorsFilenames;
-	}
 
 	/**
 	 * Retrieves the requested descriptor by obtaining it from cache
@@ -115,6 +113,28 @@ public:
 	 */
 	void clearCache();
 
+	/** Getters **/
+
+	/**
+	 * Returns a reference to the index descriptors holding the
+	 * index of image it belongs to and the starting index of the
+	 * virtual big descriptors matrix.
+	 *
+	 * @return index of descriptors
+	 */
+	const std::vector<Image>& getDescriptorsIndex() const {
+		return m_descriptorsIndex;
+	}
+
+	/**
+	 * Returns a reference to the vector of descriptors filenames.
+	 *
+	 * @return descriptors filenames
+	 */
+	const std::vector<std::string>& getDescriptorsFilenames() const {
+		return m_descriptorsFilenames;
+	}
+
 	/**
 	 * Returns the count of memory used by the matrices loaded in cache.
 	 *
@@ -135,26 +155,6 @@ private:
 	static int computeUsedMemory(cv::Mat& descriptors) {
 		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
 	}
-
-private:
-
-	static const int MAX_MEM = 1075000000; // ~1GB
-
-	std::vector<image> m_descriptorsIndex;
-	std::vector<std::string> m_descriptorsFilenames;
-
-	/** Attributes of the cache **/
-	std::vector<cv::Mat> m_descriptorsCache;
-	cv::Mat m_cachedMat;
-	int m_cachedMatStartIdx;
-	std::stack<int> m_cachingOrder;
-	int m_memoryCount = 0;
-	int m_descriptorType = -1;
-
-public:
-
-	int rows = 0;
-	int cols = 0;
 
 };
 

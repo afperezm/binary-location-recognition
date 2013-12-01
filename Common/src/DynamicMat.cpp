@@ -96,7 +96,7 @@ DynamicMat::DynamicMat(std::vector<std::string>& descriptorsFilenames) :
 
 		if (imgDescriptors.empty() == false) {
 			for (size_t i = 0; (int) i < imgDescriptors.rows; i++) {
-				image img;
+				Image img;
 				img.imgIdx = imgIdx;
 				img.startIdx = descCount;
 				m_descriptorsIndex.push_back(img);
