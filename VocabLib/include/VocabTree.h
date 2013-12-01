@@ -56,8 +56,8 @@ enum WeightingType {
 
 struct VocabTreeParams: public cvflann::IndexParams {
 	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 1,
-			cvflann::flann_centers_init_t centers_init = cvflann::FLANN_CENTERS_RANDOM,
-			int levels_up = 2) {
+			cvflann::flann_centers_init_t centers_init =
+					cvflann::FLANN_CENTERS_RANDOM, int levels_up = 2) {
 		// branching factor
 		(*this)["branching"] = branching;
 		// max iterations to perform in one kmeans clustering (kmeans tree)
@@ -460,7 +460,8 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	m_branching = get_param(params, "branching", 6);
 	m_iterations = get_param(params, "iterations", 1);
 	m_depth = get_param(params, "depth", 10);
-	m_centers_init = get_param(params, "centers_init", cvflann::FLANN_CENTERS_RANDOM);
+	m_centers_init = get_param(params, "centers_init",
+			cvflann::FLANN_CENTERS_RANDOM);
 	int directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
 	if (directIndexLevel < 0) {
 		directIndexLevel = 0;
@@ -703,14 +704,14 @@ void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
 
 	if (empty()) {
 		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
-				"Error while saving weights, vocabulary is empty");
+				"Vocabulary is empty");
 	}
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
 	if (fs.isOpened() == false) {
 		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
-				"Error while saving weights, unable to open file "
+				"Unable to open file "
 				"[" + filename + "] for writing");
 	}
 
@@ -743,15 +744,14 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 
 	if (m_words.empty() == true) {
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Error while loading weights, vocabulary is empty");
+				"Vocabulary is empty");
 	}
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Error while loading weights, unable to open file "
-				"[" + filename + "] for reading");
+				"Unable to open file [" + filename + "] for reading");
 	}
 
 	cv::FileNode words = fs["Words"];
@@ -759,20 +759,12 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 	// Verify that 'Words' is a sequence
 	if (words.type() != cv::FileNode::SEQ) {
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Error while parsing inverted index, "
-				"fetched element 'Words' should be a sequence");
+				"Fetched element 'Words' should be a sequence");
 	}
 
 	if (words.size() != m_words.size()) {
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Error while loading weights, vocabulary size "
-				"is different than inverted file length");
-	}
-
-	if (words.type() != cv::FileNode::SEQ) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Error while parsing inverted index, "
-				"fetched element 'Words' is not a sequence");
+				"Vocabulary size is different than inverted file length");
 	}
 
 	int wordId = 0;
@@ -789,8 +781,7 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 		// Verify that imageList is a sequence
 		if (images.type() != cv::FileNode::SEQ) {
 			throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-					"Error while parsing inverted index, "
-					"fetched element 'imageList' is not a sequence");
+					"Fetched element 'imageList' is not a sequence");
 		}
 
 		for (cv::FileNodeIterator image = images.begin(); image != images.end();
@@ -802,6 +793,7 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 	}
 
 	fs.release();
+
 }
 
 // --------------------------------------------------------------------------
@@ -810,6 +802,22 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::saveDirectIndex(
 		const std::string& filename) const {
 
+	if (m_directIndex->size() == 0) {
+		throw std::runtime_error("[VocabTree::saveDirectIndex] "
+				"Index is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[VocabTree::saveDirectIndex] "
+				"Unable to open file [" + filename + "] for writing");
+	}
+
+	m_directIndex->save(fs);
+
+	fs.release();
+
 }
 
 // --------------------------------------------------------------------------
@@ -817,6 +825,19 @@ void VocabTree<TDescriptor, Distance>::saveDirectIndex(
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::loadDirectIndex(
 		const std::string& filename) {
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[VocabTree::loadDirectIndex] "
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	m_directIndex->clear();
+
+	m_directIndex->load(fs);
+
+	fs.release();
 
 }
 
@@ -1411,13 +1432,13 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 				" normalizing DB BoW vectors, vocabulary is empty");
 	}
 
-// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
+	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
 	std::vector<float> mags(m_numDbImages, 0.0);
 
-// Computing DB BoW vectors magnitude
+	// Computing DB BoW vectors magnitude
 
-// Summing vector elements
+	// Summing vector elements
 	for (VocabTreeNodePtr& word : m_words) {
 		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
@@ -1436,14 +1457,14 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 		}
 	}
 
-// Applying power over sum result
+	// Applying power over sum result
 	if (normType == cv::NORM_L2) {
 		for (size_t i = 0; i < mags.size(); i++) {
 			mags[i] = sqrt(mags[i]);
 		}
 	}
 
-// Normalizing database
+	// Normalizing database
 	for (VocabTreeNodePtr& word : m_words) {
 		for (ImageCount& image : word->image_list) {
 			uint index = image.m_index;
@@ -1492,10 +1513,10 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
 
-//	printf("BoW vector\n");
-//	FunctionUtils::printDescriptors(queryBowVector);
+	//	printf("BoW vector\n");
+	//	FunctionUtils::printDescriptors(queryBowVector);
 
-//	std::cout << "Query BoW vector:\n" << queryBowVector << std::endl;
+	//	std::cout << "Query BoW vector:\n" << queryBowVector << std::endl;
 
 	//	Efficient scoring query BoW vector against all DB BoW vectors
 

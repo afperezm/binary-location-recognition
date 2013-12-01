@@ -12,6 +12,8 @@
 #include <map>
 #include <vector>
 
+#include <opencv2/core/core.hpp>
+
 namespace bfeat {
 
 typedef std::vector<int> FeatureVector;
@@ -34,7 +36,7 @@ public:
 	 *
 	 * @param level - level of the tree at which nodes are stored
 	 */
-	DirectIndex(int level);
+	DirectIndex(int level = -1);
 
 	/**
 	 * Class destroyer.
@@ -64,6 +66,12 @@ public:
 	 * @param featureId
 	 */
 	void addFeature(uint imgIdx, int nodeId, int featureId);
+
+	void save(cv::FileStorage& fs) const;
+
+	void load(cv::FileStorage& fs);
+
+	void clear() const;
 
 };
 

@@ -176,7 +176,21 @@ int main(int argc, char **argv) {
 				return EXIT_FAILURE;
 			}
 
-			descriptors.release();
+			std::string keypointsFileName(keysFolder);
+			keypointsFileName += "/" + (*image).substr(0, (*image).size() - 4)
+					+ ".yaml.gz";
+
+			printf(
+					"-- Saving feature keypoints to [%s] using OpenCV FileStorage\n",
+					keypointsFileName.c_str());
+
+			try {
+				FileUtils::saveKeypoints(keypointsFileName, keypoints);
+			} catch (const std::runtime_error& error) {
+				fprintf(stderr, "%s\n", error.what());
+				return EXIT_FAILURE;
+			}
+
 		}
 	}
 

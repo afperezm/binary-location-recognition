@@ -78,6 +78,12 @@ void saveDescriptorsToBin(const std::string& filename,
 void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
 		int descriptorLength = 128);
 
+void saveKeypoints(const std::string& filename,
+		const std::vector<cv::KeyPoint>& keypoints);
+
+void loadKeypoints(const std::string& filename,
+		std::vector<cv::KeyPoint>& keypoints);
+
 /**
  * Checks whether the file indicated by fname exists.
  *

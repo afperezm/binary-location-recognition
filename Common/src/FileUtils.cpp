@@ -48,8 +48,9 @@ void FileUtils::saveFeatures(const std::string &filename,
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
-	if (!fs.isOpened()) {
-		throw std::runtime_error("Could not open file [" + filename + "]");
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[FileUtils::saveKeypoints] "
+				"Unable to open file [" + filename + "] for writing");
 	}
 
 	fs << "TotalKeypoints" << descriptors.rows;
@@ -73,7 +74,7 @@ void FileUtils::saveFeatures(const std::string &filename,
 		fs << "}";
 	}
 
-	fs << "]"; // End of structure node
+	fs << "]";
 
 	fs.release();
 }
@@ -92,7 +93,8 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
-		throw std::runtime_error("Could not open file [" + filename + "]");
+		throw std::runtime_error("[FileUtils::loadKeypoints] "
+				"Unable to open file [" + filename + "] for reading");
 	}
 
 	int rows, cols, type;
@@ -107,8 +109,8 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileNode keypointsSequence = fs["KeyPoints"];
 
 	if (keypointsSequence.type() != cv::FileNode::SEQ) {
-		throw std::runtime_error("Error while parsing [" + filename + "]"
-				" fetched element KeyPoints is not a sequence");
+		throw std::runtime_error("[FileUtils::loadKeypoints] "
+				"Fetched element 'KeyPoints' is not a sequence");
 	}
 
 	int idx = 0;
@@ -126,7 +128,6 @@ void FileUtils::loadFeatures(const std::string& filename,
 		featureVector = descriptors.row(idx);
 
 		(*it)["descriptor"] >> featureVector;
-
 	}
 
 	fs.release();
@@ -135,12 +136,14 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::saveDescriptors(const std::string& filename, const cv::Mat& descriptors){
+void FileUtils::saveDescriptors(const std::string& filename,
+		const cv::Mat& descriptors) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
-	if (!fs.isOpened()) {
-		throw std::runtime_error("Could not open file [" + filename + "]");
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[FileUtils::saveKeypoints] "
+				"Unable to open file [" + filename + "] for writing");
 	}
 
 	fs << "Descriptors" << descriptors;
@@ -151,12 +154,14 @@ void FileUtils::saveDescriptors(const std::string& filename, const cv::Mat& desc
 
 // --------------------------------------------------------------------------
 
-void FileUtils::loadDescriptors(const std::string& filename, cv::Mat& descriptors){
+void FileUtils::loadDescriptors(const std::string& filename,
+		cv::Mat& descriptors) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
-		throw std::runtime_error("Could not open file [" + filename + "]");
+		throw std::runtime_error("[FileUtils::loadKeypoints] "
+				"Unable to open file [" + filename + "] for reading");
 	}
 
 	descriptors = cv::Mat();
@@ -185,8 +190,8 @@ void FileUtils::saveDescriptorsToBin(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
-		int descriptorLength) {
+void FileUtils::loadDescriptorsFromBin(const std::string& filename,
+		cv::Mat& descriptors, int descriptorLength) {
 
 	FILE * filePtr;
 	long fileSize;
@@ -231,6 +236,69 @@ void FileUtils::loadDescriptorsFromBin(const std::string& filename, cv::Mat& des
 //	float* data = new float[100 * 100];
 //	Mat src(100, 100, CV_32FC1, data);
 //	delete [] data;
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::saveKeypoints(const std::string& filename,
+		const std::vector<cv::KeyPoint>& keypoints) {
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[FileUtils::saveKeypoints] "
+				"Unable to open file [" + filename + "] for writing");
+	}
+
+	fs << "KeyPoints" << "[";
+
+	for (int i = 0; i < keypoints.size(); i++) {
+		cv::KeyPoint k = keypoints[i];
+		fs << "{:";
+		fs << "x" << k.pt.x;
+		fs << "y" << k.pt.y;
+		fs << "size" << k.size;
+		fs << "angle" << k.angle;
+		fs << "response" << k.response;
+		fs << "octave" << k.octave;
+		fs << "}";
+	}
+
+	fs << "]";
+
+	fs.release();
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadKeypoints(const std::string& filename,
+		std::vector<cv::KeyPoint>& keypoints) {
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[FileUtils::loadKeypoints] "
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	cv::FileNode keypointsSequence = fs["KeyPoints"];
+
+	if (keypointsSequence.type() != cv::FileNode::SEQ) {
+		throw std::runtime_error("[FileUtils::loadKeypoints] "
+				"Fetched element 'KeyPoints' is not a sequence");
+	}
+
+	for (cv::FileNodeIterator it = keypointsSequence.begin();
+			it != keypointsSequence.end(); it++) {
+		keypoints.push_back(
+				cv::KeyPoint((float) (*it)["x"], (float) (*it)["y"],
+						(float) (*it)["size"], (float) (*it)["angle"],
+						(float) (*it)["response"], (int) (*it)["octave"]));
+	}
+
+	fs.release();
+
 }
 
 // --------------------------------------------------------------------------
