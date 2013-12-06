@@ -289,6 +289,8 @@ void FileUtils::loadKeypoints(const std::string& filename,
 				"Fetched element 'KeyPoints' is not a sequence");
 	}
 
+	keypoints.clear();
+
 	for (cv::FileNodeIterator it = keypointsSequence.begin();
 			it != keypointsSequence.end(); it++) {
 		keypoints.push_back(
