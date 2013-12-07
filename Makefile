@@ -15,6 +15,7 @@ default:
 	cd VocabLearn; $(MAKE)
 	cd VocabBuildDB; $(MAKE)
 	cd VocabMatch; $(MAKE)
+	cd GeomVerify; $(MAKE)
 	cd ComputeMAP; $(MAKE)
 
 tests:
@@ -42,4 +43,5 @@ clean:
 	cd VocabLearn; $(MAKE) clean
 	cd VocabBuildDB; $(MAKE) clean
 	cd VocabMatch; $(MAKE) clean
+	cd GeomVerify; $(MAKE) clean
 	cd ComputeMAP; $(MAKE) clean

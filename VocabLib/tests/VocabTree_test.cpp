@@ -155,15 +155,38 @@ TEST(VocabTree, TestDatabase) {
 		}
 	}
 
+	db->saveInvertedIndex("test_idf.yaml.gz");
+
 	cv::Ptr<bfeat::VocabTreeBase> dbLoad = new bfeat::VocabTree<float,
 			cv::L2<float> >();
 
 	dbLoad->load("test_tree.yaml.gz");
-
-	db->saveInvertedIndex("test_idf.yaml.gz");
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
 
-	// TODO Test inverted indices are equal
+	// Test inverted indices are equal
+	ASSERT_TRUE(db->size() == dbLoad->size());
+
+	for (size_t i = 0; i < db->size(); ++i) {
+
+		int idWordA = db->getWordId(i);
+		int idWordB = dbLoad->getWordId(i);
+		ASSERT_TRUE(idWordA == idWordB);
+
+		double weightWordA = db->getWordWeight(i);
+		double weightWordB = dbLoad->getWordWeight(i);
+		ASSERT_TRUE(weightWordA == weightWordB);
+
+		std::vector<bfeat::ImageCount> invIdxWordA = db->getWordImageList(i);
+		std::vector<bfeat::ImageCount> invIdxWordB = dbLoad->getWordImageList(
+				i);
+
+		ASSERT_TRUE(invIdxWordA.size() == invIdxWordB.size());
+
+		for (size_t j = 0; j < invIdxWordA.size(); ++j) {
+			ASSERT_TRUE(invIdxWordA[j].m_index == invIdxWordB[j].m_index);
+			ASSERT_TRUE(invIdxWordA[j].m_count == invIdxWordB[j].m_count);
+		}
+	}
 
 	// Querying the tree using the same documents used for building it,
 	// the top result must be the document itself and hence the score must be 1
@@ -173,7 +196,7 @@ TEST(VocabTree, TestDatabase) {
 
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
-		db->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+		dbLoad->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
 		// Check that scores is a row vector

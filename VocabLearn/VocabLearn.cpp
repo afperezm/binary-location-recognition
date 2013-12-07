@@ -33,9 +33,9 @@ int main(int argc, char **argv) {
 
 	if (argc < 6 || argc > 7) {
 		printf("\nUsage:\n"
-				"\t%s <in.list> <in.depth>"
+				"\tVocabLearn <in.train.imgs.list> <in.depth>"
 				" <in.branch.factor> <in.restarts>"
-				" <out.tree> [in.type.binary:1]\n\n", argv[0]);
+				" <out.tree> [in.type.binary:1]\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -59,21 +59,21 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1: read list of key files that shall be used to build the tree
-	std::vector<std::string> keysFilenames;
-	std::ifstream keysList(list_in, std::fstream::in);
+	std::vector<std::string> descsFilenames;
+	std::ifstream descList(list_in, std::fstream::in);
 
-	if (keysList.is_open() == false) {
+	if (descList.is_open() == false) {
 		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
 		return EXIT_FAILURE;
 	}
 
 	// Loading file names in list into a vector
 	std::string line;
-	while (getline(keysList, line)) {
+	while (getline(descList, line)) {
 		struct stat buffer;
 		// Checking if file exist, if not print error and exit
 		if (stat(line.c_str(), &buffer) == 0) {
-			keysFilenames.push_back(line);
+			descsFilenames.push_back(line);
 		} else {
 			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
 					line.c_str());
@@ -81,13 +81,13 @@ int main(int argc, char **argv) {
 		}
 	}
 	// Close file
-	keysList.close();
+	descList.close();
 
 	// Step 2: read key files
 	printf("-- Reading keypoint files from [%s]\n", list_in);
 
 	// Step 3: build tree
-	DynamicMat mergedDescriptors(keysFilenames);
+	DynamicMat mergedDescriptors(descsFilenames);
 
 	// Cluster descriptors using Vocabulary Tree
 	bfeat::VocabTreeParams params;

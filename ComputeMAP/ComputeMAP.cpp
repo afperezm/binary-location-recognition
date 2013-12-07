@@ -9,7 +9,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <cstdlib>
+#include <stdlib.h>
 
 #include <FileUtils.hpp>
 
@@ -26,13 +26,13 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 int main(int argc, char** argv) {
 
 	if (argc != 3) {
-		printf("\nUsage:\n"
-				"\tComputeMAP <ground.truth.folder> <queries.prefix>\n\n");
+		printf("\nUsage:\n\tComputeMAP "
+				"<in.ranked.files.folder> <in.ranked.files.prefix>\n\n");
 		return EXIT_FAILURE;
 	}
 
-	string gt_folder = argv[1];
-	string qprefix = argv[2];
+	string ranked_files_folder = argv[1];
+	string prefix = argv[2];
 
 	float map = 0.0, ap;
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 	std::stringstream fname;
 	while (true) {
 		fname.str("");
-		fname << gt_folder << "/" << qprefix << i;
+		fname << ranked_files_folder << "/" << prefix << i;
 
 		if (FileUtils::checkFileExist(fname.str() + "_ranked.txt") == false) {
 			break;
@@ -62,13 +62,13 @@ int main(int argc, char** argv) {
 
 		ap = compute_ap(pos_set, junk_set, ranked_list, fname.str());
 
-#if MAPVERBOSE
+#if CMAPVERBOSE
 		printf("%f\n", ap);
 #endif
 
 		map += ap;
 
-		i++;
+		++i;
 	}
 
 	printf("-- Mean average precision is [%f]\n", map / (float) i);
@@ -99,7 +99,7 @@ set<T> vector_to_set(const vector<T>& vec) {
 float compute_ap(const set<string>& pos, const set<string>& absent,
 		const vector<string>& ranked_list, std::string prefix) {
 
-#if MAPVERBOSE
+#if CMAPVERBOSE
 	printf("size of positive set=%lu\n", pos.size());
 #endif
 
@@ -122,19 +122,19 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 	size_t j = 0;
 	for (; i < ranked_list.size(); ++i) {
 		if (absent.count(ranked_list[i])) {
-#if MAPVERBOSE
+#if CMAPVERBOSE
 			printf("%03lu) negative\n", i);
 #endif
 			// skip for the not relevant since they don't contribute
 			// i.e. no area under the curve
 			continue;
 		} else if (pos.count(ranked_list[i])) {
-#if MAPVERBOSE
+#if CMAPVERBOSE
 			printf("%03lu) relevant ", i);
 #endif
-			intersect_size++;
+			++intersect_size;
 		} else {
-#if MAPVERBOSE
+#if CMAPVERBOSE
 			printf("%03lu) notrelevant ", i);
 #endif
 		}
@@ -149,7 +149,7 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 		float apAtK = (recall - old_recall)
 				* ((old_precision + precision) / 2.0);
 
-#if MAPVERBOSE
+#if CMAPVERBOSE
 		printf("precision=%f recall=%f \t ap=%f\n", precision, recall, apAtK);
 #endif
 
@@ -161,7 +161,7 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 
 		old_recall = recall;
 		old_precision = precision;
-		j++;
+		++j;
 	}
 
 	fprintf(f_ranked_list, "%s\n%s\n", precisionValues.str().c_str(),

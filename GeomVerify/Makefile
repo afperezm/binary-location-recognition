@@ -1,4 +1,4 @@
-# Makefile for VocabLearn
+# Makefile for Test
 
 CXX = g++
 
@@ -17,21 +17,14 @@ LDFLAGS += -lkmajority
 CXXFLAGS += -I../VocabLib/include
 LDFLAGS += -lvocab
 
-# OpenCV (this goes last: beware of the linking order)
+# OpenCV
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
-
-#LDFLAGS += -Wl,-rpath=../../agast_lib/lib
-#LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
-#LDFLAGS += -Wl,-rpath=../lib/
 
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 
-BIN = VocabLearn
-
-#DEBUG = -DDEBUG
-VTREEVERBOSE = -DVTREEVERBOSE
+BIN = GeomVerify
 
 all: $(BIN)
 
@@ -39,7 +32,7 @@ $(BIN): $(OBJECTS)
 	$(CXX) $(OBJECTS) -o $(BIN) $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) $(DEBUG) $(VTREEVERBOSE) -c $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~

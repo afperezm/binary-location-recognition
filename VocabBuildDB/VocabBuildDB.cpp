@@ -24,10 +24,11 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 4 || argc > 7) {
-		printf("\nUsage:\n"
-				"\t%s <in.db.list> <in.tree> <out.db> [in.type.binary:1]"
-				" [in.use.tfidf:1] [in.normalize:1]\n\n", argv[0]);
+	if (argc < 5 || argc > 8) {
+		printf(
+				"\nUsage:\n\tVocabBuildDB <in.db.desc.list> "
+						"<in.tree> <out.inverted.index> <out.direct.index> [in.type.binary:1]"
+						" [in.use.tfidf:1] [in.normalize:1]\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -36,19 +37,20 @@ int main(int argc, char **argv) {
 
 	char *list_in = argv[1];
 	char *tree_in = argv[2];
-	char *tree_out = argv[3];
+	char *out_inv_index = argv[3];
+	char *out_dir_index = argv[4];
 	bool isDescriptorBinary = true;
 
-	if (argc >= 5) {
-		isDescriptorBinary = atoi(argv[4]);
-	}
-
 	if (argc >= 6) {
-		use_tfidf = atoi(argv[5]);
+		isDescriptorBinary = atoi(argv[5]);
 	}
 
 	if (argc >= 7) {
-		normalize = atoi(argv[6]);
+		use_tfidf = atoi(argv[6]);
+	}
+
+	if (argc >= 8) {
+		normalize = atoi(argv[7]);
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -59,24 +61,24 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	if (boost::regex_match(std::string(tree_out), expression) == false) {
+	if (boost::regex_match(std::string(out_inv_index), expression) == false) {
 		fprintf(stderr,
-				"Output tree file must have the extension .yaml.gz or .xml.gz\n");
+				"Output inverted index file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
-	// Step 1/4: read list of key files that shall be used to build the tree
-	std::vector<std::string> keysFilenames;
-	std::ifstream keysList(list_in, std::fstream::in);
+	// Step 1/4: read list of descriptors that shall be used to build the tree
+	std::vector<std::string> descFilenames;
+	std::ifstream descList(list_in, std::fstream::in);
 
-	if (keysList.is_open() == false) {
+	if (descList.is_open() == false) {
 		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
 		return EXIT_FAILURE;
 	}
 
 	// Loading file names in list into a vector
 	std::string line;
-	while (getline(keysList, line)) {
+	while (getline(descList, line)) {
 		// Checking that file exists, if not print error and exit
 		struct stat buffer;
 		if (stat(line.c_str(), &buffer) != 0) {
@@ -93,12 +95,12 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
-		keysFilenames.push_back(line);
+		descFilenames.push_back(line);
 	}
 	// Close file
-	keysList.close();
+	descList.close();
 
-	printf("-- Building DB using [%lu] images\n", keysFilenames.size());
+	printf("-- Building DB using [%lu] images\n", descFilenames.size());
 
 	cv::Ptr<bfeat::VocabTreeBase> tree;
 
@@ -119,14 +121,14 @@ int main(int argc, char **argv) {
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",
-			keysFilenames.size());
+			descFilenames.size());
 	tree->clearDatabase();
 	printf("   Clearing Inverted Files\n");
 
 	cv::Mat imgDescriptors;
 	uint imgIdx = 0;
 
-	for (std::string keyFileName : keysFilenames) {
+	for (std::string keyFileName : descFilenames) {
 		// Initialize keypoints and descriptors
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
@@ -155,7 +157,7 @@ int main(int argc, char **argv) {
 
 	imgDescriptors.release();
 
-	CV_Assert(keysFilenames.size() == imgIdx);
+	CV_Assert(descFilenames.size() == imgIdx);
 
 	printf("   Added [%u] images\n", imgIdx);
 
@@ -186,15 +188,23 @@ int main(int argc, char **argv) {
 		tree->normalizeDatabase(normType);
 	}
 
-	printf("-- Saving tree with inverted files and weights to [%s]\n",
-			tree_out);
+	printf("-- Saving inverted index to [%s]\n", out_inv_index);
 
 	mytime = cv::getTickCount();
-	tree->save(tree_out);
+	tree->saveInvertedIndex(out_inv_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
-	printf("   Tree saved in [%lf] ms\n", mytime);
+	printf("   Inverted index saved in [%lf] ms\n", mytime);
+
+	printf("-- Saving direct index to [%s]\n", out_dir_index);
+
+	mytime = cv::getTickCount();
+	tree->saveDirectIndex(out_dir_index);
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+
+	printf("   Direct index saved in [%lf] ms\n", mytime);
 
 	return EXIT_SUCCESS;
 }

@@ -108,6 +108,9 @@ public:
 
 	virtual void loadDirectIndex(const std::string& filename) = 0;
 
+	virtual void quantize(const cv::Mat& feature, uint &id, double &weight,
+			int &nodeAtL) const=0;
+
 	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
 
 	virtual void computeWordsWeights(WeightingType weighting) = 0;
@@ -122,6 +125,12 @@ public:
 			const int normType = cv::NORM_L2) const = 0;
 
 	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
+
+	virtual int getWordId(size_t i) const = 0;
+
+	virtual double getWordWeight(size_t i) const = 0;
+
+	virtual const std::vector<ImageCount>& getWordImageList(size_t i) const = 0;
 
 };
 
@@ -294,6 +303,18 @@ public:
 	void loadDirectIndex(const std::string& filename);
 
 	/**
+	 * Quantizes a single feature vector into a word. Traverses the whole tree,
+	 * and stores the resulting word id and weight.
+	 *
+	 * @param feature - Row vector representing the feature vector to quantize
+	 * @param id - The id of the found word
+	 * @param weight - The weight of the found word
+	 * @param nodeAtL - Pointer to a tree node at level l in the path down the tree
+	 */
+	void quantize(const cv::Mat& feature, uint &id, double &weight,
+			int &nodeAtL) const;
+
+	/**
 	 * Pushes DB image features down the tree until a leaf node,
 	 * once reached updates the inverted file.
 	 *
@@ -377,6 +398,18 @@ public:
 		return m_veclen;
 	}
 
+	int getWordId(size_t i) const {
+		return m_words[i]->word_id;
+	}
+
+	double getWordWeight(size_t i) const {
+		return m_words[i]->weight;
+	}
+
+	const std::vector<ImageCount>& getWordImageList(size_t i) const {
+		return m_words[i]->image_list;
+	}
+
 private:
 
 	/**
@@ -421,18 +454,6 @@ private:
 	 * @param node - The node where to store the loaded tree
 	 */
 	void load_tree(cv::FileNode& fs, VocabTreeNodePtr& node);
-
-	/**
-	 * Quantizes a single feature vector into a word. Traverses the whole tree,
-	 * and stores the resulting word id and weight.
-	 *
-	 * @param feature - Row vector representing the feature vector to quantize
-	 * @param id - The id of the found word
-	 * @param weight - The weight of the found word
-	 * @param nodeAtL - Pointer to a tree node at level l in the path down the tree
-	 */
-	void quantize(const cv::Mat& feature, uint &id, double &weight,
-			int &nodeAtL) const;
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -726,7 +747,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
 		const std::string& filename) const {
 
-	if (empty()) {
+	if (m_words.empty() == true) {
 		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
 				"Vocabulary is empty");
 	}
@@ -739,15 +760,16 @@ void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
 				"[" + filename + "] for writing");
 	}
 
-	fs << "Words" << "[";
+	fs << "NumDBImages" << int(m_numDbImages);
 
+	fs << "Words" << "[";
 	for (VocabTreeNodePtr node : m_words) {
 		fs << "{";
 
 		fs << "weight" << node->weight;
 		fs << "imageList" << "[";
 		for (ImageCount img : node->image_list) {
-			fs << "{:" << "m_index" << (int) img.m_index << "m_count"
+			fs << "{:" << "m_index" << int(img.m_index) << "m_count"
 					<< img.m_count << "}";
 		}
 		fs << "]";
@@ -777,6 +799,8 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
 				"Unable to open file [" + filename + "] for reading");
 	}
+
+	m_numDbImages = int(fs["NumDBImages"]);
 
 	cv::FileNode words = fs["Words"];
 
@@ -972,6 +996,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	if (fitted == false && indices_length <= m_dataset.getCapacity()) {
 		m_dataset.clearCache();
 		fitted = true;
+#if VTREEVERBOSE
+	printf("Clearing cache at level=[%d]\n", level);
+#endif
 	}
 
 #if DEBUG
@@ -1194,17 +1221,17 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 	// Initialize query BoW vector
 	bowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
 
-//	printf("Quantizing query features vectors]\n");
+	uint wordIdx;
+	double wordWeight;
+	int nodeAtL;
+
 	// Quantize each query image feature vector
 	for (size_t i = 0; (int) i < featuresVector.rows; i++) {
-		uint wordIdx;
-		double wordWeight;
 
 //		printf("  Quantizing vector [%lu]\n", i);
 //		std::cout << featuresVector.row(i) << std::endl;
-		int nodeAtL;
+
 		quantize(featuresVector.row(i), wordIdx, wordWeight, nodeAtL);
-//		getchar();
 
 		if (wordIdx > m_words.size() - 1) {
 			throw std::runtime_error(
@@ -1379,16 +1406,14 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 						" vocabulary is empty");
 	}
 
+	uint wordIdx;
+	double wordWeight; // not needed
+	int nodeAtL;
+
 	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
-		uint wordIdx;
-		double wordWeight; // not needed
-		// w is the IDF value if TF_IDF, 1 if TF
-		// w is the Inverse Document Frequency if IDF, 1 if BINARY
 //		printf("  Quantizing vector [%lu]\n", i);
 //		std::cout << imgFeatures.row(i) << std::endl;
-		int nodeAtL;
 		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
-//		getchar();
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 		m_directIndex->addFeature(imgIdx, nodeAtL, i);
 	}
@@ -1499,7 +1524,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 		throw std::runtime_error(ss.str());
 	}
 
-	if (empty()) {
+	if (m_words.empty() == true) {
 		throw std::runtime_error("[VocabTree::scoreQuery]"
 				" Error while scoring query, vocabulary is empty");
 	}

@@ -33,13 +33,12 @@ int main(int argc, char **argv) {
 	if (argc < 3 || argc > 5) {
 		printf(
 				"\nUsage:\n"
-						"\t%s <in.imgs.folder> <out.keys.folder> [in.detector:SIFT] [in.descriptor:BRISK]\n\n",
-				argv[0]);
+						"\tFeatureExtract <in.imgs.folder> <out.features.folder> [in.detector:SIFT] [in.descriptor:BRISK]\n\n");
 		return EXIT_FAILURE;
 	}
 
 	char* imgsFolder = argv[1];
-	char* keysFolder = argv[2];
+	char* featuresFolder = argv[2];
 	std::string detectorType = "SIFT";
 	std::string descriptorType = "BRISK";
 
@@ -87,9 +86,9 @@ int main(int argc, char **argv) {
 	printf("-- Using detector=[%s] descriptor=[%s]\n", detectorType.c_str(),
 			descriptorType.c_str());
 
+	// Load files from images folder into a vector
 	printf("-- Loading images in folder [%s]\n", imgsFolder);
 
-	// Load files from images folder into a vector
 	std::vector<std::string> imgFolderFiles;
 	try {
 		FileUtils::readFolder(imgsFolder, imgFolderFiles);
@@ -102,13 +101,13 @@ int main(int argc, char **argv) {
 	// Finding last written key file
 	printf(
 			"-- Searching for previous written key files in [%s] to resume feature extraction\n",
-			keysFolder);
+			featuresFolder);
 	// By default set to the first file
 	std::vector<std::string>::iterator startImg = imgFolderFiles.begin();
 	// Load files from keys folder into a vector
 	std::vector<std::string> keyFiles;
 	try {
-		FileUtils::readFolder(keysFolder, keyFiles);
+		FileUtils::readFolder(featuresFolder, keyFiles);
 	} catch (const std::runtime_error& error) {
 		fprintf(stderr, "%s\n", error.what());
 		return EXIT_FAILURE;
@@ -137,6 +136,7 @@ int main(int argc, char **argv) {
 		printf("   Starting feature extraction from first image\n");
 	}
 
+	// Extracting features
 	for (std::vector<std::string>::iterator image = startImg;
 			image != imgFolderFiles.end(); ++image) {
 		if ((*image).find(".jpg") != std::string::npos) {
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
 			//	cv::imshow("Image keypoints", img_1);
 			//	cv::waitKey(0);
 
-			std::string descriptorFileName(keysFolder);
+			std::string descriptorFileName(featuresFolder);
 			descriptorFileName += "/" + (*image).substr(0, (*image).size() - 4)
 					+ ".yaml.gz";
 
@@ -176,9 +176,9 @@ int main(int argc, char **argv) {
 				return EXIT_FAILURE;
 			}
 
-			std::string keypointsFileName(keysFolder);
+			std::string keypointsFileName(featuresFolder);
 			keypointsFileName += "/" + (*image).substr(0, (*image).size() - 4)
-					+ ".yaml.gz";
+					+ "_kpt.yaml.gz";
 
 			printf(
 					"-- Saving feature keypoints to [%s] using OpenCV FileStorage\n",

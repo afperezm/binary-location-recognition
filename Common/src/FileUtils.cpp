@@ -93,7 +93,7 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
-		throw std::runtime_error("[FileUtils::loadKeypoints] "
+		throw std::runtime_error("[FileUtils::loadFeatures] "
 				"Unable to open file [" + filename + "] for reading");
 	}
 
@@ -109,7 +109,7 @@ void FileUtils::loadFeatures(const std::string& filename,
 	cv::FileNode keypointsSequence = fs["KeyPoints"];
 
 	if (keypointsSequence.type() != cv::FileNode::SEQ) {
-		throw std::runtime_error("[FileUtils::loadKeypoints] "
+		throw std::runtime_error("[FileUtils::loadFeatures] "
 				"Fetched element 'KeyPoints' is not a sequence");
 	}
 
@@ -160,7 +160,7 @@ void FileUtils::loadDescriptors(const std::string& filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
 
 	if (fs.isOpened() == false) {
-		throw std::runtime_error("[FileUtils::loadKeypoints] "
+		throw std::runtime_error("[FileUtils::loadDescriptors] "
 				"Unable to open file [" + filename + "] for reading");
 	}
 
