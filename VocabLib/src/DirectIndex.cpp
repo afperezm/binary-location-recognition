@@ -78,6 +78,7 @@ void DirectIndex::save(const std::string& filename) const {
 
 	int imgIdx = 0;
 
+	fs << "Level" << m_level;
 	fs << "DirectIndex" << "[";
 	for (TreeNode node : m_index) {
 		fs << "{";
@@ -110,6 +111,8 @@ void DirectIndex::load(const std::string& filename) {
 		throw std::runtime_error("[DirectIndex::load] "
 				"Unable to open file [" + filename + "] for reading");
 	}
+
+	m_level = int(fs["Level"]);
 
 	cv::FileNode directIndex = fs["DirectIndex"], nodes;
 
