@@ -932,7 +932,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			level, indices_length);
 #endif
 
-	int* centers_idx = new int[m_branching];
+	std::vector<int> centers_idx(m_branching);
 	int centers_length;
 
 #if DEBUG
@@ -958,7 +958,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->word_id = m_words.size();
 		node->weight = 1.0;
 		m_words.push_back(node);
-		delete[] centers_idx;
 #if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): got less cluster indices than clusters (%d features)\n",
@@ -978,7 +977,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		m_dataset.row(centers_idx[i]).copyTo(
 				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
-	delete[] centers_idx;
 
 #if DEBUG
 #if VTREEVERBOSE
@@ -986,7 +984,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
-	int* count = new int[m_branching];
+	std::vector<int> count(m_branching);
 	for (int i = 0; i < m_branching; ++i) {
 		count[i] = 0;
 	}
@@ -1007,7 +1005,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
-	int* belongs_to = new int[indices_length];
+	std::vector<int> belongs_to(indices_length);
 	for (int i = 0; i < indices_length; ++i) {
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
@@ -1081,9 +1079,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			}
 			// Divide accumulated data by the number transaction assigned to the cluster
 			for (size_t i = 0; (int) i < m_branching; ++i) {
-				int cnt = count[i];
 				for (size_t k = 0; k < m_veclen; ++k) {
-					dcenters.at<TDescriptor>(i, k) /= cnt;
+					dcenters.at<TDescriptor>(i, k) /= count[i];
 				}
 			}
 		}
@@ -1203,8 +1200,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	dcenters.release();
 	delete[] centers;
-	delete[] count;
-	delete[] belongs_to;
 }
 
 // --------------------------------------------------------------------------

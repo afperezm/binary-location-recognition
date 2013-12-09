@@ -122,7 +122,7 @@ void KMajorityIndex::cluster() {
 void KMajorityIndex::initCentroids() {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
-	cv::Ptr<int> centers_idx = new int[k];
+	std::vector<int> centers_idx(k);
 	int centers_length;
 
 	// Randomly chose centers
