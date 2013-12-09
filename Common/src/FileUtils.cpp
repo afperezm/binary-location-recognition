@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <dirent.h>
+#include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
+
 #include <sys/stat.h>
 
 void FileUtils::readFolder(const char* folderPath,
@@ -32,6 +34,61 @@ void FileUtils::readFolder(const char* folderPath,
 		throw std::runtime_error(
 				"Could not open directory [" + std::string(folderPath) + "]");
 	}
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::saveList(const std::string& list_fpath,
+		const std::vector<std::string>& list) {
+
+	// Open file
+	std::ofstream outputFileStream(list_fpath.c_str(), std::fstream::out);
+
+	// Check file
+	if (outputFileStream.good() == false) {
+		throw std::runtime_error(
+				"Error while opening file [" + list_fpath + "] for writing\n");
+	}
+
+	// Save list to file
+	for (std::string line : list) {
+		outputFileStream << line << std::endl;
+	}
+
+	// Close file
+	outputFileStream.close();
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadList(const std::string& list_fpath,
+		std::vector<std::string>& list) {
+
+	// Initializing variables
+	std::ifstream inputFileStream;
+	std::string line;
+	list.clear();
+
+	if (FileUtils::checkFileExist(list_fpath) == false) {
+		throw std::runtime_error("File [" + list_fpath + "] doesn't exist");
+	}
+
+	// Open file
+	inputFileStream.open(list_fpath.c_str(), std::fstream::in);
+
+	// Check file
+	if (inputFileStream.good() == false) {
+		throw std::runtime_error(
+				"Error while opening file [" + list_fpath + "] for reading");
+	}
+
+	// Load list from file
+	while (getline(inputFileStream, line)) {
+		list.push_back(line);
+	}
+
+	// Close file
+	inputFileStream.close();
 }
 
 // --------------------------------------------------------------------------

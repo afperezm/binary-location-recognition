@@ -5,8 +5,6 @@
  *      Author: andresf
  */
 
-#include <fstream>
-
 #include <boost/regex.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -16,11 +14,6 @@
 #include <VocabTree.h>
 
 double mytime;
-
-int loadList(const std::string& list_fpath, std::vector<std::string>& list);
-
-void saveList(const std::string& list_fpath,
-		const std::vector<std::string>& list);
 
 void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		const std::vector<cv::KeyPoint>& keypoints1,
@@ -81,31 +74,26 @@ int main(int argc, char **argv) {
 		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
 	}
 
-	printf("-- Reading tree from [%s]\n", in_tree.c_str());
-
+	printf("-- Loading tree from [%s]\n", in_tree.c_str());
 	mytime = cv::getTickCount();
 	tree->load(in_tree);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
+	printf("   Loaded in [%lf] ms, got [%lu] words \n", mytime, tree->size());
 
-	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			tree->size());
-
-	printf("-- Reading direct index [%s]\n", in_direct_index.c_str());
-
+	printf("-- Loading direct index [%s]\n", in_direct_index.c_str());
 	mytime = cv::getTickCount();
 	directIndexCandidates->load(in_direct_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
-
-	printf("   Direct index loaded in [%lf] ms, got [%lu] images\n", mytime,
+	printf("   Loaded in [%lf] ms, got [%lu] images\n", mytime,
 			directIndexCandidates->size());
 
 	// Step 2a: load list of queries descriptors
-	printf("-- Load list of queries descriptors\n");
+	printf("-- Loading list of queries descriptors\n");
 	std::vector<std::string> queries_desc_list;
-	loadList(in_queries_desc_list, queries_desc_list);
-	printf("   Done, got [%lu] entries\n", queries_desc_list.size());
+	FileUtils::loadList(in_queries_desc_list, queries_desc_list);
+	printf("   Loaded, got [%lu] entries\n", queries_desc_list.size());
 
 	// Step 2b: load queries descriptors
 
@@ -116,7 +104,6 @@ int main(int argc, char **argv) {
 
 	printf(
 			"-- Loading queries descriptors and adding them to the direct index\n");
-
 	// Loop over list of queries descriptors
 	for (std::string descriptorsFilename : queries_desc_list) {
 		// Load query descriptors
@@ -131,25 +118,26 @@ int main(int argc, char **argv) {
 		}
 		++imgIdx;
 	}
-
-	printf("   Done, got [%lu] words\n", directIndexCandidates->size());
+	printf("   Loaded and added descriptors of [%lu] images\n",
+			directIndexCandidates->size());
 
 	// Step 3a: load list of queries keypoints
 	printf("-- Loading list of queries keypoints\n");
 	std::vector<std::string> queries_keys_list;
-	loadList(in_queries_keys_list, queries_keys_list);
-	printf("   Done, got [%lu] entries\n", queries_keys_list.size());
+	FileUtils::loadList(in_queries_keys_list, queries_keys_list);
+	printf("   Loaded, got [%lu] entries\n", queries_keys_list.size());
 
 	if (queries_desc_list.size() != queries_keys_list.size()) {
-		fprintf(stderr,
-				"Different number of entries in queries keypoints and descriptors lists\n");
+		fprintf(stderr, "Different number of entries between "
+				"lists of queries descriptors and keypoints\n");
 		return EXIT_FAILURE;
 	}
 
 	// Step 3b: load names of database files
 	printf("-- Loading names of database files\n");
 	std::vector<std::string> db_desc_list;
-	loadList(in_db_desc_list, db_desc_list);
+	FileUtils::loadList(in_db_desc_list, db_desc_list);
+	printf("   Loaded, got [%lu] entries\n", db_desc_list.size());
 
 	// Step 4/4: load and process queries keypoints
 	printf("-- Loading and processing queries keypoints\n");
@@ -161,14 +149,10 @@ int main(int argc, char **argv) {
 	std::stringstream ranked_list_fname;
 
 	std::vector<cv::DMatch> matchesCandidateToQuery;
-	std::vector<cv::Point2f> matchedCandidatePoints;
-	std::vector<cv::Point2f> matchedQueryPoints;
+	std::vector<cv::Point2f> matchedCandidatePoints, matchedQueryPoints;
 	int candidateImgId, queryImgId;
 
-	cv::Mat inliers_idx;
-	cv::Mat candidates_inliers;
-	cv::Mat candidates_inliers_idx;
-	cv::Mat H;
+	cv::Mat inliers_idx, candidates_inliers, candidates_inliers_idx, H;
 
 	// Loop over list of queries keypoints
 	for (size_t i = 0; i < queries_keys_list.size(); ++i) {
@@ -178,7 +162,7 @@ int main(int argc, char **argv) {
 		// Step 4a: load query keypoints
 		printf("   Loading keypoints\n");
 		FileUtils::loadKeypoints(queries_keys_list[i], queryKeypoints);
-		printf("   Got [%lu] keypoints\n", queryKeypoints.size());
+		printf("   Loaded, got [%lu] keypoints\n", queryKeypoints.size());
 
 		// Step 4b: load list of query ranked candidates
 		printf("   Loading list of ranked candidates\n");
@@ -189,8 +173,9 @@ int main(int argc, char **argv) {
 		ranked_list_fname.str("");
 		ranked_list_fname << in_ranked_lists_folder << "/query_" << i
 				<< "_ranked.txt";
-		loadList(ranked_list_fname.str(), ranked_candidates_list);
-		printf("   Got [%lu] candidates\n", ranked_candidates_list.size());
+		FileUtils::loadList(ranked_list_fname.str(), ranked_candidates_list);
+		printf("   Loaded, got [%lu] candidates\n",
+				ranked_candidates_list.size());
 
 		if (int(ranked_candidates_list.size()) < topResults) {
 			// Caused by one of two:
@@ -215,11 +200,12 @@ int main(int argc, char **argv) {
 			FileUtils::loadKeypoints(
 					in_db_keys_folder + "/" + ranked_candidates_list[j]
 							+ "_kpt.yaml.gz", candidateKeypoints);
-			printf("   Got [%lu] keypoints\n", candidateKeypoints.size());
+			printf("   Loaded, got [%lu] keypoints\n",
+					candidateKeypoints.size());
 
 			// Searching putative matches
-			printf("   Matching keypoints of query [%lu] to candidate [%lu]\n",
-					i, j);
+			printf("   Matching keypoints of query [%lu] "
+					"against candidate [%lu]\n", i, j);
 
 			// Id of database image
 			std::vector<std::string>::iterator it = std::find(
@@ -227,12 +213,11 @@ int main(int argc, char **argv) {
 					"db/" + ranked_candidates_list[j] + ".yaml.gz");
 
 			if (it == db_desc_list.end()) {
-				throw std::runtime_error(
-						"Candidate [%s] not found in list of database filenames");
+				throw std::runtime_error("Candidate [%s] not found "
+						"in list of database filenames");
 			}
 
 			candidateImgId = std::distance(db_desc_list.begin(), it);
-			// printf("candidate name=[%s] id=[%d]\n", (*it).c_str(), candidateImgId);
 
 			mytime = cv::getTickCount();
 
@@ -348,63 +333,9 @@ int main(int argc, char **argv) {
 		ranked_list_fname.str("");
 		ranked_list_fname << out_ranked_lists_folder << "/query_" << i
 				<< "_ranked.txt";
-		saveList(ranked_list_fname.str(), geom_ranked_candidates_list);
+		FileUtils::saveList(ranked_list_fname.str(),
+				geom_ranked_candidates_list);
 	}
-
-}
-
-int loadList(const std::string& list_fpath, std::vector<std::string>& list) {
-
-	list.clear();
-
-	if (FileUtils::checkFileExist(list_fpath) == false) {
-		fprintf(stderr, "File [%s] doesn't exist\n", list_fpath.c_str());
-		return EXIT_FAILURE;
-	}
-
-	std::ifstream inputFileStream;
-	std::string line;
-
-	// Open file
-	inputFileStream.open(list_fpath.c_str(), std::fstream::in);
-
-	// Check file
-	if (inputFileStream.good() == false) {
-		fprintf(stderr, "Error while opening file [%s] for reading\n",
-				list_fpath.c_str());
-		return EXIT_FAILURE;
-	}
-
-	// Load list from file
-	while (getline(inputFileStream, line)) {
-		list.push_back(line);
-	}
-
-	// Close file
-	inputFileStream.close();
-
-	return EXIT_SUCCESS;
-}
-
-void saveList(const std::string& list_fpath,
-		const std::vector<std::string>& list) {
-
-	// Open file
-	std::ofstream outputFileStream(list_fpath.c_str(), std::fstream::out);
-
-	// Check file
-	if (outputFileStream.good() == false) {
-		throw std::runtime_error(
-				"Error while opening file [" + list_fpath + "] for writing\n");
-	}
-
-	// Save list to file
-	for (std::string line : list) {
-		outputFileStream << line << std::endl;
-	}
-
-	// Close file
-	outputFileStream.close();
 
 }
 
