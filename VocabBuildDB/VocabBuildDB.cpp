@@ -5,7 +5,6 @@
  *      Author: andresf
  */
 
-#include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -26,7 +25,7 @@ int main(int argc, char **argv) {
 
 	if (argc < 5 || argc > 8) {
 		printf(
-				"\nUsage:\n\tVocabBuildDB <in.db.desc.list> "
+				"\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
 						"<in.tree> <out.inverted.index> <out.direct.index> [in.type.binary:1]"
 						" [in.use.tfidf:1] [in.normalize:1]\n\n");
 		return EXIT_FAILURE;
@@ -35,10 +34,10 @@ int main(int argc, char **argv) {
 	bool use_tfidf = true;
 	bool normalize = true;
 
-	char *list_in = argv[1];
-	char *tree_in = argv[2];
-	char *out_inv_index = argv[3];
-	char *out_dir_index = argv[4];
+	std::string list_in = argv[1];
+	std::string tree_in = argv[2];
+	std::string out_inv_index = argv[3];
+	std::string out_dir_index = argv[4];
 	bool isDescriptorBinary = true;
 
 	if (argc >= 6) {
@@ -55,52 +54,25 @@ int main(int argc, char **argv) {
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
-	if (boost::regex_match(std::string(tree_in), expression) == false) {
+	if (boost::regex_match(tree_in, expression) == false) {
 		fprintf(stderr,
 				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
-	if (boost::regex_match(std::string(out_inv_index), expression) == false) {
+	if (boost::regex_match(out_inv_index, expression) == false) {
 		fprintf(stderr,
 				"Output inverted index file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
 	// Step 1/4: read list of descriptors that shall be used to build the tree
+	printf("-- Loading list of database images descriptors\n");
 	std::vector<std::string> descFilenames;
-	std::ifstream descList(list_in, std::fstream::in);
+	FileUtils::loadList(list_in, descFilenames);
+	printf("   Loaded, got [%lu] entries\n", descFilenames.size());
 
-	if (descList.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
-		return EXIT_FAILURE;
-	}
-
-	// Loading file names in list into a vector
-	std::string line;
-	while (getline(descList, line)) {
-		// Checking that file exists, if not print error and exit
-		struct stat buffer;
-		if (stat(line.c_str(), &buffer) != 0) {
-			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
-					line.c_str());
-			return EXIT_FAILURE;
-		}
-
-		// Checking file extension to be compressed yaml or xml
-		if (boost::regex_match(line, expression) == false) {
-			fprintf(stderr,
-					"Keypoints file [%s] must have the extension .yaml.gz or .xml.gz\n",
-					line.c_str());
-			return EXIT_FAILURE;
-		}
-
-		descFilenames.push_back(line);
-	}
-	// Close file
-	descList.close();
-
-	printf("-- Building DB using [%lu] images\n", descFilenames.size());
+	printf("-- Building database using [%lu] images\n", descFilenames.size());
 
 	cv::Ptr<bfeat::VocabTreeBase> tree;
 
@@ -110,10 +82,10 @@ int main(int argc, char **argv) {
 		tree = new bfeat::VocabTree<float, cv::L2<float> >();
 	}
 
-	printf("-- Reading tree from [%s]\n", tree_in);
+	printf("-- Reading tree from [%s]\n", tree_in.c_str());
 
 	mytime = cv::getTickCount();
-	tree->load(std::string(tree_in));
+	tree->load(tree_in);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
@@ -138,7 +110,7 @@ int main(int argc, char **argv) {
 			fprintf(stderr,
 					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
 					isDescriptorBinary == true ? "binary" : "non-binary",
-					imgDescriptors.type() == CV_8U ? "binary" : "real");
+					imgDescriptors.type() == CV_8U ? "binary" : "non-binary");
 			return EXIT_FAILURE;
 		}
 
@@ -176,19 +148,19 @@ int main(int argc, char **argv) {
 
 	tree->computeWordsWeights(weightingScheme);
 
-	printf("-- Applying words weights to the DB BoW vectors counts\n");
+	printf("-- Applying words weights to the database BoF vectors counts\n");
 	tree->createDatabase();
 
 	int normType = cv::NORM_L1;
 
 	if (normalize == true) {
-		printf("-- Normalizing DB BoW vectors using [%s]\n",
+		printf("-- Normalizing database BoF vectors using [%s]\n",
 				normType == cv::NORM_L1 ? "L1-norm" :
 				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
 		tree->normalizeDatabase(normType);
 	}
 
-	printf("-- Saving inverted index to [%s]\n", out_inv_index);
+	printf("-- Saving inverted index to [%s]\n", out_inv_index.c_str());
 
 	mytime = cv::getTickCount();
 	tree->saveInvertedIndex(out_inv_index);
@@ -197,7 +169,7 @@ int main(int argc, char **argv) {
 
 	printf("   Inverted index saved in [%lf] ms\n", mytime);
 
-	printf("-- Saving direct index to [%s]\n", out_dir_index);
+	printf("-- Saving direct index to [%s]\n", out_dir_index.c_str());
 
 	mytime = cv::getTickCount();
 	tree->saveDirectIndex(out_dir_index);

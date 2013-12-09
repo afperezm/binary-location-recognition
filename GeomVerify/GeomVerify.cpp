@@ -17,10 +17,10 @@ double mytime;
 
 void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		const std::vector<cv::KeyPoint>& keypoints1,
-		cv::vector<cv::Point2f>& matchedPoints1,
+		cv::vector<cv::Point2f>& matchedPoints1, cv::Mat& img1,
 		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
 		const std::vector<cv::KeyPoint>& keypoints2,
-		std::vector<cv::Point2f>& matchedPoints2,
+		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
 		std::vector<cv::DMatch>& matches1to2);
 
 // For each query
@@ -41,8 +41,8 @@ int main(int argc, char **argv) {
 				"\nUsage:\n"
 						"\tGeomVerify <in.tree> <in.direct.index> "
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
-						"<in.db.desc.list> <in.db.keys.folder> <in.queries.desc.list> <in.queries.keys.list> "
-						"<out.geom.ranked.files.folder> <in.top.results> "
+						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.list> "
+						"<out.re-ranked.files.folder> <in.top.results> "
 						"[in.type.binary:1] [in.ransac.thr:10]"
 						"\n\n");
 		return EXIT_FAILURE;
@@ -154,6 +154,11 @@ int main(int argc, char **argv) {
 
 	cv::Mat inliers_idx, candidates_inliers, candidates_inliers_idx, H;
 
+	cv::Mat imgMatches;
+	cv::Mat queryImg, candidateImg;
+
+	std::string queryBase, candidateBase;
+
 	// Loop over list of queries keypoints
 	for (size_t i = 0; i < queries_keys_list.size(); ++i) {
 		printf("-- Processing query [%lu]\n", i);
@@ -208,12 +213,22 @@ int main(int argc, char **argv) {
 
 			candidateImgId = std::distance(db_desc_list.begin(), it);
 
+			queryBase = queries_keys_list[i].substr(8,
+					queries_keys_list[i].length() - 20);
+			candidateBase = ranked_candidates_list[j];
+
+			queryImg = cv::imread("oxbuild_images/" + queryBase + ".jpg",
+					CV_LOAD_IMAGE_GRAYSCALE);
+			candidateImg = cv::imread(
+					"oxbuild_images/" + candidateBase + ".jpg",
+					CV_LOAD_IMAGE_GRAYSCALE);
+
 			mytime = cv::getTickCount();
 
 			matchKeypoints(directIndexQueries, queryImgId, queryKeypoints,
-					matchedQueryPoints, directIndexCandidates, candidateImgId,
-					candidateKeypoints, matchedCandidatePoints,
-					matchesCandidateToQuery);
+					matchedQueryPoints, queryImg, directIndexCandidates,
+					candidateImgId, candidateKeypoints, matchedCandidatePoints,
+					candidateImg, matchesCandidateToQuery);
 
 			mytime = (double(cv::getTickCount()) - mytime)
 					/ cv::getTickFrequency() * 1000;
@@ -222,63 +237,53 @@ int main(int argc, char **argv) {
 					int(matchesCandidateToQuery.size()), mytime);
 
 			if ((int(matchesCandidateToQuery.size())) < 4) {
-				fprintf(stderr, "Error while matching keypoints, need at least "
-						"4 putative matches for homography computation\n");
-				return EXIT_FAILURE;
-			}
+				fprintf(stderr, "   Cannot compute homography, "
+						"at least 4 putative matches are needed\n");
+			} else {
+				// Compute a projective transformation between query and ranked file using direct index
+				printf("   Computing projective transformation "
+						"between query [%lu] and candidate [%lu]\n", i, j);
 
-			// Compute a projective transformation between query and ranked file using direct index
-			printf("   Computing projective transformation "
-					"between query [%lu] and candidate [%lu]\n", i, j);
+				inliers_idx = cv::Mat();
 
-			inliers_idx = cv::Mat();
+				mytime = cv::getTickCount();
+				H = cv::findHomography(matchedCandidatePoints,
+						matchedQueryPoints, CV_RANSAC, ransacThreshold,
+						inliers_idx);
+				mytime = (double(cv::getTickCount()) - mytime)
+						/ cv::getTickFrequency() * 1000;
 
-			mytime = cv::getTickCount();
-			H = cv::findHomography(matchedCandidatePoints, matchedQueryPoints,
-					CV_RANSAC, ransacThreshold, inliers_idx);
-			mytime = (double(cv::getTickCount()) - mytime)
-					/ cv::getTickFrequency() * 1000;
+				// Obtain number of inliers
+				candidates_inliers.at<int>(0, j) = int(sum(inliers_idx)[0]);
 
-			// Obtain number of inliers
-			candidates_inliers.at<int>(0, j) = int(sum(inliers_idx)[0]);
+				printf(
+						"   Computed homography in [%0.3fs], found [%d] inliers\n",
+						mytime, candidates_inliers.at<int>(0, j));
 
-			printf("   Computed homography in [%0.3fs], found [%d] inliers\n",
-					mytime, candidates_inliers.at<int>(0, j));
-
-			/**** Drawing inlier matches ****/
-
-			std::vector<cv::DMatch> inliers;
-			for (int i = 0; i < inliers_idx.rows; ++i) {
-				if ((int) inliers_idx.at<uchar>(i) == 1) {
-					inliers.push_back(matchesCandidateToQuery.at(i));
+				/**** Drawing inlier matches ****/
+				std::vector<cv::DMatch> inliers;
+				for (int i = 0; i < inliers_idx.rows; ++i) {
+					if ((int) inliers_idx.at<uchar>(i) == 1) {
+						inliers.push_back(matchesCandidateToQuery.at(i));
+					}
 				}
+
+				cv::drawMatches(queryImg, queryKeypoints, candidateImg,
+						candidateKeypoints, inliers, imgMatches,
+						cv::Scalar::all(-1), cv::Scalar::all(-1),
+						std::vector<char>(),
+						cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+				cv::imwrite(
+						"oxbuild_images/match_" + queryBase + "_"
+								+ ranked_candidates_list[j] + ".jpg",
+						imgMatches);
+				/********************************/
+
 			}
-
-			cv::Mat imgMatches;
-			cv::Mat queryImg, candidateImg;
-
-			std::string queryBase = queries_keys_list[i].substr(8,
-					queries_keys_list[i].length() - 20);
-			std::string candidateBase = ranked_candidates_list[j];
-
-			queryImg = cv::imread("oxbuild_images/" + queryBase + ".jpg",
-					CV_LOAD_IMAGE_GRAYSCALE);
-			candidateImg = cv::imread(
-					"oxbuild_images/" + candidateBase + ".jpg",
-					CV_LOAD_IMAGE_GRAYSCALE);
-
-			cv::drawMatches(queryImg, queryKeypoints, candidateImg,
-					candidateKeypoints, inliers, imgMatches,
-					cv::Scalar::all(-1), cv::Scalar::all(-1),
-					std::vector<char>(),
-					cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-			cv::imwrite(
-					"oxbuild_images/match_" + queryBase + "_"
-							+ ranked_candidates_list[j] + ".jpg", imgMatches);
-
-			/********************************/
 
 		}
+
+		printf("-- Re-ranking candidates list\n");
 
 		// Re-order list of candidates by its inlier number
 		sortIdx(candidates_inliers, candidates_inliers_idx, CV_SORT_DESCENDING);
@@ -311,6 +316,9 @@ int main(int argc, char **argv) {
 				ranked_candidates_list.begin() + top,
 				ranked_candidates_list.end());
 
+		printf("   Done, re-ranked top [%d] candidates out of [%lu]\n", top,
+				geom_ranked_candidates_list.size());
+
 #if GVVERBOSE
 		printf("Full re-ranked candidates list:\n");
 		for (std::string candidate : geom_ranked_candidates_list) {
@@ -319,21 +327,26 @@ int main(int argc, char **argv) {
 		printf("\n");
 #endif
 
+		printf("-- Saving list of re-ranked candidates\n");
+
 		ranked_list_fname.str("");
 		ranked_list_fname << out_ranked_lists_folder << "/query_" << i
 				<< "_ranked.txt";
 		FileUtils::saveList(ranked_list_fname.str(),
 				geom_ranked_candidates_list);
+
+		printf("   Done, saved [%lu] entries\n",
+				geom_ranked_candidates_list.size());
 	}
 
 }
 
 void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		const std::vector<cv::KeyPoint>& keypoints1,
-		cv::vector<cv::Point2f>& matchedPoints1,
+		cv::vector<cv::Point2f>& matchedPoints1, cv::Mat& img1,
 		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
 		const std::vector<cv::KeyPoint>& keypoints2,
-		std::vector<cv::Point2f>& matchedPoints2,
+		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
 		std::vector<cv::DMatch>& matches1to2) {
 
 	// Clean up variables received as arguments
@@ -348,6 +361,16 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 	// Declare and initialize iterators to the maps to intersect
 	typename bfeat::TreeNode::const_iterator it1 = nodes1.begin();
 	typename bfeat::TreeNode::const_iterator it2 = nodes2.begin();
+
+	cv::Point2f point1, point2;
+
+	double dist, proximityThreshold = 40.0, similarityThreshold = 0.8, ncc;
+
+	int windowHalfLength = 10, windowSize = 2 * windowHalfLength + 1;
+
+	cv::Mat A, B, NCC;
+	cv::Scalar meanB, stdDevB;
+	cv::Scalar meanA, stdDevA;
 
 	// Intersect nodes maps, solution taken from:
 	// http://stackoverflow.com/questions/3772664/intersection-of-two-stl-maps
@@ -371,25 +394,72 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 									&& i2
 											< static_cast<int>(keypoints2.size()));
 
-					// Extract points
-					cv::Point2f point1 = keypoints1[i1].pt;
-					cv::Point2f point2 = keypoints2[i2].pt;
+					// Extract point
+					point1 = keypoints1[i1].pt;
+					point2 = keypoints2[i2].pt;
 
-					double dist = cv::norm(
+					dist = cv::norm(
 							cv::Point(point1.x, point1.y)
 									- cv::Point(point2.x, point2.y));
-
 					// Apply a proximity threshold
-					if (dist <= 40.0) {
-						// Add points to vectors of matched
-						matchedPoints1.push_back(point1);
-						matchedPoints2.push_back(point2);
-
-						cv::DMatch match = cv::DMatch(i1, i2,
-								cv::norm(point1 - point2));
-						// Set pair as a match
-						matches1to2.push_back(match);
+					if (dist > proximityThreshold) {
+						continue;
 					}
+
+					// Ignore features close to the border since they don't have enough support
+					if (point1.x - windowHalfLength < 0
+							|| point1.y - windowHalfLength < 0
+							|| point1.x + windowHalfLength + 1 > img1.cols
+							|| point1.y + windowHalfLength + 1 > img1.rows) {
+						continue;
+					}
+
+					// Ignore features close to the border since they don't have enough support
+					if (point2.x - windowHalfLength < 0
+							|| point2.y - windowHalfLength < 0
+							|| point2.x + windowHalfLength + 1 > img2.cols
+							|| point2.y + windowHalfLength + 1 > img2.rows) {
+						continue;
+					}
+
+					// Extract patches
+					A = cv::Mat(), B = cv::Mat();
+					img1(
+							cv::Range(int(point1.y) - windowHalfLength,
+									int(point1.y) + windowHalfLength + 1),
+							cv::Range(int(point1.x) - windowHalfLength,
+									int(point1.x) + windowHalfLength + 1)).convertTo(
+							A, CV_32F);
+					img2(
+							cv::Range(int(point2.y) - windowHalfLength,
+									int(point2.y) + windowHalfLength + 1),
+							cv::Range(int(point2.x) - windowHalfLength,
+									int(point2.x) + windowHalfLength + 1)).convertTo(
+							B, CV_32F);
+					meanStdDev(A, meanA, stdDevA);
+					meanStdDev(B, meanB, stdDevB);
+
+					// Computing normalized cross correlation for the patches A and B
+					subtract(A, meanA, A);
+					subtract(B, meanB, B);
+					multiply(A, B, NCC);
+					divide(NCC, stdDevA, NCC);
+					divide(NCC, stdDevB, NCC);
+
+					ncc = sum(NCC)[0] / std::pow(double(windowSize), 2);
+
+					if (ncc < similarityThreshold) {
+						continue;
+					}
+
+					// Add points to vectors of matched
+					matchedPoints1.push_back(point1);
+					matchedPoints2.push_back(point2);
+
+					cv::DMatch match = cv::DMatch(i1, i2,
+							cv::norm(point1 - point2));
+					// Set pair as a match
+					matches1to2.push_back(match);
 				}
 			}
 			++it1, ++it2;

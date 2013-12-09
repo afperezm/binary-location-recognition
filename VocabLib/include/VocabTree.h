@@ -60,11 +60,11 @@ struct VocabTreeParams: public cvflann::IndexParams {
 					cvflann::FLANN_CENTERS_RANDOM, int levels_up = 2) {
 		// branching factor
 		(*this)["branching"] = branching;
-		// max iterations to perform in one kmeans clustering (kmeans tree)
+		// max iterations to perform in one k-means clustering
 		(*this)["iterations"] = iterations;
 		// tree depth
 		(*this)["depth"] = depth;
-		// algorithm used for picking the initial cluster centers for kmeans tree
+		// algorithm used for picking the initial cluster centers for k-means tree
 		(*this)["centers_init"] = centers_init;
 		// Levels to go up the tree to select nodes to store in the direct index
 		(*this)["levels_up"] = levels_up;
@@ -732,7 +732,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 		node->children = new VocabTreeNodePtr[m_branching];
 		cv::FileNodeIterator it = children.begin();
 
-		for (size_t c = 0; (int) c < m_branching; ++c, it++) {
+		for (size_t c = 0; (int) c < m_branching; ++c, ++it) {
 			node->children[c] = new VocabTreeNode();
 			cv::FileNode child = *it;
 			load_tree(child, node->children[c]);
@@ -820,7 +820,7 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 	cv::FileNode images;
 
 	for (cv::FileNodeIterator word = words.begin(); word != words.end();
-			word++, wordId++) {
+			++word, ++wordId) {
 
 		m_words[wordId]->weight = double((*word)["weight"]);
 
@@ -880,7 +880,7 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 
 	// Checking indices to be in range, but actually is not necessary
 	// is just for avoing the unused warning
-	for (size_t i = 0; (int) i < indices_length; i++) {
+	for (size_t i = 0; (int) i < indices_length; ++i) {
 		CV_Assert(0 <= indices[i] && indices[i] < m_dataset.rows);
 	}
 
@@ -903,9 +903,9 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		int* indices, int indices_length, int level, bool fitted) {
 
 	node->node_id = m_size;
-	m_size++;
+	++m_size;
 
-	// Sort descriptors, caching levearges this fact
+	// Sort descriptors, caching leverages this fact
 	// Note: it doesn't affect the clustering process since all descriptors referenced by indices belong to the same cluster
 	if (level > 0) {
 		std::sort(indices, indices + indices_length);
@@ -961,7 +961,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		delete[] centers_idx;
 #if VTREEVERBOSE
 		printf(
-				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
+				"[VocabTree::computeClustering] (level %d): got less cluster indices than clusters (%d features)\n",
 				level, indices_length);
 #endif
 		return;
@@ -974,7 +974,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 
 	cv::Mat dcenters(m_branching, m_veclen, m_dataset.type());
-	for (int i = 0; i < centers_length; i++) {
+	for (int i = 0; i < centers_length; ++i) {
 		m_dataset.row(centers_idx[i]).copyTo(
 				dcenters(cv::Range(i, i + 1), cv::Range(0, m_veclen)));
 	}
@@ -997,7 +997,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		m_dataset.clearCache();
 		fitted = true;
 #if VTREEVERBOSE
-	printf("Clearing cache at level=[%d]\n", level);
+		printf("Clearing cache at level=[%d]\n", level);
 #endif
 	}
 
@@ -1009,11 +1009,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	int* belongs_to = new int[indices_length];
 	for (int i = 0; i < indices_length; ++i) {
-#if VTREEVERBOSE
-#if DEBUG
-		printf("descriptor=[%d]\n", indices[i]);
-#endif
-#endif
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
 				(TDescriptor*) dcenters.row(0).data, m_veclen);
@@ -1027,7 +1022,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				sq_dist = new_sq_dist;
 			}
 		}
-		count[belongs_to[i]]++;
+		++count[belongs_to[i]];
 	}
 
 #if DEBUG
@@ -1046,7 +1041,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 
 		converged = true;
-		iteration++;
+		++iteration;
 
 #if DEBUG
 #if VTREEVERBOSE
@@ -1065,13 +1060,13 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			// Zeroing matrix of cumulative bits
 			bitwiseCount = cv::Scalar::all(0);
 			// Bitwise summing the data into each centroid
-			for (size_t i = 0; (int) i < indices_length; i++) {
+			for (size_t i = 0; (int) i < indices_length; ++i) {
 				uint j = belongs_to[i];
 				cv::Mat b = bitwiseCount.row(j);
 				KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
 			}
 			// Bitwise majority voting
-			for (size_t j = 0; (int) j < m_branching; j++) {
+			for (size_t j = 0; (int) j < m_branching; ++j) {
 				cv::Mat centroid = dcenters.row(j);
 				KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
 						count[j]);
@@ -1119,8 +1114,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				}
 			}
 			if (new_centroid != belongs_to[i]) {
-				count[belongs_to[i]]--;
-				count[new_centroid]++;
+				--count[belongs_to[i]];
+				++count[new_centroid];
 				belongs_to[i] = new_centroid;
 
 				converged = false;
@@ -1152,8 +1147,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				for (int k = 0; k < indices_length; ++k) {
 					if (belongs_to[k] == j) {
 						belongs_to[k] = i;
-						count[j]--;
-						count[i]++;
+						--count[j];
+						++count[i];
 						break;
 					}
 				}
@@ -1195,7 +1190,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			if (belongs_to[i] == c) {
 				std::swap(indices[i], indices[end]);
 				std::swap(belongs_to[i], belongs_to[end]);
-				end++;
+				++end;
 			}
 		}
 
@@ -1223,13 +1218,10 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 	uint wordIdx;
 	double wordWeight;
-	int nodeAtL;
+	int nodeAtL; // unused
 
 	// Quantize each query image feature vector
-	for (size_t i = 0; (int) i < featuresVector.rows; i++) {
-
-//		printf("  Quantizing vector [%lu]\n", i);
-//		std::cout << featuresVector.row(i) << std::endl;
+	for (size_t i = 0; (int) i < featuresVector.rows; ++i) {
 
 		quantize(featuresVector.row(i), wordIdx, wordWeight, nodeAtL);
 
@@ -1254,54 +1246,29 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 	VocabTreeNodePtr best_node = m_root;
 
 	int level = 0;
-//	int k;
+
 	while (best_node->children != NULL) {
 
 		VocabTreeNodePtr node = best_node;
 
-//		k = 0;
 		// Arbitrarily assign to first child
 		best_node = node->children[0];
 		DistanceType best_distance = m_distance((TDescriptor*) feature.data,
 				best_node->center, m_veclen);
 
-//		for (size_t i = 0; i < m_veclen; i++) {
-//			printf("%f, ", best_node->center);
-//		}
-
-//		printf("d(%d)=%f ", k, best_distance);
-
-//		cvflann::L2<float> dfun = cvflann::L2<float>();
-//		cvflann::L2<float>::ResultType d = dfun((TDescriptor*) feature.data, best_node->center, m_veclen);
-
-//		std::cout << "feature:" << std::endl << feature << std::endl;
-//		std::cout << "center:" << std::endl;
-
-//		for (size_t i = 0; i < m_veclen; i++) {
-//			std::cout << best_node->center[i] << ",";
-//		}
-
-//		std::cout << std::endl;
-
-//		std::cout << "At level [" << level << "] distance to node [0] is " << "[" << best_distance << "]\n";
-
-//		size_t j;
 		// Looking for a better child
-		for (size_t j = 1; (int) j < m_branching; j++) {
+		for (size_t j = 1; (int) j < m_branching; ++j) {
 			DistanceType d = m_distance((TDescriptor*) feature.data,
 					node->children[j]->center, m_veclen);
-//			printf("d(%d)=%f ", j, d);
 			if (d < best_distance) {
 				best_distance = d;
 				best_node = node->children[j];
-//				k = j;
 				if (level == m_directIndex->getLevel()) {
 					nodeAtL = j;
 				}
 			}
 		}
-//		printf("\nlevel=[%d] node=[%d]\n", level, k);
-		level++;
+		++level;
 	}
 
 	// Turn node id into word id
@@ -1410,16 +1377,14 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 	double wordWeight; // not needed
 	int nodeAtL;
 
-	for (size_t i = 0; (int) i < imgFeatures.rows; i++) {
-//		printf("  Quantizing vector [%lu]\n", i);
-//		std::cout << imgFeatures.row(i) << std::endl;
+	for (size_t i = 0; (int) i < imgFeatures.rows; ++i) {
 		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 		m_directIndex->addFeature(imgIdx, nodeAtL, i);
 	}
 
 	// Increasing the counter of images in the DB
-	m_numDbImages++;
+	++m_numDbImages;
 }
 
 // --------------------------------------------------------------------------
@@ -1485,7 +1450,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 
 	// Applying power over sum result
 	if (normType == cv::NORM_L2) {
-		for (size_t i = 0; i < mags.size(); i++) {
+		for (size_t i = 0; i < mags.size(); ++i) {
 			mags[i] = sqrt(mags[i]);
 		}
 	}
@@ -1539,11 +1504,6 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
 
-	//	printf("BoW vector\n");
-	//	FunctionUtils::printDescriptors(queryBowVector);
-
-	//	std::cout << "Query BoW vector:\n" << queryBowVector << std::endl;
-
 	//	Efficient scoring query BoW vector against all DB BoW vectors
 
 	// ||v - w||_{L1} = 2 + Sum(|v_i - w_i| - |v_i| - |w_i|)
@@ -1593,7 +1553,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	}
 
 	// Completing efficient score implementation
-	for (int i = 0; i < scores.cols; i++) {
+	for (int i = 0; i < scores.cols; ++i) {
 		if (normType == cv::NORM_L1) {
 			scores.at<float>(0, i) = (float) (-scores.at<float>(0, i) / 2.0);
 		} else if (normType == cv::NORM_L2) {
@@ -1656,11 +1616,10 @@ bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
 
 	if (a->children == NULL) {
 		// Base case: both are leaf nodes since have no children
-
 		return true;
 	} else {
 		// Recursion case: both are interior nodes
-		for (size_t i = 0; (int) i < m_branching; i++) {
+		for (size_t i = 0; (int) i < m_branching; ++i) {
 			if (compareEqual(a->children[i], b->children[i]) == false) {
 				return false;
 			}
@@ -1684,10 +1643,6 @@ bool VocabTree<TDescriptor, Distance>::operator==(
 #endif
 		return false;
 	}
-
-//	if (m_words.size() != other.size()) {
-//		return false;
-//	}
 
 	if (compareEqual(getRoot(), other.getRoot()) == false) {
 #if DEBUG

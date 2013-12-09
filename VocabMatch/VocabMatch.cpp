@@ -5,7 +5,6 @@
  *      Author: andresf
  */
 
-#include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -37,11 +36,11 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	char *in_tree = argv[1];
-	char* in_inverted_index = argv[2];
-	char *in_db_desc_list = argv[3];
-	char *in_queries_desc_list = argv[4];
-	char *out_ranked_files_folder = argv[5];
+	std::string in_tree = argv[1];
+	std::string in_inverted_index = argv[2];
+	std::string in_db_desc_list = argv[3];
+	std::string in_queries_desc_list = argv[4];
+	std::string out_ranked_files_folder = argv[5];
 	uint num_nbrs = atoi(argv[6]);
 	bool is_binary = true;
 	const char *output_html = const_cast<char*>("results.html");
@@ -55,7 +54,7 @@ int main(int argc, char **argv) {
 	}
 
 	// Checking that database filename refers to a compressed yaml or xml file
-	if (boost::regex_match(std::string(in_tree), DESCRIPTOR_REGEX) == false) {
+	if (boost::regex_match(in_tree, DESCRIPTOR_REGEX) == false) {
 		fprintf(stderr,
 				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
@@ -70,85 +69,35 @@ int main(int argc, char **argv) {
 		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
 	}
 
-	printf("-- Loading tree from [%s]\n", in_tree);
+	printf("-- Loading tree from [%s]\n", in_tree.c_str());
 
 	mytime = cv::getTickCount();
-	tree->load(std::string(in_tree));
+	tree->load(in_tree);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
 			tree->size());
 
-	printf("-- Loading inverted index [%s]\n", in_inverted_index);
+	printf("-- Loading inverted index [%s]\n", in_inverted_index.c_str());
 
 	mytime = cv::getTickCount();
-	tree->loadInvertedIndex(std::string(in_inverted_index));
+	tree->loadInvertedIndex(in_inverted_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
 	printf("   Inverted index loaded in [%lf] ms\n", mytime);
 
-	std::ifstream inputFileStream;
-	std::string line;
-
 	// Step 2/4: load names of database files
 	printf("-- Loading names of database files\n");
 	std::vector<std::string> db_desc_list;
-	inputFileStream.open(in_db_desc_list, std::fstream::in);
-
-	if (inputFileStream.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n",
-				in_db_desc_list);
-		return EXIT_FAILURE;
-	}
-
-	// Loading names of database files
-	while (getline(inputFileStream, line)) {
-
-		// Checking that filename refers to a compressed yaml or xml file
-		if (boost::regex_match(line, DESCRIPTOR_REGEX) == false) {
-			fprintf(stderr, "File [%s] must have the extension "
-					".yaml.gz or .xml.gz\n", line.c_str());
-			return EXIT_FAILURE;
-		}
-
-		db_desc_list.push_back(line);
-	}
-	// Close file
-	inputFileStream.close();
+	FileUtils::loadList(in_db_desc_list, db_desc_list);
+	printf("   Loaded, got [%lu] entries\n", db_desc_list.size());
 
 	// Step 3/4: load list of queries descriptors
 	printf("-- Loading list of queries descriptors\n");
 	std::vector<std::string> query_filenames;
-	inputFileStream.open(in_queries_desc_list, std::fstream::in);
-
-	if (inputFileStream.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n",
-				in_queries_desc_list);
-		return EXIT_FAILURE;
-	}
-
-	// Loading file names in list into a vector
-	while (getline(inputFileStream, line)) {
-
-		// Checking that file exists, if not print error and exit
-		struct stat buffer;
-		if (stat(line.c_str(), &buffer) != 0) {
-			fprintf(stderr, "File [%s] doesn't exist\n", line.c_str());
-			return EXIT_FAILURE;
-		}
-
-		// Checking that line refers to a compressed yaml or xml file
-		if (boost::regex_match(line, DESCRIPTOR_REGEX) == false) {
-			fprintf(stderr, "File [%s] must have the extension "
-					".yaml.gz or .xml.gz\n", line.c_str());
-			return EXIT_FAILURE;
-		}
-
-		query_filenames.push_back(line);
-	}
-	// Close file
-	inputFileStream.close();
+	FileUtils::loadList(in_queries_desc_list, query_filenames);
+	printf("   Loaded, got [%lu] entries\n", query_filenames.size());
 
 	// Step 4/4: score each query
 	int normType = cv::NORM_L1;
@@ -203,13 +152,6 @@ int main(int argc, char **argv) {
 		// Print to standard output the matching scores between
 		// the query bow vector and the database images bow vectors
 		for (size_t j = 0; (int) j < scores.cols; ++j) {
-//			cv::Mat dbBowVector;
-//			tree->getDbBowVector(j, dbBowVector);
-//			std::cout << j << ") database BoW vector:\n" << dbBowVector << std::endl;
-//			printf(
-//					"   Match score between [%s] query image and [%lu] database image: %f\n",
-//					query_filenames[i].c_str(), j, scores.at<float>(0, j));
-//			getchar();
 			printf(
 					"   Match score between [%lu] query image and [%lu] database image: %f\n",
 					i, j, scores.at<float>(0, j));
@@ -219,18 +161,6 @@ int main(int argc, char **argv) {
 		cv::Mat perm;
 		// Note: recall that the index of the images in the inverted file corresponds
 		// to the zero-based line number in the file used to build the database.
-		// Hence scores matrix and db_landmarks and db_filenames vectors.
-		// are equally ordered.
-		// Also the images in list_db and list_db_ld must be equally ordered,
-		// that implies same number of elements.
-		//
-		// list_db      list_db_ld
-		//   img1  --->  img1 ld1
-		//   img2  --->  img2 ld1
-		//   img3  --->  img3 ld1
-		//   img4  --->  img4 ld2
-		//   img5  --->  img5 ld2
-		//   img6  --->  img6 ld2
 		cv::sortIdx(scores, perm, cv::SORT_EVERY_ROW + cv::SORT_DESCENDING);
 
 		std::stringstream ranked_list_fname;
