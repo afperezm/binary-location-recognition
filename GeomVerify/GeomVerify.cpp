@@ -30,6 +30,17 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		std::vector<cv::Point2f>& matchedPoints2,
 		std::vector<cv::DMatch>& matches1to2);
 
+// For each query
+//	 - Load its keys
+//	 - Load the list of its ranked candidates
+//	 - For each ranked candidate
+//		 - Load its keys
+//		 - Find correspondences between query and candidate by intersecting direct index results
+//		 - Match together all keypoints in same node and maybe apply some criteria for matching results
+//		 - Compute a projective transformation between query and ranked file using direct index
+//		 - Obtain number of inliers
+//	 - Re-order list of candidates by its number of inliers
+
 int main(int argc, char **argv) {
 
 	if (argc < 11 || argc > 14) {
@@ -39,7 +50,7 @@ int main(int argc, char **argv) {
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
 						"<in.db.desc.list> <in.db.keys.folder> <in.queries.desc.list> <in.queries.keys.list> "
 						"<out.geom.ranked.files.folder> <in.top.results> "
-						"[in.type.binary:1] [in.ransac.thr:10] [in.sim.thr:0.8]"
+						"[in.type.binary:1] [in.ransac.thr:10]"
 						"\n\n");
 		return EXIT_FAILURE;
 	}
@@ -260,7 +271,7 @@ int main(int argc, char **argv) {
 			printf("   Computed homography in [%0.3fs], found [%d] inliers\n",
 					mytime, candidates_inliers.at<int>(0, j));
 
-			///////////////
+			/**** Drawing inlier matches ****/
 
 			std::vector<cv::DMatch> inliers;
 			for (int i = 0; i < inliers_idx.rows; ++i) {
@@ -290,13 +301,15 @@ int main(int argc, char **argv) {
 			cv::imwrite(
 					"oxbuild_images/match_" + queryBase + "_"
 							+ ranked_candidates_list[j] + ".jpg", imgMatches);
-			///////////////
+
+			/********************************/
 
 		}
 
-		// Re-order list of candidates by its number of inliers
+		// Re-order list of candidates by its inlier number
 		sortIdx(candidates_inliers, candidates_inliers_idx, CV_SORT_DESCENDING);
 
+		// Copying re-ranked candidates
 		geom_ranked_candidates_list.clear();
 		for (size_t j = 0; int(j) < topResults; ++j) {
 			geom_ranked_candidates_list.push_back(
@@ -319,6 +332,7 @@ int main(int argc, char **argv) {
 		printf("\n");
 #endif
 
+		// Copying non re-ranked candidates
 		geom_ranked_candidates_list.insert(geom_ranked_candidates_list.end(),
 				ranked_candidates_list.begin() + topResults,
 				ranked_candidates_list.end());
@@ -336,17 +350,6 @@ int main(int argc, char **argv) {
 				<< "_ranked.txt";
 		saveList(ranked_list_fname.str(), geom_ranked_candidates_list);
 	}
-
-// For each query
-//	 - Load its keys
-//	 - Load the list of its ranked candidates
-//	 - For each ranked candidate
-//		 - Load its keys
-//		 - Find correspondences between query and candidate by intersecting direct index results
-//		 - Match together all keypoints in same node and maybe apply some criteria for matching results
-//		 - Compute a projective transformation between query and ranked file using direct index
-//		 - Obtain number of inliers
-//	 - Re-order list of candidates by its number of inliers
 
 }
 
