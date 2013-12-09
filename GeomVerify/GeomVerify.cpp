@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
 
 	std::vector<cv::DMatch> matchesCandidateToQuery;
 	std::vector<cv::Point2f> matchedCandidatePoints, matchedQueryPoints;
-	int candidateImgId, queryImgId;
+	int candidateImgId, queryImgId, top = -1;
 
 	cv::Mat inliers_idx, candidates_inliers, candidates_inliers_idx, H;
 
@@ -177,23 +177,12 @@ int main(int argc, char **argv) {
 		printf("   Loaded, got [%lu] candidates\n",
 				ranked_candidates_list.size());
 
-		if (int(ranked_candidates_list.size()) < topResults) {
-			// Caused by one of two:
-			// * Input argument topResults is too high.
-			// * Ranked list is too short.s
-			std::stringstream ss;
-			ss << "Not enough candidates for spatial re-ranking, "
-					"need at least [" << topResults << "] "
-					"but there are only ["
-					<< ranked_candidates_list.size() + "]";
-			throw std::runtime_error(ss.str());
-		}
+		top = MIN(int(ranked_candidates_list.size()), topResults);
 
-		candidates_inliers = cv::Mat::zeros(1, topResults,
-				cv::DataType<int>::type);
+		candidates_inliers = cv::Mat::zeros(1, top, cv::DataType<int>::type);
 
 		// Step 4c: load query ranked candidates
-		for (size_t j = 0; int(j) < topResults; ++j) {
+		for (size_t j = 0; int(j) < top; ++j) {
 
 			// Load keypoints of jth ranked candidate
 			printf("   Loading keypoints of candidate [%lu]\n", j);
@@ -296,7 +285,7 @@ int main(int argc, char **argv) {
 
 		// Copying re-ranked candidates
 		geom_ranked_candidates_list.clear();
-		for (size_t j = 0; int(j) < topResults; ++j) {
+		for (size_t j = 0; int(j) < top; ++j) {
 			geom_ranked_candidates_list.push_back(
 					ranked_candidates_list[candidates_inliers_idx.at<int>(0, j)]);
 		}
@@ -319,7 +308,7 @@ int main(int argc, char **argv) {
 
 		// Copying non re-ranked candidates
 		geom_ranked_candidates_list.insert(geom_ranked_candidates_list.end(),
-				ranked_candidates_list.begin() + topResults,
+				ranked_candidates_list.begin() + top,
 				ranked_candidates_list.end());
 
 #if GVVERBOSE

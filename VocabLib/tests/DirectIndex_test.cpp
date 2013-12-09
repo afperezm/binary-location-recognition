@@ -72,6 +72,9 @@ TEST(DirectIndex, SaveLoad) {
 	cv::Ptr<bfeat::DirectIndex> indexTwo = new bfeat::DirectIndex();
 	indexTwo->load("test_di.yaml.gz");
 
+	// Check level
+	EXPECT_TRUE(indexOne->getLevel() == indexTwo->getLevel());
+
 	// Check number of images in the index
 	EXPECT_TRUE(indexOne->size() == indexTwo->size());
 
