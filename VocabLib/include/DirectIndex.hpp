@@ -58,6 +58,8 @@ public:
 	 */
 	int getLevel() const;
 
+	void setLevel(int level);
+
 	/**
 	 * Updates the direct index of the given image by
 	 * pushing the feature to its corresponding node.

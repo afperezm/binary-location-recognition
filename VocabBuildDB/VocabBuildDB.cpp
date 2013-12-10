@@ -23,10 +23,10 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 8) {
+	if (argc < 6 || argc > 9) {
 		printf(
 				"\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
-						"<in.tree> <out.inverted.index> <out.direct.index> [in.type.binary:1]"
+						"<in.tree> <out.inverted.index> <out.direct.index> <in.levels.up> [in.type.binary:1]"
 						" [in.use.tfidf:1] [in.normalize:1]\n\n");
 		return EXIT_FAILURE;
 	}
@@ -38,18 +38,19 @@ int main(int argc, char **argv) {
 	std::string tree_in = argv[2];
 	std::string out_inv_index = argv[3];
 	std::string out_dir_index = argv[4];
+	int levelsUp = atoi(argv[5]);
 	bool isDescriptorBinary = true;
 
-	if (argc >= 6) {
-		isDescriptorBinary = atoi(argv[5]);
-	}
-
 	if (argc >= 7) {
-		use_tfidf = atoi(argv[6]);
+		isDescriptorBinary = atoi(argv[6]);
 	}
 
 	if (argc >= 8) {
-		normalize = atoi(argv[7]);
+		use_tfidf = atoi(argv[7]);
+	}
+
+	if (argc >= 9) {
+		normalize = atoi(argv[8]);
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -90,6 +91,9 @@ int main(int argc, char **argv) {
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
 			tree->size());
+
+	tree->setDirectIndexLevel(levelsUp);
+	printf("-- Direct index level [%d]\n", tree->getDirectIndexLevel());
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",

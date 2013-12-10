@@ -21,7 +21,8 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
 		const std::vector<cv::KeyPoint>& keypoints2,
 		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
-		std::vector<cv::DMatch>& matches1to2);
+		std::vector<cv::DMatch>& matches1to2, double proximityThreshold,
+		double similarityThreshold);
 
 // For each query
 //	 - Load its keys
@@ -36,14 +37,14 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 
 int main(int argc, char **argv) {
 
-	if (argc < 11 || argc > 14) {
+	if (argc < 11 || argc > 15) {
 		printf(
 				"\nUsage:\n"
 						"\tGeomVerify <in.tree> <in.direct.index> "
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
 						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.list> "
 						"<out.re-ranked.files.folder> <in.top.results> "
-						"[in.type.binary:1] [in.ransac.thr:10]"
+						"[in.type.binary:1] [in.ransac.thr:10] [in.proximity.thr:40] [in.similarity.thr:0.8]"
 						"\n\n");
 		return EXIT_FAILURE;
 	}
@@ -61,6 +62,8 @@ int main(int argc, char **argv) {
 	int topResults = atoi(argv[10]);
 	bool isBinary = argc >= 12 ? atoi(argv[11]) : true;
 	double ransacThreshold = argc >= 13 ? atof(argv[12]) : 10.0;
+	double proximityThreshold = argc >= 14 ? atof(argv[13]) : 40.0;
+	double similarityThreshold = argc >= 15 ? atof(argv[14]) : 0.8;
 
 	// Step 1/4: load tree + direct index
 	cv::Ptr<bfeat::VocabTreeBase> tree;
@@ -73,6 +76,10 @@ int main(int argc, char **argv) {
 	} else {
 		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
 	}
+
+	printf("-- Running spatial verification using proxThr=[%f] simThr=[%f] "
+			"ransacThr=[%f]\n", proximityThreshold, similarityThreshold,
+			ransacThreshold);
 
 	printf("-- Loading tree from [%s]\n", in_tree.c_str());
 	mytime = cv::getTickCount();
@@ -102,8 +109,12 @@ int main(int argc, char **argv) {
 	int nodeAtL, imgIdx = 0;
 	cv::Mat queryDescriptors;
 
+	tree->setDirectIndexLevel(
+			tree->getDepth() - 1 - directIndexCandidates->getLevel());
+
 	printf(
-			"-- Loading queries descriptors and adding them to the direct index\n");
+			"-- Loading queries descriptors and adding them to the direct index, level=[%d]\n",
+			tree->getDirectIndexLevel());
 	// Loop over list of queries descriptors
 	for (std::string descriptorsFilename : queries_desc_list) {
 		// Load query descriptors
@@ -228,7 +239,8 @@ int main(int argc, char **argv) {
 			matchKeypoints(directIndexQueries, queryImgId, queryKeypoints,
 					matchedQueryPoints, queryImg, directIndexCandidates,
 					candidateImgId, candidateKeypoints, matchedCandidatePoints,
-					candidateImg, matchesCandidateToQuery);
+					candidateImg, matchesCandidateToQuery, proximityThreshold,
+					similarityThreshold);
 
 			mytime = (double(cv::getTickCount()) - mytime)
 					/ cv::getTickFrequency() * 1000;
@@ -347,7 +359,8 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
 		const std::vector<cv::KeyPoint>& keypoints2,
 		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
-		std::vector<cv::DMatch>& matches1to2) {
+		std::vector<cv::DMatch>& matches1to2, double proximityThreshold,
+		double similarityThreshold) {
 
 	// Clean up variables received as arguments
 	matchedPoints1.clear();
@@ -364,7 +377,7 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 
 	cv::Point2f point1, point2;
 
-	double dist, proximityThreshold = 40.0, similarityThreshold = 0.8, ncc;
+	double dist, ncc;
 
 	int windowHalfLength = 10, windowSize = 2 * windowHalfLength + 1;
 

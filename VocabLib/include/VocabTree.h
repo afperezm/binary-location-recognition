@@ -132,6 +132,11 @@ public:
 
 	virtual const std::vector<ImageCount>& getWordImageList(size_t i) const = 0;
 
+	virtual int getDirectIndexLevel() = 0;
+
+	virtual void setDirectIndexLevel(int levelsUp) = 0;
+
+	virtual int getDepth() const = 0;
 };
 
 static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
@@ -410,6 +415,20 @@ public:
 		return m_words[i]->image_list;
 	}
 
+	int getDirectIndexLevel() {
+		return m_directIndex->getLevel();
+	}
+
+	void setDirectIndexLevel(int levelsUp) {
+		int directIndexLevel = m_depth - 1 - levelsUp;
+		if (directIndexLevel < 0) {
+			directIndexLevel = 0;
+		} else if (directIndexLevel > m_depth - 1) {
+			directIndexLevel = m_depth - 1;
+		}
+		m_directIndex->setLevel(directIndexLevel);
+	}
+
 private:
 
 	/**
@@ -507,13 +526,8 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	m_depth = get_param(params, "depth", 10);
 	m_centers_init = get_param(params, "centers_init",
 			cvflann::FLANN_CENTERS_RANDOM);
-	int directIndexLevel = m_depth - get_param(params, "di_levels_up", 2);
-	if (directIndexLevel < 0) {
-		directIndexLevel = 0;
-	} else if (directIndexLevel >= m_depth - 1) {
-		directIndexLevel = m_depth;
-	}
-	m_directIndex = new bfeat::DirectIndex(directIndexLevel);
+	m_directIndex = new bfeat::DirectIndex();
+	setDirectIndexLevel(get_param(params, "levels_up", 0));
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {

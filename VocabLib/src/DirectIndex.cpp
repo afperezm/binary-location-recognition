@@ -27,6 +27,10 @@ int DirectIndex::getLevel() const {
 	return m_level;
 }
 
+void DirectIndex::setLevel(int level) {
+	m_level = level;
+}
+
 void DirectIndex::addFeature(int imgIdx, int nodeId, int featureId) {
 
 	// Lookup image in the direct index
