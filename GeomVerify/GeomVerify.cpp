@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
 						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.list> "
 						"<out.re-ranked.files.folder> <in.top.results> "
-						"[in.type.binary:1] [in.ransac.thr:10] [in.proximity.thr:40] [in.similarity.thr:0.8]"
+						"[in.type.binary:1] [in.ransac.thr:10] [in.proximity.thr:40] [in.similarity.thr:0.4]"
 						"\n\n");
 		return EXIT_FAILURE;
 	}
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 	bool isBinary = argc >= 12 ? atoi(argv[11]) : true;
 	double ransacThreshold = argc >= 13 ? atof(argv[12]) : 10.0;
 	double proximityThreshold = argc >= 14 ? atof(argv[13]) : 40.0;
-	double similarityThreshold = argc >= 15 ? atof(argv[14]) : 0.8;
+	double similarityThreshold = argc >= 15 ? atof(argv[14]) : 0.4;
 
 	// Step 1/4: load tree + direct index
 	cv::Ptr<bfeat::VocabTreeBase> tree;
