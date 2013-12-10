@@ -55,7 +55,7 @@ enum WeightingType {
 };
 
 struct VocabTreeParams: public cvflann::IndexParams {
-	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 1,
+	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 10,
 			cvflann::flann_centers_init_t centers_init =
 					cvflann::FLANN_CENTERS_RANDOM, int levels_up = 2) {
 		// branching factor
@@ -521,13 +521,13 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
-	m_branching = get_param(params, "branching", 6);
-	m_iterations = get_param(params, "iterations", 1);
-	m_depth = get_param(params, "depth", 10);
+	m_branching = get_param(params, "branching", 10);
+	m_iterations = get_param(params, "iterations", 10);
+	m_depth = get_param(params, "depth", 6);
 	m_centers_init = get_param(params, "centers_init",
 			cvflann::FLANN_CENTERS_RANDOM);
 	m_directIndex = new bfeat::DirectIndex();
-	setDirectIndexLevel(get_param(params, "levels_up", 0));
+	setDirectIndexLevel(get_param(params, "levels_up", 2));
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
