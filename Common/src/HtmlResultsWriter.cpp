@@ -5,6 +5,8 @@
  *      Author: andresf
  */
 
+#include <stdexcept>
+
 #include "HtmlResultsWriter.hpp"
 
 void HtmlResultsWriter::basifyFilename(const char *filename, char *base) {
@@ -14,8 +16,22 @@ void HtmlResultsWriter::basifyFilename(const char *filename, char *base) {
 
 // --------------------------------------------------------------------------
 
-void HtmlResultsWriter::writeHeader(FILE *f, int num_nns) {
-	fprintf(f, "<html>\n"
+void open(const std::string& file_name, int num_candidates) {
+
+}
+
+// --------------------------------------------------------------------------
+
+void HtmlResultsWriter::open(const std::string& file_name, int num_nns) {
+
+	f_html = fopen(file_name.c_str(), "w");
+
+	if (f_html == NULL) {
+		throw std::runtime_error(
+				"Error opening file [" + file_name + "] for writing");
+	}
+
+	fprintf(f_html, "<html>\n"
 			"<header>\n"
 			"<title>Vocabulary tree results</title>\n"
 			"</header>\n"
@@ -23,23 +39,24 @@ void HtmlResultsWriter::writeHeader(FILE *f, int num_nns) {
 			"<h1>Vocabulary tree results</h1>\n"
 			"<hr>\n\n");
 
-	fprintf(f, "<table border=2 align=center>\n<tr>\n<th>Query image</th>\n");
+	fprintf(f_html,
+			"<table border=2 align=center>\n<tr>\n<th>Query image</th>\n");
 	for (int i = 0; i < num_nns; i++) {
-		fprintf(f, "<th>Match %d</th>\n", i + 1);
+		fprintf(f_html, "<th>Match %d</th>\n", i + 1);
 	}
-	fprintf(f, "</tr>\n");
+	fprintf(f_html, "</tr>\n");
 }
 
 // --------------------------------------------------------------------------
 
-void HtmlResultsWriter::writeRow(FILE *f, const std::string &query,
-		cv::Mat& scores, cv::Mat& perm, int num_nns,
-		const std::vector<std::string> &db_images) {
+void HtmlResultsWriter::writeRow(const std::string &query, cv::Mat& scores,
+		cv::Mat& perm, int num_nns, const std::vector<std::string>& db_images) {
+
 	char q_base[512], q_thumb[512];
 	basifyFilename(query.c_str(), q_base);
 	sprintf(q_thumb, "%s.thumb.jpg", q_base);
 
-	fprintf(f,
+	fprintf(f_html,
 			"<tr align=center>\n<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
 			q_thumb, q_thumb);
 
@@ -48,28 +65,30 @@ void HtmlResultsWriter::writeRow(FILE *f, const std::string &query,
 		basifyFilename(db_images[perm.at<int>(0, i)].c_str(), d_base);
 		sprintf(d_thumb, "%s.thumb.jpg", d_base);
 
-		fprintf(f,
+		fprintf(f_html,
 				"<td><img src=\"%s\" style=\"max-height:200px\"><br><p>%s</p></td>\n",
 				d_thumb, d_thumb);
 	}
 
-	fprintf(f, "</tr>\n<tr align=right>\n");
+	fprintf(f_html, "</tr>\n<tr align=right>\n");
 
-	fprintf(f, "<td></td>\n");
+	fprintf(f_html, "<td></td>\n");
 	for (int i = 0; i < num_nns; i++)
-		fprintf(f, "<td>%0.5f</td>\n", scores.at<float>(0, perm.at<int>(0, i)));
+		fprintf(f_html, "<td>%0.5f</td>\n",
+				scores.at<float>(0, perm.at<int>(0, i)));
 
-	fprintf(f, "</tr>\n");
+	fprintf(f_html, "</tr>\n");
 }
 
 // --------------------------------------------------------------------------
 
-void HtmlResultsWriter::writeFooter(FILE *f) {
-	fprintf(f, "</tr>\n"
+void HtmlResultsWriter::close() {
+	fprintf(f_html, "</tr>\n"
 			"</table>\n"
 			"<hr>\n"
 			"</body>\n"
 			"</html>\n");
+	fclose(f_html);
 }
 
 // --------------------------------------------------------------------------

@@ -32,9 +32,11 @@ static std::vector<std::string> DEFAULT_FILENAMES;
 
 class DynamicMat {
 
-private:
+public:
 
 	static const int MAX_MEM = 1075000000; // ~1GB
+
+private:
 
 	double m_capacity = 0.0;
 	int m_descriptorType = -1;

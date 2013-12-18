@@ -23,19 +23,19 @@ public:
 		return instance;
 	}
 
-	void writeHeader(FILE *f, int num_nns);
+	void open(const std::string& file_name, int num_nns);
 
-	void writeRow(FILE *f, const std::string &query, cv::Mat& scores,
-			cv::Mat& perm, int num_nns,
-			const std::vector<std::string> &db_images);
+	void writeRow(const std::string &query, cv::Mat& scores, cv::Mat& perm,
+			int num_nns, const std::vector<std::string>& db_images);
 
-	void writeFooter(FILE *f);
+	void close();
 
 	std::string getHtml() const;
 
 private:
 	// Make the constructor private so that it cannot be instantiated from outside
-	HtmlResultsWriter() {
+	HtmlResultsWriter() :
+			f_html(NULL) {
 	}
 	;
 
@@ -47,6 +47,7 @@ private:
 	void basifyFilename(const char *filename, char *base);
 
 protected:
+	FILE* f_html;
 	std::stringstream html;
 };
 

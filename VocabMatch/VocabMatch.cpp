@@ -114,12 +114,7 @@ int main(int argc, char **argv) {
 	// Compute the number of candidates
 	int top = MIN (num_nbrs, db_desc_list.size());
 
-	FILE *f_html = fopen(output_html, "w");
-	HtmlResultsWriter::getInstance().writeHeader(f_html, top);
-	if (f_html == NULL) {
-		fprintf(stderr, "Error opening file [%s] for writing\n", output_html);
-		return EXIT_FAILURE;
-	}
+	HtmlResultsWriter::getInstance().open(output_html, top);
 
 	for (size_t i = 0; i < query_filenames.size(); ++i) {
 		// Initialize descriptors
@@ -182,14 +177,13 @@ int main(int argc, char **argv) {
 		fclose(f_ranked_list);
 
 		// Print to a file the ranked list of candidates ordered by score in HTML format
-		HtmlResultsWriter::getInstance().writeRow(f_html, query_filenames[i],
-				scores, perm, top, db_desc_list);
+		HtmlResultsWriter::getInstance().writeRow(query_filenames[i], scores,
+				perm, top, db_desc_list);
 		scores.release();
 		perm.release();
 	}
 
-	HtmlResultsWriter::getInstance().writeFooter(f_html);
-	fclose(f_html);
+	HtmlResultsWriter::getInstance().close();
 
 	return EXIT_SUCCESS;
 }

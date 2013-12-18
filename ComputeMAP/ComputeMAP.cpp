@@ -62,16 +62,14 @@ int main(int argc, char** argv) {
 
 		ap = compute_ap(pos_set, junk_set, ranked_list, fname.str());
 
-#if CMAPVERBOSE
-		printf("%f\n", ap);
-#endif
+		printf("-- Average precision is [%f]\n", ap);
 
 		map += ap;
 
 		++i;
 	}
 
-	printf("-- Mean average precision is [%f]\n", map / (float) i);
+	printf("-- Mean average precision is [%f]\n", map / float(i));
 
 	return 0;
 }
@@ -123,19 +121,19 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 	for (; i < ranked_list.size(); ++i) {
 		if (absent.count(ranked_list[i])) {
 #if CMAPVERBOSE
-			printf("%03lu) negative\n", i);
+			printf("%03lu - %s) negative\n", i, ranked_list[i].c_str());
 #endif
 			// skip for the not relevant since they don't contribute
 			// i.e. no area under the curve
 			continue;
 		} else if (pos.count(ranked_list[i])) {
 #if CMAPVERBOSE
-			printf("%03lu) relevant ", i);
+			printf("%03lu - %s) relevant ", i, ranked_list[i].c_str());
 #endif
 			++intersect_size;
 		} else {
 #if CMAPVERBOSE
-			printf("%03lu) notrelevant ", i);
+			printf("%03lu - %s) non-relevant ", i, ranked_list[i].c_str());
 #endif
 		}
 

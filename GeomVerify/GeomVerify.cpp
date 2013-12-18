@@ -5,24 +5,21 @@
  *      Author: andresf
  */
 
+#include <iostream>
+
 #include <boost/regex.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/flann/logger.h>
 #include <opencv2/highgui/highgui.hpp>
+
+#include <matching.hpp>
 
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
+#include <HtmlResultsWriter.hpp>
 #include <VocabTree.h>
 
 double mytime;
-
-void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
-		const std::vector<cv::KeyPoint>& keypoints1,
-		cv::vector<cv::Point2f>& matchedPoints1, cv::Mat& img1,
-		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
-		const std::vector<cv::KeyPoint>& keypoints2,
-		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
-		std::vector<cv::DMatch>& matches1to2, double proximityThreshold,
-		double similarityThreshold);
 
 // For each query
 //	 - Load its keys
@@ -37,14 +34,14 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
 
 int main(int argc, char **argv) {
 
-	if (argc < 11 || argc > 15) {
+	if (argc < 11 || argc > 16) {
 		printf(
 				"\nUsage:\n"
 						"\tGeomVerify <in.tree> <in.direct.index> "
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
-						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.list> "
-						"<out.re-ranked.files.folder> <in.top.results> "
-						"[in.type.binary:1] [in.ransac.thr:10] [in.proximity.thr:40] [in.similarity.thr:0.4]"
+						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.folder> "
+						"<out.re-ranked.files.folder> <in.top.candidates> "
+						"[in.type.binary:1] [in.topKeypoints:500] [in.ratio.thr:0.8] [im.min.matches:8] [in.ransac.thr:10]"
 						"\n\n");
 		return EXIT_FAILURE;
 	}
@@ -56,14 +53,15 @@ int main(int argc, char **argv) {
 	std::string in_db_desc_list = argv[5]; // Used to obtain the mapping dbimg.candidate -> dbimg.id
 	std::string in_db_keys_folder = argv[6]; // Used to load query ranked candidates
 	std::string in_queries_desc_list = argv[7]; // Quantized in tree to match keypoints represented by the same word
-	std::string in_queries_keys_list = argv[8];
+	std::string in_queries_keys_folder = argv[8];
 	std::string out_ranked_lists_folder = argv[9];
 
-	int topResults = atoi(argv[10]);
+	int topCandidates = atoi(argv[10]);
 	bool isBinary = argc >= 12 ? atoi(argv[11]) : true;
-	double ransacThreshold = argc >= 13 ? atof(argv[12]) : 10.0;
-	double proximityThreshold = argc >= 14 ? atof(argv[13]) : 40.0;
-	double similarityThreshold = argc >= 15 ? atof(argv[14]) : 0.4;
+	int topKeypoints = argc >= 13 ? atoi(argv[12]) : 500;
+	double ratioThreshold = argc >= 14 ? atof(argv[13]) : 0.8;
+	int ransacMinMatches = argc >= 15 ? atoi(argv[14]) : 8;
+	double ransacThreshold = argc >= 16 ? atof(argv[15]) : 10.0;
 
 	// Step 1/4: load tree + direct index
 	cv::Ptr<bfeat::VocabTreeBase> tree;
@@ -77,8 +75,10 @@ int main(int argc, char **argv) {
 		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
 	}
 
-	printf("-- Running spatial verification using proxThr=[%f] simThr=[%f] "
-			"ransacThr=[%f]\n", proximityThreshold, similarityThreshold,
+	printf(
+			"-- Running spatial verification using topCandidates=[%d] topKeypoints=[%d] "
+					"ratioThr=[%2.1f] ransacMinMatches=[%d] ransacThr=[%2.1f]\n",
+			topCandidates, topKeypoints, ratioThreshold, ransacMinMatches,
 			ransacThreshold);
 
 	printf("-- Loading tree from [%s]\n", in_tree.c_str());
@@ -132,17 +132,7 @@ int main(int argc, char **argv) {
 	printf("   Loaded and added descriptors of [%lu] images\n",
 			directIndexCandidates->size());
 
-	// Step 3a: load list of queries keypoints
-	printf("-- Loading list of queries keypoints\n");
-	std::vector<std::string> queries_keys_list;
-	FileUtils::loadList(in_queries_keys_list, queries_keys_list);
-	printf("   Loaded, got [%lu] entries\n", queries_keys_list.size());
-
-	if (queries_desc_list.size() != queries_keys_list.size()) {
-		fprintf(stderr, "Different number of entries between "
-				"lists of queries descriptors and keypoints\n");
-		return EXIT_FAILURE;
-	}
+	// Step 3a: load list of queries key-points
 
 	// Step 3b: load names of database files
 	printf("-- Loading names of database files\n");
@@ -150,8 +140,8 @@ int main(int argc, char **argv) {
 	FileUtils::loadList(in_db_desc_list, db_desc_list);
 	printf("   Loaded, got [%lu] entries\n", db_desc_list.size());
 
-	// Step 4/4: load and process queries keypoints
-	printf("-- Loading and processing queries keypoints\n");
+	// Step 4/4: load and process queries key-points
+	printf("-- Loading and processing queries key-points\n");
 	std::vector<cv::KeyPoint> queryKeypoints;
 
 	std::vector<std::string> ranked_candidates_list,
@@ -159,32 +149,44 @@ int main(int argc, char **argv) {
 	std::vector<cv::KeyPoint> candidateKeypoints;
 	std::stringstream ranked_list_fname;
 
-	std::vector<cv::DMatch> matchesCandidateToQuery;
+	std::vector<cv::DMatch> matchesCandidateToQuery, inlierMatches;
 	std::vector<cv::Point2f> matchedCandidatePoints, matchedQueryPoints;
 	int candidateImgId, queryImgId, top = -1;
 
 	cv::Mat inliers_idx, candidates_inliers, candidates_inliers_idx, H;
 
-	cv::Mat imgMatches;
+	cv::Mat imgOut;
 	cv::Mat queryImg, candidateImg;
+	cv::Mat candidateDescriptors;
 
 	std::string queryBase, candidateBase;
 
-	// Loop over list of queries keypoints
-	for (size_t i = 0; i < queries_keys_list.size(); ++i) {
-		printf("-- Processing query [%lu]\n", i);
+	cvflann::Logger::setDestination("inliers.log");
+
+	HtmlResultsWriter::getInstance().open("results_gv.html", topCandidates);
+
+	// Loop over list of queries key-points
+	for (size_t i = 0; i < queries_desc_list.size(); ++i) {
+		printf("-- Processing query [%lu] - [%s]\n", i,
+				queries_desc_list[i].c_str());
 		queryImgId = i;
 
-		// Step 4a: load query keypoints
-		printf("   Loading keypoints\n");
-		FileUtils::loadKeypoints(queries_keys_list[i], queryKeypoints);
-		printf("   Loaded, got [%lu] keypoints\n", queryKeypoints.size());
+		queryBase = queries_desc_list[i].substr(8,
+				queries_desc_list[i].length() - 16);
+
+		// Step 4a: load and pre-process query features
+		printf("   Load and pre-process query features\n");
+		FileUtils::loadKeypoints(
+				in_queries_keys_folder + "/" + queryBase + "_kpt.yaml.gz",
+				queryKeypoints);
+		FileUtils::loadDescriptors(queries_desc_list[i], queryDescriptors);
+		filterFeatures(queryKeypoints, queryDescriptors, topKeypoints);
 
 		// Step 4b: load list of query ranked candidates
 		printf("   Loading list of ranked candidates\n");
 		// Load list of query ranked candidates
-		// Note: recall that elements in the lists of queries keypoints and descriptors
-		// follow the same order and hence using query keypoints filename position to build
+		// Note: recall that elements in the lists of queries key-points and descriptors
+		// follow the same order and hence using query key-points filename position to build
 		// its ranked candidates filename its legal
 		ranked_list_fname.str("");
 		ranked_list_fname << in_ranked_lists_folder << "/query_" << i
@@ -193,23 +195,37 @@ int main(int argc, char **argv) {
 		printf("   Loaded, got [%lu] candidates\n",
 				ranked_candidates_list.size());
 
-		top = MIN(int(ranked_candidates_list.size()), topResults);
+		top = MIN(int(ranked_candidates_list.size()), topCandidates);
 
 		candidates_inliers = cv::Mat::zeros(1, top, cv::DataType<int>::type);
 
-		// Step 4c: load query ranked candidates
+		queryImg = cv::imread("oxbuild_images/" + queryBase + ".jpg",
+				CV_LOAD_IMAGE_GRAYSCALE);
+
+//		imgOut = cv::Mat();
+//		cv::drawKeypoints(queryImg, queryKeypoints, imgOut,
+//				cv::Scalar(255, 255, 0), cv::DrawMatchesFlags::DEFAULT);
+//		cv::namedWindow("oxbuild_images/" + queryBase + ".jpg",
+//				cv::WINDOW_NORMAL);
+//		cv::resizeWindow("oxbuild_images/" + queryBase + ".jpg", 500, 500);
+//		cv::imshow("oxbuild_images/" + queryBase + ".jpg", imgOut);
+//		cv::waitKey(0);
+
+		// Step 4c: load and pre-process candidate features
 		for (size_t j = 0; int(j) < top; ++j) {
 
-			// Load keypoints of jth ranked candidate
-			printf("   Loading keypoints of candidate [%lu]\n", j);
+			printf("   Load and pre-process candidate features\n");
 			FileUtils::loadKeypoints(
 					in_db_keys_folder + "/" + ranked_candidates_list[j]
 							+ "_kpt.yaml.gz", candidateKeypoints);
-			printf("   Loaded, got [%lu] keypoints\n",
-					candidateKeypoints.size());
+			FileUtils::loadDescriptors(
+					"db/" + ranked_candidates_list[j] + ".yaml.gz",
+					candidateDescriptors);
+			filterFeatures(candidateKeypoints, candidateDescriptors,
+					topKeypoints);
 
 			// Searching putative matches
-			printf("   Matching keypoints of query [%lu] "
+			printf("   Matching key-points of query [%lu] "
 					"against candidate [%lu]\n", i, j);
 
 			// Id of database image
@@ -224,23 +240,48 @@ int main(int argc, char **argv) {
 
 			candidateImgId = std::distance(db_desc_list.begin(), it);
 
-			queryBase = queries_keys_list[i].substr(8,
-					queries_keys_list[i].length() - 20);
 			candidateBase = ranked_candidates_list[j];
-
-			queryImg = cv::imread("oxbuild_images/" + queryBase + ".jpg",
-					CV_LOAD_IMAGE_GRAYSCALE);
 			candidateImg = cv::imread(
 					"oxbuild_images/" + candidateBase + ".jpg",
 					CV_LOAD_IMAGE_GRAYSCALE);
 
+//			imgOut = cv::Mat();
+//			cv::drawKeypoints(candidateImg, candidateKeypoints, imgOut,
+//					cv::Scalar(255, 255, 0), cv::DrawMatchesFlags::DEFAULT);
+//			cv::namedWindow("oxbuild_images/" + candidateBase + ".jpg",
+//					cv::WINDOW_NORMAL);
+//			cv::resizeWindow("oxbuild_images/" + candidateBase + ".jpg", 500,
+//					500);
+//			cv::imshow("oxbuild_images/" + candidateBase + ".jpg", imgOut);
+//			cv::waitKey(0);
+
 			mytime = cv::getTickCount();
 
-			matchKeypoints(directIndexQueries, queryImgId, queryKeypoints,
-					matchedQueryPoints, queryImg, directIndexCandidates,
-					candidateImgId, candidateKeypoints, matchedCandidatePoints,
-					candidateImg, matchesCandidateToQuery, proximityThreshold,
-					similarityThreshold);
+			// TODO Use the direct index to pre-filter query and candidate key-points
+
+			matchKeypoints(candidateKeypoints, candidateDescriptors,
+					queryKeypoints, queryDescriptors, matchesCandidateToQuery,
+					topKeypoints, ratioThreshold);
+
+			matchedCandidatePoints.clear();
+			matchedQueryPoints.clear();
+
+			for (cv::DMatch& match : matchesCandidateToQuery) {
+//				double kptsDist = cv::norm(
+//						cv::Point(candidateKeypoints[match.queryIdx].pt.x,
+//								candidateKeypoints[match.queryIdx].pt.y)
+//								- cv::Point(queryKeypoints[match.trainIdx].pt.x,
+//										queryKeypoints[match.trainIdx].pt.y));
+//
+//				// Apply a proximity threshold
+//				if (kptsDist > 200) {
+//					continue;
+//				}
+				// Add points to vectors of matched
+				matchedQueryPoints.push_back(queryKeypoints[match.trainIdx].pt);
+				matchedCandidatePoints.push_back(
+						candidateKeypoints[match.queryIdx].pt);
+			}
 
 			mytime = (double(cv::getTickCount()) - mytime)
 					/ cv::getTickFrequency() * 1000;
@@ -248,9 +289,24 @@ int main(int argc, char **argv) {
 			printf("   Found [%d] putative matches in [%lf] ms\n",
 					int(matchesCandidateToQuery.size()), mytime);
 
-			if ((int(matchesCandidateToQuery.size())) < 4) {
+//			imgOut = cv::Mat();
+//			cv::drawMatches(candidateImg, candidateKeypoints, queryImg,
+//					queryKeypoints, matchesCandidateToQuery, imgOut);
+//			cv::namedWindow(
+//					"oxbuild_images/" + queryBase + "_" + candidateBase
+//							+ ".jpg", cv::WINDOW_NORMAL);
+//			cv::resizeWindow(
+//					"oxbuild_images/" + queryBase + "_" + candidateBase
+//							+ ".jpg", 500, 500);
+//			cv::imshow(
+//					"oxbuild_images/" + queryBase + "_" + candidateBase
+//							+ ".jpg", imgOut);
+//			cv::waitKey(0);
+
+			if ((int(matchesCandidateToQuery.size())) < ransacMinMatches) {
 				fprintf(stderr, "   Cannot compute homography, "
-						"at least 4 putative matches are needed\n");
+						"at least [%d] putative matches are needed\n",
+						ransacMinMatches);
 			} else {
 				// Compute a projective transformation between query and ranked file using direct index
 				printf("   Computing projective transformation "
@@ -266,32 +322,43 @@ int main(int argc, char **argv) {
 						/ cv::getTickFrequency() * 1000;
 
 				// Obtain number of inliers
-				candidates_inliers.at<int>(0, j) = int(sum(inliers_idx)[0]);
+				int numInliers = int(sum(inliers_idx)[0]);
 
 				printf(
 						"   Computed homography in [%0.3fs], found [%d] inliers\n",
-						mytime, candidates_inliers.at<int>(0, j));
+						mytime, numInliers);
 
-				/**** Drawing inlier matches ****/
-				std::vector<cv::DMatch> inliers;
+				candidates_inliers.at<int>(0, j) = numInliers;
+
+				inlierMatches.clear();
 				for (int i = 0; i < inliers_idx.rows; ++i) {
-					if ((int) inliers_idx.at<uchar>(i) == 1) {
-						inliers.push_back(matchesCandidateToQuery.at(i));
+					if (int(inliers_idx.at<uchar>(i)) == int(1)) {
+						inlierMatches.push_back(matchesCandidateToQuery.at(i));
 					}
 				}
-
-				cv::drawMatches(queryImg, queryKeypoints, candidateImg,
-						candidateKeypoints, inliers, imgMatches,
-						cv::Scalar::all(-1), cv::Scalar::all(-1),
-						std::vector<char>(),
-						cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+				imgOut = cv::Mat();
+				cv::drawMatches(candidateImg, candidateKeypoints, queryImg,
+						queryKeypoints, inlierMatches, imgOut);
 				cv::imwrite(
-						"oxbuild_images/match_" + queryBase + "_"
-								+ ranked_candidates_list[j] + ".jpg",
-						imgMatches);
-				/********************************/
+						out_ranked_lists_folder + "/match_" + queryBase + "_"
+								+ candidateBase + ".jpg", imgOut);
+//				cv::namedWindow(
+//						"oxbuild_images/match_" + queryBase + "_"
+//								+ candidateBase + ".jpg", cv::WINDOW_NORMAL);
+//				cv::resizeWindow(
+//						"oxbuild_images/match_" + queryBase + "_"
+//								+ candidateBase + ".jpg", 500, 500);
+//				cv::imshow(
+//						"oxbuild_images/match_" + queryBase + "_"
+//								+ candidateBase + ".jpg", imgOut);
+//				cv::waitKey(0);
 
 			}
+
+			cvflann::Logger::log(0,
+					"query=[%s] candidate=[%s] numberInliers=[%d]\n",
+					queryBase.c_str(), candidateBase.c_str(),
+					candidates_inliers.at<int>(0, j));
 
 		}
 
@@ -351,133 +418,6 @@ int main(int argc, char **argv) {
 				geom_ranked_candidates_list.size());
 	}
 
-}
-
-void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int id1,
-		const std::vector<cv::KeyPoint>& keypoints1,
-		cv::vector<cv::Point2f>& matchedPoints1, cv::Mat& img1,
-		const cv::Ptr<bfeat::DirectIndex> directIndex2, int id2,
-		const std::vector<cv::KeyPoint>& keypoints2,
-		std::vector<cv::Point2f>& matchedPoints2, cv::Mat& img2,
-		std::vector<cv::DMatch>& matches1to2, double proximityThreshold,
-		double similarityThreshold) {
-
-	// Clean up variables received as arguments
-	matchedPoints1.clear();
-	matchedPoints2.clear();
-	matches1to2.clear();
-
-	// Lookup query and database images in the index and get nodes list
-	bfeat::TreeNode nodes1 = directIndex1->lookUpImg(id1);
-	bfeat::TreeNode nodes2 = directIndex2->lookUpImg(id2);
-
-	// Declare and initialize iterators to the maps to intersect
-	typename bfeat::TreeNode::const_iterator it1 = nodes1.begin();
-	typename bfeat::TreeNode::const_iterator it2 = nodes2.begin();
-
-	cv::Point2f point1, point2;
-
-	double dist, ncc;
-
-	int windowHalfLength = 10, windowSize = 2 * windowHalfLength + 1;
-
-	cv::Mat A, B, NCC;
-	cv::Scalar meanB, stdDevB;
-	cv::Scalar meanA, stdDevA;
-
-	// Intersect nodes maps, solution taken from:
-	// http://stackoverflow.com/questions/3772664/intersection-of-two-stl-maps
-	while (it1 != nodes1.end() && it2 != nodes2.end()) {
-		if (it1->first < it2->first) {
-			++it1;
-		} else if (it2->first < it1->first) {
-			++it2;
-		} else {
-			// Match together all query keypoints vs candidate keypoints of an intersected node
-			for (int i1 : it1->second) {
-				for (int i2 : it2->second) {
-
-					// Assert that feature ids stored in the direct index are in range
-					CV_Assert(
-							i1 >= 0
-									&& i1
-											< static_cast<int>(keypoints1.size()));
-					CV_Assert(
-							i2 >= 0
-									&& i2
-											< static_cast<int>(keypoints2.size()));
-
-					// Extract point
-					point1 = keypoints1[i1].pt;
-					point2 = keypoints2[i2].pt;
-
-					dist = cv::norm(
-							cv::Point(point1.x, point1.y)
-									- cv::Point(point2.x, point2.y));
-					// Apply a proximity threshold
-					if (dist > proximityThreshold) {
-						continue;
-					}
-
-					// Ignore features close to the border since they don't have enough support
-					if (point1.x - windowHalfLength < 0
-							|| point1.y - windowHalfLength < 0
-							|| point1.x + windowHalfLength + 1 > img1.cols
-							|| point1.y + windowHalfLength + 1 > img1.rows) {
-						continue;
-					}
-
-					// Ignore features close to the border since they don't have enough support
-					if (point2.x - windowHalfLength < 0
-							|| point2.y - windowHalfLength < 0
-							|| point2.x + windowHalfLength + 1 > img2.cols
-							|| point2.y + windowHalfLength + 1 > img2.rows) {
-						continue;
-					}
-
-					// Extract patches
-					A = cv::Mat(), B = cv::Mat();
-					img1(
-							cv::Range(int(point1.y) - windowHalfLength,
-									int(point1.y) + windowHalfLength + 1),
-							cv::Range(int(point1.x) - windowHalfLength,
-									int(point1.x) + windowHalfLength + 1)).convertTo(
-							A, CV_32F);
-					img2(
-							cv::Range(int(point2.y) - windowHalfLength,
-									int(point2.y) + windowHalfLength + 1),
-							cv::Range(int(point2.x) - windowHalfLength,
-									int(point2.x) + windowHalfLength + 1)).convertTo(
-							B, CV_32F);
-					meanStdDev(A, meanA, stdDevA);
-					meanStdDev(B, meanB, stdDevB);
-
-					// Computing normalized cross correlation for the patches A and B
-					subtract(A, meanA, A);
-					subtract(B, meanB, B);
-					multiply(A, B, NCC);
-					divide(NCC, stdDevA, NCC);
-					divide(NCC, stdDevB, NCC);
-
-					ncc = sum(NCC)[0] / std::pow(double(windowSize), 2);
-
-					if (ncc < similarityThreshold) {
-						continue;
-					}
-
-					// Add points to vectors of matched
-					matchedPoints1.push_back(point1);
-					matchedPoints2.push_back(point2);
-
-					cv::DMatch match = cv::DMatch(i1, i2,
-							cv::norm(point1 - point2));
-					// Set pair as a match
-					matches1to2.push_back(match);
-				}
-			}
-			++it1, ++it2;
-		}
-	}
+	HtmlResultsWriter::getInstance().close();
 
 }
-

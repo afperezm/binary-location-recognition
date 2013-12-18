@@ -146,3 +146,13 @@ TEST(DynamicMat, RowExtraction) {
 	}
 
 }
+
+TEST(DynamicMat, Stress) {
+	std::string root = "/home/andresf/oxford_buildings_dataset/";
+	std::vector<std::string> descriptorsList;
+	FileUtils::loadList("list_noqueries_distract.txt", descriptorsList);
+	DynamicMat data(descriptorsList);
+	for (int i = 0; i < data.rows; ++i) {
+		ASSERT_TRUE(data.getMemoryCount() <= data.MAX_MEM);
+	}
+}
