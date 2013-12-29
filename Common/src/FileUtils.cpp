@@ -221,6 +221,7 @@ void FileUtils::loadDescriptors(const std::string& filename,
 				"Unable to open file [" + filename + "] for reading");
 	}
 
+	descriptors.release();
 	descriptors = cv::Mat();
 
 	fs["Descriptors"] >> descriptors;

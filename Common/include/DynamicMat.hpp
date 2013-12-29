@@ -19,13 +19,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-struct Image {
-	int imgIdx; // Index of the image it represents
-	int startIdx; // (inclusive) Starting index in the merged descriptors matrix
-	Image() :
-			imgIdx(-1), startIdx(-1) {
-	}
-};
+// Pair holding image index (first) and (inclusive) starting descriptors index (second)
+typedef int Image;
 
 static std::vector<Image> DEFAULT_INDICES;
 static std::vector<std::string> DEFAULT_FILENAMES;
@@ -34,21 +29,21 @@ class DynamicMat {
 
 public:
 
-	static const int MAX_MEM = 1075000000; // ~1GB
+	static const size_t MAX_MEM = 530000000; // ~500 MB
 
 private:
 
 	double m_capacity = 0.0;
 	int m_descriptorType = -1;
-	std::vector<Image> m_descriptorsIndex;
+	std::vector<Image> m_imagesIndex, m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
 
 	/** Attributes of the cache **/
-	int m_memoryCount = 0;
+	size_t m_memoryCount = 0;
 	cv::Mat m_cachedMat;
 	int m_cachedMatStartIdx;
 	std::stack<int> m_cachingOrder;
-	std::vector<cv::Mat> m_descriptorsCache;
+	std::map<int, cv::Mat> m_descriptorsCache;
 
 public:
 
@@ -63,18 +58,18 @@ public:
 	DynamicMat();
 
 	/**
-	 * Class constructor.
-	 *
-	 * @param keysFilenames - Reference to a vector of descriptor filenames
-	 */
-	DynamicMat(std::vector<std::string>& keysFilenames);
-
-	/**
 	 * Copy constructor.
 	 *
 	 * @param other - Reference to an instance where to copy properties from
 	 */
 	DynamicMat(const DynamicMat& other);
+
+	/**
+	 * Class constructor.
+	 *
+	 * @param keysFilenames - Reference to a vector of descriptor filenames
+	 */
+	DynamicMat(std::vector<std::string>& keysFilenames);
 
 	/**
 	 * Class destroyer.
@@ -137,7 +132,7 @@ public:
 	 * @return index of descriptors
 	 */
 	const std::vector<Image>& getDescriptorsIndex() const {
-		return m_descriptorsIndex;
+		return m_imagesIndex;
 	}
 
 	/**
@@ -154,7 +149,7 @@ public:
 	 *
 	 * @return memory count in Bytes
 	 */
-	int getMemoryCount() const {
+	size_t getMemoryCount() const {
 		return m_memoryCount;
 	}
 
@@ -166,8 +161,10 @@ private:
 	 * @param descriptors - a reference to a matrix containing descriptors
 	 * @return number of bytes used
 	 */
-	static int computeUsedMemory(cv::Mat& descriptors) {
-		return int(descriptors.rows * descriptors.cols * descriptors.elemSize());
+	static size_t computeUsedMemory(cv::Mat& descriptors) {
+		CV_Assert(descriptors.rows >= 0);
+		CV_Assert(descriptors.cols >= 0);
+		return descriptors.rows * descriptors.cols * descriptors.elemSize();
 	}
 
 };
