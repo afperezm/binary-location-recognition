@@ -141,9 +141,7 @@ TEST(DynamicMat, RowExtraction) {
 
 		// Check row elements are equal
 		for (int j = 0; j < extractedRow.cols; j++) {
-			EXPECT_TRUE(
-					extractedRow.at<float>(0, j)
-							== originalRow.at<float>(0, j));
+			EXPECT_TRUE(extractedRow.at<float>(0, j) == originalRow.at<float>(0, j));
 		}
 	}
 
@@ -152,7 +150,7 @@ TEST(DynamicMat, RowExtraction) {
 TEST(DynamicMat, Stress) {
 
 	std::vector<std::string> descriptorsList;
-	FileUtils::loadList("list_noqueries_distract_copy.txt", descriptorsList);
+	FileUtils::loadList("list.txt", descriptorsList);
 	DynamicMat data(descriptorsList);
 	cv::Mat row = cv::Mat();
 
