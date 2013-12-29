@@ -29,7 +29,7 @@ class DynamicMat {
 
 public:
 
-	static const size_t MAX_MEM = 530000000; // ~500 MB
+	static const size_t MAX_MEM = 1074000000; // ~1 GB
 
 private:
 

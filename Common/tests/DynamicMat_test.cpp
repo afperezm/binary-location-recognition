@@ -141,7 +141,9 @@ TEST(DynamicMat, RowExtraction) {
 
 		// Check row elements are equal
 		for (int j = 0; j < extractedRow.cols; j++) {
-			EXPECT_TRUE(extractedRow.at<float>(0, j) == originalRow.at<float>(0, j));
+			EXPECT_TRUE(
+					extractedRow.at<float>(0, j)
+							== originalRow.at<float>(0, j));
 		}
 	}
 
@@ -155,10 +157,7 @@ TEST(DynamicMat, Stress) {
 	cv::Mat row = cv::Mat();
 
 	for (int i = 0; i < data.rows; ++i) {
-		printf("Extracting row [%4d]\n", i);
 		row = data.row(i);
-		printf("Using [%f] MB of memory\n",
-				double(data.getMemoryCount() / (1024 * 1024)));
 		ASSERT_TRUE(data.getMemoryCount() <= data.MAX_MEM);
 	}
 

@@ -158,7 +158,7 @@ private:
 		TDescriptor* center;
 		// Children nodes (only for non-terminal nodes)
 		// Note: no need to store how many children does it has because
-		// this is a k-ary tree, where 'k' is the branch factor, that is has k children or none
+		// this is a k-ary tree, where 'k' is the branch factor, i.e. it has k children or none
 		VocabTreeNode** children;
 		// Word id (only for terminal nodes)
 		int word_id;

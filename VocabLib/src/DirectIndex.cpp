@@ -50,7 +50,7 @@ void DirectIndex::addFeature(int imgIdx, int nodeId, int featureId) {
 				std::pair<int, FeatureVector>(nodeId, FeatureVector())).first;
 	}
 	// Obtain a reference to the features vector of the node
-	FeatureVector& fv = (*it).second;
+	FeatureVector& fv = it->second;
 
 	fv.push_back(featureId);
 }
