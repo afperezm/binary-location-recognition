@@ -238,7 +238,7 @@ public:
 	 * @param params - Parameters to the hierarchical k-means algorithm
 	 */
 	VocabTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
-			const cvflann::IndexParams& params = VocabTreeParams());
+			const VocabTreeParams& params = VocabTreeParams());
 
 	/**
 	 * Class destroyer, releases the memory used by the tree.
@@ -515,23 +515,27 @@ private:
 
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
-		const cvflann::IndexParams& params) :
+		const VocabTreeParams& params) :
 		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
 				Distance()) {
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
-	m_branching = get_param(params, "branching", 10);
-	m_iterations = get_param(params, "iterations", 10);
-	m_depth = get_param(params, "depth", 6);
-	m_centers_init = get_param(params, "centers_init",
-			cvflann::FLANN_CENTERS_RANDOM);
+	// m_branching = get_param(params, "branching", 10);
+	m_branching = 10;
+	// m_iterations = get_param(params, "iterations", 10);
+	m_iterations = 1;
+	// m_depth = get_param(params, "depth", 6);
+	m_depth = 6;
+	// m_centers_init = get_param(params, "centers_init", cvflann::FLANN_CENTERS_RANDOM);
+	m_centers_init = cvflann::FLANN_CENTERS_RANDOM;
 	m_directIndex = new bfeat::DirectIndex();
-	setDirectIndexLevel(get_param(params, "levels_up", 2));
+	// setDirectIndexLevel(cvflann::get_param(params, "levels_up", 2));
+	setDirectIndexLevel(2);
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
-		m_iterations = (std::numeric_limits<int>::max)();
+		m_iterations = std::numeric_limits<int>::max();
 	}
 
 }
@@ -555,7 +559,9 @@ void VocabTree<TDescriptor, Distance>::free_centers(VocabTreeNodePtr node) {
 		for (int k = 0; k < m_branching; ++k) {
 			free_centers(node->children[k]);
 		}
+		delete[] node->children;
 	}
+	delete node;
 }
 
 // --------------------------------------------------------------------------
@@ -586,27 +592,29 @@ void VocabTree<TDescriptor, Distance>::build() {
 	}
 
 	// Number of features in the data set
-	size_t size = m_dataset.rows;
+	int size = m_dataset.rows;
 
 	//  Array of descriptors indices
 	int* indices = new int[size];
-	for (size_t i = 0; i < size; ++i) {
-		indices[i] = int(i);
+	for (int i = 0; i < size; ++i) {
+		indices[i] = i;
 	}
 
 	m_root = new VocabTreeNode();
-	computeNodeStatistics(m_root, indices, (int) size);
+
+	computeNodeStatistics(m_root, indices, size);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Started clustering\n");
 #endif
 
-	computeClustering(m_root, indices, (int) size, 0, false);
+	computeClustering(m_root, indices, size, 0, false);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Finished clustering\n");
 #endif
 
+	delete[] indices;
 }
 
 // --------------------------------------------------------------------------
@@ -893,7 +901,7 @@ void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
 	TDescriptor* center = new TDescriptor[m_veclen];
 
 	// Checking indices to be in range, but actually is not necessary
-	// is just for avoing the unused warning
+	// is just to avoid unused variable warning
 	for (size_t i = 0; (int) i < indices_length; ++i) {
 		CV_Assert(0 <= indices[i] && indices[i] < m_dataset.rows);
 	}

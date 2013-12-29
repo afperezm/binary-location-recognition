@@ -223,10 +223,10 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 			// Check the iterator is valid
 			CV_Assert(it != m_descriptorsCache.end());
 			// Decrease memory counter
-			m_memoryCount -= computeUsedMemory((*it).second);
+			m_memoryCount -= computeUsedMemory(it->second);
 			// Release and dereference data
-			(*it).second.release();
-			(*it).second = cv::Mat();
+			it->second.release();
+			it->second = cv::Mat();
 			// Remove element from cache
 			m_descriptorsCache.erase(it);
 			// Pop its index from the stack
@@ -246,7 +246,7 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 		m_cachingOrder.push(descriptorIdx);
 	}
 
-	return (*it).second;
+	return it->second;
 }
 
 // --------------------------------------------------------------------------
