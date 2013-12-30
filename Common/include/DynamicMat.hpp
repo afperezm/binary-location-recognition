@@ -19,6 +19,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
+#ifndef MAX_CACHE_SIZE
+#define MAX_CACHE_SIZE 1073700000 // ~1 GB
+#endif
+
 // Pair holding image index (first) and (inclusive) starting descriptors index (second)
 typedef int Image;
 
@@ -29,7 +33,7 @@ class DynamicMat {
 
 public:
 
-	static const size_t MAX_MEM = 1074000000; // ~1 GB
+	static const size_t MAX_MEM = MAX_CACHE_SIZE;
 
 private:
 
