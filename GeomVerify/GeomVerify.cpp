@@ -70,9 +70,9 @@ int main(int argc, char **argv) {
 			new bfeat::DirectIndex();
 
 	if (isBinary == true) {
-		tree = new bfeat::VocabTree<uchar, cv::Hamming>();
+		tree = new bfeat::VocabTreeBin();
 	} else {
-		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
+		tree = new bfeat::VocabTreeReal();
 	}
 
 	printf(

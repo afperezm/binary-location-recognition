@@ -85,11 +85,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (isDescriptorBinary == true) {
-		tree = new bfeat::VocabTree<uchar, cv::Hamming>(mergedDescriptors,
-				params);
+		tree = new bfeat::VocabTreeBin(mergedDescriptors, params);
 	} else {
-		tree = new bfeat::VocabTree<float, cv::L2<float> >(mergedDescriptors,
-				params);
+		tree = new bfeat::VocabTreeReal(mergedDescriptors, params);
 	}
 
 	printf(
@@ -110,7 +108,7 @@ int main(int argc, char **argv) {
 			* 1000;
 	printf(
 			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
-			mergedDescriptors.cols, mytime, tree->size());
+			mergedDescriptors.rows, mytime, tree->size());
 
 	printf("-- Saving tree to [%s]\n", tree_out.c_str());
 

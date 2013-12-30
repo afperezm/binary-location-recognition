@@ -78,9 +78,9 @@ int main(int argc, char **argv) {
 	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	if (isDescriptorBinary == true) {
-		tree = new bfeat::VocabTree<uchar, cv::Hamming>();
+		tree = new bfeat::VocabTreeBin();
 	} else {
-		tree = new bfeat::VocabTree<float, cv::L2<float> >();
+		tree = new bfeat::VocabTreeReal();
 	}
 
 	printf("-- Reading tree from [%s]\n", tree_in.c_str());
@@ -104,13 +104,14 @@ int main(int argc, char **argv) {
 	cv::Mat imgDescriptors;
 	uint imgIdx = 0;
 
-	for (std::string keyFileName : descFilenames) {
-		// Initialize keypoints and descriptors
-		imgDescriptors = cv::Mat();
+	for (std::string& keyFileName : descFilenames) {
+		// Load descriptors
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 
 		// Check type of descriptors
-		if ((imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
+		// Note: for empty matrices FileStorage API sets as 0 the descriptor type
+		if (imgDescriptors.empty() == false
+				&& (imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
 			fprintf(stderr,
 					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
 					isDescriptorBinary == true ? "binary" : "non-binary",
@@ -118,20 +119,21 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
-		if (imgDescriptors.rows != 0) {
-			printf("   Adding image [%u] to database\n", imgIdx);
-			try {
-				tree->addImageToDatabase(imgIdx, imgDescriptors);
-			} catch (const std::runtime_error& error) {
-				fprintf(stderr, "%s\n", error.what());
-				return EXIT_FAILURE;
-			}
+		// Add image to database
+		printf("   Adding image [%u] to database\n", imgIdx);
+		try {
+			tree->addImageToDatabase(imgIdx, imgDescriptors);
+		} catch (const std::runtime_error& error) {
+			fprintf(stderr, "%s\n", error.what());
+			return EXIT_FAILURE;
 		}
 
-		imgIdx++;
+		// Increase added images counter
+		++imgIdx;
 	}
 
 	imgDescriptors.release();
+	imgDescriptors = cv::Mat();
 
 	CV_Assert(descFilenames.size() == imgIdx);
 

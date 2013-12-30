@@ -20,7 +20,7 @@ TEST(VocabTree, Instantiation) {
 
 	EXPECT_TRUE(tree == NULL);
 
-	tree = new bfeat::VocabTree<float, cv::L2<float> >();
+	tree = new bfeat::VocabTreeReal();
 
 	EXPECT_TRUE(tree != NULL);
 }
@@ -35,16 +35,14 @@ TEST(VocabTree, LoadSaveReal) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTree<float, cv::L2<float> > > tree =
-			new bfeat::VocabTree<float, cv::L2<float> >(data);
+	cv::Ptr<bfeat::VocabTreeReal> tree = new bfeat::VocabTreeReal(data);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTree<float, cv::L2<float> > > treeLoad =
-			new bfeat::VocabTree<float, cv::L2<float> >();
+	cv::Ptr<bfeat::VocabTreeReal> treeLoad = new bfeat::VocabTreeReal();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -66,16 +64,15 @@ TEST(VocabTree, LoadSaveBinary) {
 	DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTree<uchar, cv::Hamming> > tree;
-	tree = new bfeat::VocabTree<uchar, cv::Hamming>(data);
+	cv::Ptr<bfeat::VocabTreeBin> tree;
+	tree = new bfeat::VocabTreeBin(data);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTree<uchar, cv::Hamming> > treeLoad =
-			new bfeat::VocabTree<uchar, cv::Hamming>();
+	cv::Ptr<bfeat::VocabTreeBin> treeLoad = new bfeat::VocabTreeBin();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -98,15 +95,13 @@ TEST(VocabTree, TestDatabase) {
 
 	DynamicMat data(keysFilenames);
 
-	cv::Ptr<bfeat::VocabTreeBase> tree = new bfeat::VocabTree<float,
-			cv::L2<float> >(data);
+	cv::Ptr<bfeat::VocabTreeBase> tree = new bfeat::VocabTreeReal(data);
 
 	tree->build();
 	tree->save("test_tree.yaml.gz");
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTreeBase> db = new bfeat::VocabTree<float,
-			cv::L2<float> >();
+	cv::Ptr<bfeat::VocabTreeBase> db = new bfeat::VocabTreeReal();
 
 	db->load("test_tree.yaml.gz");
 
@@ -122,7 +117,7 @@ TEST(VocabTree, TestDatabase) {
 			fprintf(stderr, "%s\n", error.what());
 			gotException = true;
 		}
-		i++;
+		++i;
 	}
 
 	// Assert all images where inserted without any problem
@@ -131,7 +126,7 @@ TEST(VocabTree, TestDatabase) {
 	cv::Mat dbBowVector, sumResult;
 
 	// Asserting inverted files are not empty anymore
-	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); imgIdx++) {
+	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
 		db->getDbBoWVector(imgIdx, dbBowVector);
 		cv::reduce(dbBowVector, sumResult, 1, CV_REDUCE_SUM);
 		ASSERT_TRUE(sumResult.rows == 1);
@@ -146,10 +141,10 @@ TEST(VocabTree, TestDatabase) {
 	db->normalizeDatabase(cv::NORM_L1);
 
 	// Asserting DB BoW vectors values are in the range [0,1]
-	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); imgIdx++) {
+	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
 		db->getDbBoWVector(imgIdx, dbBowVector);
 		ASSERT_TRUE(dbBowVector.rows == 1);
-		for (int i = 0; i < dbBowVector.cols; i++) {
+		for (int i = 0; i < dbBowVector.cols; ++i) {
 			ASSERT_TRUE(dbBowVector.at<float>(0, i) >= 0);
 			ASSERT_TRUE(dbBowVector.at<float>(0, i) <= 1);
 		}
@@ -157,8 +152,7 @@ TEST(VocabTree, TestDatabase) {
 
 	db->saveInvertedIndex("test_idf.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTreeBase> dbLoad = new bfeat::VocabTree<float,
-			cv::L2<float> >();
+	cv::Ptr<bfeat::VocabTreeBase> dbLoad = new bfeat::VocabTreeReal();
 
 	dbLoad->load("test_tree.yaml.gz");
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
@@ -211,7 +205,7 @@ TEST(VocabTree, TestDatabase) {
 
 		EXPECT_TRUE((int )i == perm.at<int>(0, 0));
 		EXPECT_TRUE(round(scores.at<float>(0, perm.at<int>(0, 0))) == 1.0);
-		i++;
+		++i;
 	}
 
 }

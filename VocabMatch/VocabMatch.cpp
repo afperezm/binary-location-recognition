@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
 	cv::Ptr<bfeat::VocabTreeBase> tree;
 
 	if (is_binary == true) {
-		tree = new bfeat::VocabTree<uchar, cv::Hamming>();
+		tree = new bfeat::VocabTreeBin();
 	} else {
-		tree = new bfeat::VocabTree<float, cvflann::L2<float> >();
+		tree = new bfeat::VocabTreeReal();
 	}
 
 	printf("-- Loading tree from [%s]\n", in_tree.c_str());

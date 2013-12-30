@@ -420,11 +420,13 @@ public:
 	}
 
 	void setDirectIndexLevel(int levelsUp) {
-		int directIndexLevel = m_depth - 1 - levelsUp;
-		if (directIndexLevel < 0) {
+		int directIndexLevel = 0;
+		if (levelsUp > m_depth - 1) {
 			directIndexLevel = 0;
-		} else if (directIndexLevel > m_depth - 1) {
+		} else if (levelsUp < 0) {
 			directIndexLevel = m_depth - 1;
+		} else {
+			directIndexLevel = m_depth - 1 - levelsUp;
 		}
 		m_directIndex->setLevel(directIndexLevel);
 	}
@@ -510,6 +512,9 @@ private:
 	void operator=(VocabTree const&); // Don't implement
 
 };
+
+typedef VocabTree<float, cv::L2<float> > VocabTreeReal;
+typedef VocabTree<uchar, cv::Hamming> VocabTreeBin;
 
 // --------------------------------------------------------------------------
 
@@ -1370,12 +1375,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		cv::Mat imgFeatures) {
 
-	if (imgFeatures.rows < 1) {
-		throw std::runtime_error(
-				"[VocabTree::addImageToDatabase] Error while adding image, at least one feature vector is needed");
-	}
-
-	if (imgFeatures.cols != (int) m_veclen) {
+	if (imgFeatures.empty() == false && imgFeatures.cols != int(m_veclen)) {
 		std::stringstream ss;
 		ss << "Error while adding image, feature vector has different length"
 				" than the ones used for building the tree, it is ["
@@ -1394,7 +1394,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 	double wordWeight; // not needed
 	int nodeAtL;
 
-	for (size_t i = 0; (int) i < imgFeatures.rows; ++i) {
+	for (int i = 0; i < imgFeatures.rows; ++i) {
 		quantize(imgFeatures.row(i), wordIdx, wordWeight, nodeAtL);
 		addFeatureToInvertedFile(wordIdx, imgIdx);
 		m_directIndex->addFeature(imgIdx, nodeAtL, i);
@@ -1435,7 +1435,7 @@ void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 
-	if (empty()) {
+	if (m_words.empty() == true) {
 		throw std::runtime_error("[VocabTree::normalizeDatabase] Error while"
 				" normalizing DB BoW vectors, vocabulary is empty");
 	}
@@ -1452,7 +1452,7 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 			uint index = image.m_index;
 			double dim = image.m_count;
 
-			assert(index < mags.size());
+			CV_Assert(index < mags.size());
 
 			if (normType == cv::NORM_L1) {
 				mags[index] += fabs(dim);
