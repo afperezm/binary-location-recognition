@@ -39,14 +39,19 @@
 #ifndef VOCAB_TREE_H_
 #define VOCAB_TREE_H_
 
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <opencv2/core/core_c.h>
 #include <opencv2/flann/flann.hpp>
 
 #include <CentersChooser.h>
 #include <DirectIndex.hpp>
 #include <DynamicMat.hpp>
+#include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 #include <KMajorityIndex.h>
+
+#include <fstream>
 
 namespace bfeat {
 
@@ -820,54 +825,70 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 				"Vocabulary is empty");
 	}
 
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+	// Initializing variables
+	std::ifstream inputZippedFileStream;
+	boost::iostreams::filtering_istream inputFileStream;
+	std::string line, wordHeader = "   -", weightHeader = "weight", pairHeader =
+			"{";
+	int index, wordId = -1;
+	float count;
+	double weight;
 
-	if (fs.isOpened() == false) {
+	// Check file exists
+	if (FileUtils::checkFileExist(filename) == false) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"File [" + filename + "] doesn't exist");
+	}
+
+	// Open file
+	inputZippedFileStream.open(filename.c_str(),
+			std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (inputZippedFileStream.good() == false) {
 		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
 				"Unable to open file [" + filename + "] for reading");
 	}
 
-	m_numDbImages = int(fs["NumDBImages"]);
+	try {
+		inputFileStream.push(boost::iostreams::gzip_decompressor());
+		inputFileStream.push(inputZippedFileStream);
 
-	cv::FileNode words = fs["Words"];
+		// Load/Skip first line
+		getline(inputFileStream, line);
 
-	// Verify that 'Words' is a sequence
-	if (words.type() != cv::FileNode::SEQ) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Fetched element 'Words' should be a sequence");
-	}
+		// Load number of images
+		getline(inputFileStream, line);
+		sscanf(line.c_str(), "%*s %d", &m_numDbImages);
 
-	if (words.size() != m_words.size()) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Vocabulary size is different than inverted file length");
-	}
+		// Load/Skip words vector header
+		getline(inputFileStream, line);
 
-	int wordId = 0;
-
-	cv::FileNode images;
-
-	for (cv::FileNodeIterator word = words.begin(); word != words.end();
-			++word, ++wordId) {
-
-		m_words[wordId]->weight = double((*word)["weight"]);
-
-		images = (*word)["imageList"];
-
-		// Verify that imageList is a sequence
-		if (images.type() != cv::FileNode::SEQ) {
-			throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-					"Fetched element 'imageList' is not a sequence");
+		// Load list from file
+		while (getline(inputFileStream, line)) {
+			if (line.compare(wordHeader) == 0) {
+				++wordId;
+			} else if (line.find(weightHeader) != std::string::npos) {
+				sscanf(line.c_str(), "%*s %lf", &weight);
+				m_words[wordId]->weight = weight;
+			} else if (line.find(pairHeader) != std::string::npos) {
+				line.replace(line.find('-'), 1, " ");
+				std::replace(line.begin(), line.end(), ':', ' ');
+				std::replace(line.begin(), line.end(), ',', ' ');
+				std::replace(line.begin(), line.end(), '{', ' ');
+				std::replace(line.begin(), line.end(), '}', ' ');
+				sscanf(line.c_str(), "%*s %d %*s %f", &index, &count);
+				ImageCount img(index, count);
+				m_words[wordId]->image_list.push_back(img);
+			}
 		}
-
-		for (cv::FileNodeIterator image = images.begin(); image != images.end();
-				++image) {
-			size_t index = int((*image)["m_index"]);
-			ImageCount img(index, float((*image)["m_count"]));
-			m_words[wordId]->image_list.push_back(img);
-		}
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
+				"Got error while parsing file [" + std::string(e.what()) + "]");
 	}
 
-	fs.release();
+	// Close file
+	inputZippedFileStream.close();
 
 }
 
@@ -1497,7 +1518,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 				"[VocabTree::scoreQuery] Error while scoring image, at least one feature vector is needed");
 	}
 
-	if (queryImgFeatures.cols != (int) m_veclen) {
+	if (queryImgFeatures.cols != int(m_veclen)) {
 		std::stringstream ss;
 		ss << "Error while adding image, feature vector has different length"
 				" than the ones used for building the tree, it is ["

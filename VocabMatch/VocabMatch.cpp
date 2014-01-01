@@ -123,6 +123,10 @@ int main(int argc, char **argv) {
 		// Load query descriptors
 		FileUtils::loadDescriptors(query_filenames[i], imgDescriptors);
 
+		if (imgDescriptors.empty() == true) {
+			continue;
+		}
+
 		// Check type of descriptors
 		if ((imgDescriptors.type() == CV_8U) != is_binary) {
 			fprintf(stderr,

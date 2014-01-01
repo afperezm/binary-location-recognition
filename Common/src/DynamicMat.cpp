@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------
 
 DynamicMat::DynamicMat() :
-		m_capacity(0), m_descriptorType(-1), m_imagesIndex(DEFAULT_INDICES), m_descriptorsFilenames(
+		m_capacity(0.0), m_descriptorType(-1), m_imagesIndex(DEFAULT_INDICES), m_descriptorsFilenames(
 				DEFAULT_FILENAMES), m_memoryCount(0), m_cachedMat(cv::Mat()), m_cachedMatStartIdx(
 				-1), rows(0), cols(0) {
 #if DYNMATVERBOSE

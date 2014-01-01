@@ -51,7 +51,7 @@ void FileUtils::saveList(const std::string& list_fpath,
 	}
 
 	// Save list to file
-	for (std::string line : list) {
+	for (const std::string& line : list) {
 		outputFileStream << line << std::endl;
 	}
 
