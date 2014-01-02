@@ -60,7 +60,7 @@ enum WeightingType {
 };
 
 struct VocabTreeParams: public cvflann::IndexParams {
-	VocabTreeParams(int branching = 10, int depth = 6, int iterations = 10,
+	VocabTreeParams(int branching = 10, int depth = 7, int iterations = 10,
 			cvflann::flann_centers_init_t centers_init =
 					cvflann::FLANN_CENTERS_RANDOM, int levels_up = 2) {
 		// branching factor
@@ -479,7 +479,7 @@ private:
 	 * @param filename - A reference to the file storage where to read node parameters
 	 * @param node - The node where to store the loaded tree
 	 */
-	void load_tree(cv::FileNode& fs, VocabTreeNodePtr& node);
+	void load_tree(cv::FileNodeIterator& it, VocabTreeNodePtr& node);
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -531,17 +531,18 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
-	// m_branching = get_param(params, "branching", 10);
-	m_branching = 10;
-	// m_iterations = get_param(params, "iterations", 10);
-	m_iterations = 1;
-	// m_depth = get_param(params, "depth", 6);
-	m_depth = 6;
-	// m_centers_init = get_param(params, "centers_init", cvflann::FLANN_CENTERS_RANDOM);
-	m_centers_init = cvflann::FLANN_CENTERS_RANDOM;
+	m_branching = cvflann::get_param(params, "branching", 10);
+	// m_branching = 10;
+	m_iterations = cvflann::get_param(params, "iterations", 10);
+	// m_iterations = 1;
+	m_depth = cvflann::get_param(params, "depth", 7);
+	// m_depth = 7;
+	m_centers_init = cvflann::get_param(params, "centers_init",
+			cvflann::FLANN_CENTERS_RANDOM);
+	// m_centers_init = cvflann::FLANN_CENTERS_RANDOM;
 	m_directIndex = new bfeat::DirectIndex();
-	// setDirectIndexLevel(cvflann::get_param(params, "levels_up", 2));
-	setDirectIndexLevel(2);
+	setDirectIndexLevel(cvflann::get_param(params, "levels_up", 2));
+	// setDirectIndexLevel(2);
 	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
@@ -651,9 +652,11 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 	fs << "vectorLength" << (int) m_veclen;
 	fs << "numDbImages" << (int) m_numDbImages;
 
-	fs << "root";
+	fs << "nodes" << "[";
 
 	save_tree(fs, m_root);
+
+	fs << "]";
 
 	fs.release();
 }
@@ -671,17 +674,15 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 					(uchar*) node->center);
 	fs << "nodeId" << node->node_id;
 	fs << "wordId" << node->word_id;
+	fs << "}";
 
-	fs << "children" << "[";
 	if (node->children != NULL) {
 		// WriteChildren
-		for (size_t i = 0; (int) i < m_branching; i++) {
+		for (int i = 0; i < m_branching; ++i) {
 			save_tree(fs, node->children[i]);
 		}
 	}
-	fs << "]";
 
-	fs << "}";
 }
 
 // --------------------------------------------------------------------------
@@ -701,11 +702,20 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 	m_veclen = (int) fs["vectorLength"];
 	m_numDbImages = (int) fs["numDbImages"];
 
-	cv::FileNode root = fs["root"];
+	cv::FileNode children = fs["nodes"];
+
+	// Verifying that children is a sequence
+	if (children.type() != cv::FileNode::NONE
+			&& children.type() != cv::FileNode::SEQ) {
+		throw std::runtime_error("Error while parsing tree,"
+				" fetched element 'children' should be a sequence");
+	}
 
 	m_root = new VocabTreeNode();
 
-	load_tree(root, m_root);
+	cv::FileNodeIterator it = children.begin();
+
+	load_tree(it, m_root);
 
 	fs.release();
 }
@@ -713,8 +723,10 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
+void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNodeIterator& it,
 		VocabTreeNodePtr& node) {
+
+	cv::FileNode fs = *it;
 
 	cv::Mat center;
 	fs["center"] >> center;
@@ -731,9 +743,9 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	node->node_id = (int) fs["nodeId"];
 	node->word_id = (int) fs["wordId"];
 
-	cv::FileNode children = fs["children"];
+	bool hasChildren = node->word_id == -1;
 
-	if (children.size() == 0) {
+	if (hasChildren == false) {
 		// Node has no children then it's a leaf node
 
 		node->children = NULL;
@@ -745,29 +757,11 @@ void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNode& fs,
 	} else {
 		// Node has children then it's an interior node
 
-		// Verifying that children is a sequence
-		if (children.type() != cv::FileNode::NONE
-				&& children.type() != cv::FileNode::SEQ) {
-			throw std::runtime_error("Error while parsing tree,"
-					" fetched element 'children' should be a sequence");
-		}
-
-		// Verifying that children has 0 or k elements
-		if (children.size() != 0 && (int) children.size() != m_branching) {
-			std::stringstream ss;
-			ss << "Error while parsing tree, fetched element"
-					" 'children' must have [0] or [" << m_branching
-					<< "] elements";
-			throw std::runtime_error(ss.str());
-		}
-
 		node->children = new VocabTreeNodePtr[m_branching];
-		cv::FileNodeIterator it = children.begin();
 
-		for (size_t c = 0; (int) c < m_branching; ++c, ++it) {
+		for (size_t c = 0; (int) c < m_branching; ++c) {
 			node->children[c] = new VocabTreeNode();
-			cv::FileNode child = *it;
-			load_tree(child, node->children[c]);
+			load_tree(++it, node->children[c]);
 		}
 	}
 
@@ -1636,7 +1630,7 @@ bool VocabTree<TDescriptor, Distance>::compareEqual(const VocabTreeNodePtr a,
 #endif
 #endif
 
-// Assert both nodes are interior or leaf nodes
+	// Assert both nodes are interior or leaf nodes
 	if ((a->children != NULL && b->children == NULL)
 			|| (a->children == NULL && b->children != NULL)) {
 		return false;

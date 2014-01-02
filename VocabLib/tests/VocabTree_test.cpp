@@ -5,7 +5,6 @@
  *      Author: andresf
  */
 
-#include <ctime>
 #include <limits.h>
 
 #include <gtest/gtest.h>
@@ -37,7 +36,6 @@ TEST(VocabTree, LoadSaveReal) {
 
 	cv::Ptr<bfeat::VocabTreeReal> tree = new bfeat::VocabTreeReal(data);
 
-	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");

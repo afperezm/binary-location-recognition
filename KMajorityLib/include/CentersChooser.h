@@ -8,6 +8,8 @@
 #ifndef CENTERSCHOOSER_H_
 #define CENTERSCHOOSER_H_
 
+#include <ctime>
+
 #include <opencv2/flann/flann.hpp>
 
 #include <DynamicMat.hpp>
@@ -449,6 +451,7 @@ cv::Ptr<CentersChooser<TDescriptor, Distance> > CentersChooser<TDescriptor,
 	cv::Ptr<CentersChooser<TDescriptor, Distance> > cc;
 
 	if (chooserType == cvflann::FLANN_CENTERS_RANDOM) {
+		cvflann::seed_random(unsigned(std::time(0)));
 		cc = new RandomCenters<TDescriptor, Distance>();
 	} else if (chooserType == cvflann::FLANN_CENTERS_GONZALES) {
 		cc = new GonzalezCenters<TDescriptor, Distance>();
