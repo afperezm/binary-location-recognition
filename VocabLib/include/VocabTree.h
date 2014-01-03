@@ -479,7 +479,8 @@ private:
 	 * @param filename - A reference to the file storage where to read node parameters
 	 * @param node - The node where to store the loaded tree
 	 */
-	void load_tree(cv::FileNodeIterator& it, VocabTreeNodePtr& node);
+	void load_tree(boost::iostreams::filtering_istream& is,
+			VocabTreeNodePtr& node);
 
 	/**
 	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
@@ -690,78 +691,174 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
+	std::ifstream inputZippedFileStream;
+	boost::iostreams::filtering_istream inputFileStream;
 
-	if (fs.isOpened() == false) {
-		throw std::runtime_error("Could not open file " + filename);
+	std::string line, field;
+	std::stringstream ss;
+
+	enum treeFields {
+		iterations, branching, depth, vectorLength, numDbImages, nodes
+	};
+	std::string treeFieldsNames[] = { "iterations:", "branching:", "depth:",
+			"vectorLength:", "numDbImages:", "nodes:" };
+
+	// Open file
+	inputZippedFileStream.open(filename.c_str(),
+			std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (inputZippedFileStream.good() == false) {
+		throw std::runtime_error("[VocabTree::load] "
+				"Unable to open file [" + filename + "] for reading");
 	}
 
-	m_iterations = (int) fs["iterations"];
-	m_branching = (int) fs["branching"];
-	m_depth = (int) fs["depth"];
-	m_veclen = (int) fs["vectorLength"];
-	m_numDbImages = (int) fs["numDbImages"];
+	try {
+		inputFileStream.push(boost::iostreams::gzip_decompressor());
+		inputFileStream.push(inputZippedFileStream);
 
-	cv::FileNode children = fs["nodes"];
+		while (getline(inputFileStream, line)) {
+//			printf("%s\n", line.c_str());
+			ss.clear();
+			ss.str(line);
+			ss >> field;
+			if (field.compare(treeFieldsNames[iterations]) == 0) {
+				ss >> m_iterations;
+//				printf("%s %d\n", field.c_str(), m_iterations);
+			} else if (field.compare(treeFieldsNames[branching]) == 0) {
+				ss >> m_branching;
+//				printf("%s %d\n", field.c_str(), m_branching);
+			} else if (field.compare(treeFieldsNames[depth]) == 0) {
+				ss >> m_depth;
+//				printf("%s %d\n", field.c_str(), m_depth);
+			} else if (field.compare(treeFieldsNames[vectorLength]) == 0) {
+				ss >> m_veclen;
+//				printf("%s %lu\n", field.c_str(), m_veclen);
+			} else if (field.compare(treeFieldsNames[numDbImages]) == 0) {
+				ss >> m_numDbImages;
+//				printf("%s %u\n", field.c_str(), m_numDbImages);
+			} else if (field.compare(treeFieldsNames[nodes]) == 0) {
+//				printf("%s\n", field.c_str());
+				break;
+			}
+		}
 
-	// Verifying that children is a sequence
-	if (children.type() != cv::FileNode::NONE
-			&& children.type() != cv::FileNode::SEQ) {
-		throw std::runtime_error("Error while parsing tree,"
-				" fetched element 'children' should be a sequence");
+		m_root = new VocabTreeNode();
+		load_tree(inputFileStream, m_root);
+
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error("[VocabTree::load] "
+				"Got error while parsing file [" + std::string(e.what()) + "]");
 	}
 
-	m_root = new VocabTreeNode();
+	// Close file
+	inputZippedFileStream.close();
 
-	cv::FileNodeIterator it = children.begin();
-
-	load_tree(it, m_root);
-
-	fs.release();
 }
 
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::load_tree(cv::FileNodeIterator& it,
+void VocabTree<TDescriptor, Distance>::load_tree(
+		boost::iostreams::filtering_istream& inputFileStream,
 		VocabTreeNodePtr& node) {
 
-	cv::FileNode fs = *it;
+	enum nodeFields {
+		start, center, rows, cols, dt, data, nodeId, wordId
+	};
+	std::string nodeFieldsNames[] = { "-", "center:", "rows:", "cols:", "dt:",
+			"data:", "nodeId:", "wordId:" };
 
-	cv::Mat center;
-	fs["center"] >> center;
-	CV_Assert(center.rows == 1);
-	CV_Assert(center.cols == (int ) m_veclen);
+	std::string line, field;
+	std::stringstream ss;
 
-	// Deep copy
-	node->center = new TDescriptor[m_veclen];
-	for (size_t k = 0; k < m_veclen; ++k) {
-		node->center[k] = center.at<TDescriptor>(0, k);
+	cv::Mat _center;
+
+	int _rows = -1;
+	int _cols = -1;
+	std::string _type;
+	int colIdx = -1;
+	float elem;
+
+	while (getline(inputFileStream, line)) {
+		ss.clear();
+		ss.str(line);
+		ss >> field;
+		if (field.compare(nodeFieldsNames[start]) == 0) {
+			continue;
+		} else if (field.compare(nodeFieldsNames[center]) == 0) {
+			continue;
+		} else if (field.compare(nodeFieldsNames[rows]) == 0) {
+			ss >> _rows;
+//			printf("%s %d\n", field.c_str(), _rows);
+		} else if (field.compare(nodeFieldsNames[cols]) == 0) {
+			ss >> _cols;
+//			printf("%s %d\n", field.c_str(), _cols);
+		} else if (field.compare(nodeFieldsNames[dt]) == 0) {
+			ss >> _type;
+//			printf("%s %s\n", field.c_str(), _type.c_str());
+		} else if (field.compare(nodeFieldsNames[nodeId]) == 0) {
+			ss >> node->node_id;
+		} else if (field.compare(nodeFieldsNames[wordId]) == 0) {
+			ss >> node->word_id;
+			break;
+		} else {
+			if (field.compare(nodeFieldsNames[data]) == 0) {
+				_center = cv::Mat::zeros(_rows, _cols,
+						_type.compare("f") == 0 ? CV_32F : CV_8U);
+				line.replace(line.find(nodeFieldsNames[data]), 5, " ");
+			}
+
+			bool isLastLine = line.find("]") != std::string::npos;
+
+			std::replace(line.begin(), line.end(), '[', ' ');
+			std::replace(line.begin(), line.end(), ',', ' ');
+			std::replace(line.begin(), line.end(), ']', ' ');
+
+			// printf("[%s] -->", line.c_str());
+
+			ss.clear();
+			ss.str(line);
+
+			while ((ss >> elem).fail() == false) {
+				_center.at<TDescriptor>(0, ++colIdx) = elem;
+			}
+
+			// printf("\n");
+
+			if (isLastLine) {
+				// Check dimensions correctness
+				CV_Assert(_center.rows == 1);
+				CV_Assert(_center.cols == int(m_veclen));
+
+//				std::cout << _center << std::endl;
+
+				// Deep copy
+				node->center = new TDescriptor[m_veclen];
+				for (size_t k = 0; k < m_veclen; ++k) {
+					node->center[k] = _center.at<TDescriptor>(0, k);
+				}
+
+				// Release memory and dereference header
+				_center.release();
+				_center = cv::Mat();
+			}
+		}
 	}
-	center.release();
-
-	node->node_id = (int) fs["nodeId"];
-	node->word_id = (int) fs["wordId"];
 
 	bool hasChildren = node->word_id == -1;
 
 	if (hasChildren == false) {
 		// Node has no children then it's a leaf node
-
 		node->children = NULL;
-
 		std::vector<ImageCount>().swap(node->image_list);
-
 		m_words.push_back(node);
-
 	} else {
 		// Node has children then it's an interior node
-
 		node->children = new VocabTreeNodePtr[m_branching];
-
-		for (size_t c = 0; (int) c < m_branching; ++c) {
+		for (int c = 0; c < m_branching; ++c) {
 			node->children[c] = new VocabTreeNode();
-			load_tree(++it, node->children[c]);
+			load_tree(inputFileStream, node->children[c]);
 		}
 	}
 
@@ -826,13 +923,6 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 			"{";
 	int index, wordId = -1;
 	float count;
-	double weight;
-
-	// Check file exists
-	if (FileUtils::checkFileExist(filename) == false) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"File [" + filename + "] doesn't exist");
-	}
 
 	// Open file
 	inputZippedFileStream.open(filename.c_str(),
@@ -863,8 +953,7 @@ void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 			if (line.compare(wordHeader) == 0) {
 				++wordId;
 			} else if (line.find(weightHeader) != std::string::npos) {
-				sscanf(line.c_str(), "%*s %lf", &weight);
-				m_words[wordId]->weight = weight;
+				sscanf(line.c_str(), "%*s %lf", &m_words[wordId]->weight);
 			} else if (line.find(pairHeader) != std::string::npos) {
 				line.replace(line.find('-'), 1, " ");
 				std::replace(line.begin(), line.end(), ':', ' ');
