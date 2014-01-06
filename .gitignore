@@ -21,6 +21,7 @@
 FeatureExtract/FeatureExtract
 FeatureSelect/FeatureSelect
 GeomVerify/GeomVerify
+OxDataReader/OxDataReader
 VocabLearn/VocabLearn
 VocabBuildDB/VocabBuildDB
 VocabMatch/VocabMatch

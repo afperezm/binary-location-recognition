@@ -74,24 +74,6 @@ void saveDescriptors(const std::string& filename, const cv::Mat& descriptors);
 void loadDescriptors(const std::string& filename, cv::Mat& descriptors);
 
 /**
- * Saves a set of descriptors onto a plain text file using C++ STL.
- *
- * @param filename - The path to the file where to save the descriptors
- * @param descriptors - The descriptors to be saved
- */
-void saveDescriptorsToBin(const std::string& filename,
-		const cv::Mat& descriptors);
-
-/**
- * Loads a set of descriptors from a plain text file using C++ STL.
- *
- * @param filename - The path to the file where to load the descriptors from
- * @param descriptors - The matrix where to save the loaded descriptors
- */
-void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors,
-		int descriptorLength = 128);
-
-/**
  * Saves a set of keypoints onto a plain text file using OpenCV FileStorage API.
  *
  * @param filename - The path to the file where to save the keypoints
