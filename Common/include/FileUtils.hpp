@@ -19,7 +19,7 @@ namespace FileUtils {
 void readFolder(const char* folderPath, std::vector<std::string>& files);
 
 /**
- * Loads a list of strings from a plain text file, each element is pushed as a new element.
+ * Saves a list of strings to a plain text file, each element is saved to a new line.
  *
  * @param filename - The path to the file where to load the list from
  * @param list - The list where to save the loaded strings
@@ -28,7 +28,7 @@ void saveList(const std::string& filename,
 		const std::vector<std::string>& list);
 
 /**
- * Saves a list of strings to a plain text file, each element is saved to a new line.
+ * Loads a list of strings from a plain text file, each element is pushed as a new element.
  *
  * @param filename - The path to the file where to save the list
  * @param list - The list to be saved

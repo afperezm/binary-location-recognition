@@ -69,10 +69,6 @@ void FileUtils::loadList(const std::string& list_fpath,
 	std::string line;
 	list.clear();
 
-	if (FileUtils::checkFileExist(list_fpath) == false) {
-		throw std::runtime_error("File [" + list_fpath + "] doesn't exist");
-	}
-
 	// Open file
 	inputFileStream.open(list_fpath.c_str(), std::fstream::in);
 
