@@ -136,14 +136,15 @@ int main(int argc, char **argv) {
 		printf("   Starting feature extraction from first image\n");
 	}
 
+	std::vector<cv::KeyPoint> keypoints;
+	cv::Mat descriptors;
+
 	// Extracting features
 	for (std::vector<std::string>::iterator image = startImg;
 			image != imgFolderFiles.end(); ++image) {
 		if ((*image).find(".jpg") != std::string::npos) {
 			printf("-- Processing image [%s]\n", (*image).c_str());
 
-			std::vector<cv::KeyPoint> keypoints;
-			cv::Mat descriptors;
 			try {
 				// Notice that number of key-points might be reduced due to border effect
 				detectAndDescribeFeatures(imgsFolder, (*image), keypoints,
@@ -214,6 +215,7 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
 				detectorType);
 
+		// Clear key-points
 		std::vector<cv::KeyPoint>().swap(keypoints);
 		// Detect the key-points
 		printf("   Detecting key-points from image [%s]\n", imgName.c_str());
@@ -230,13 +232,16 @@ void detectAndDescribeFeatures(const std::string& imgPath,
 		cv::Ptr<cv::DescriptorExtractor> extractor =
 				cv::DescriptorExtractor::create(descriptorType);
 
+		descriptors.release();
 		descriptors = cv::Mat();
+
 		// Describe key-points
 		// Notice that number of key-points might be reduced due to border effect
 		printf("   Describing key-points from image [%s]\n", imgName.c_str());
 		extractor->compute(img, keypoints, descriptors);
 
 		img.release();
+		img = cv::Mat();
 
 		//	mytime = cv::getTickCount();
 		//	extractor->compute(img_1, key-points, descriptors);

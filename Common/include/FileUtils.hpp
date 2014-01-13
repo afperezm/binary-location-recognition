@@ -9,6 +9,33 @@
 
 namespace FileUtils {
 
+struct Query {
+
+	std::string name;
+	float x1, y1, x2, y2;
+
+	Query() {
+		clear();
+	}
+
+	Query(std::string& _name, float _x1, float _y1, float _x2, float _y2) {
+		name = _name;
+		x1 = _x1;
+		y1 = _y1;
+		y2 = _y2;
+		x2 = _x2;
+	}
+
+	void clear() {
+		name.clear();
+		x1 = -1.0;
+		y1 = -1.0;
+		y2 = -1.0;
+		x2 = -1.0;
+	}
+
+};
+
 /**
  * Opens a directory and saves all the files names onto a vector of strings, it
  * returns a status flag for reporting any error during the opening of the folder.
@@ -98,6 +125,15 @@ void loadKeypoints(const std::string& filename,
  * @return true if the file exists, false otherwise
  */
 bool checkFileExist(const std::string& filename);
+
+/**
+ * Loads from a plain text file a list of strings and regions coordinates corresponding to
+ * a set of queries.
+ *
+ * @param filePath - Path the file holding the list of queries and the coordinates of the region it determines
+ * @param list - List holding the loaded queries
+ */
+void loadQueriesList(std::string& filePath, std::vector<Query>& list);
 
 } // namespace FileUtils
 

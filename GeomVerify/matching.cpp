@@ -119,7 +119,7 @@ void _matchKeypointsImpl(const std::vector<cv::KeyPoint>& keypoints1,
 
 	double score;
 	DistanceType descsDist, dBest, dSecond;
-	int idBest = -1;
+	int idBest = -1, idSecondBest = -1;
 
 	// knn(2): for each descriptor in 1 find the best two descriptors in 2
 	for (size_t i = 0; i < keypoints1.size(); i++) {
@@ -141,6 +141,7 @@ void _matchKeypointsImpl(const std::vector<cv::KeyPoint>& keypoints1,
 				idBest = int(j);
 			} else if (descsDist < dSecond) {
 				dSecond = descsDist;
+				idSecondBest = int(j);
 			}
 
 		}
@@ -149,7 +150,9 @@ void _matchKeypointsImpl(const std::vector<cv::KeyPoint>& keypoints1,
 
 		CV_Assert(score <= 1.0);
 
-		if (score >= ratioThreshold) {
+		// Reject all matches in which the distance ratio is greater than 0.8
+		// this eliminates 90% of the false matches while discarding less than 5% of the correct matches
+		if (score > ratioThreshold) {
 			continue;
 		}
 

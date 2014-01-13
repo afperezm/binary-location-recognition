@@ -1,4 +1,4 @@
-# BinVocabTree #
+# LocRecPipeline #
 
 ## Overview ##
 

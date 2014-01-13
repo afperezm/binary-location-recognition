@@ -195,7 +195,7 @@ void FileUtils::saveDescriptors(const std::string& filename,
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
 
 	if (fs.isOpened() == false) {
-		throw std::runtime_error("[FileUtils::saveKeypoints] "
+		throw std::runtime_error("[FileUtils::saveDescriptors] "
 				"Unable to open file [" + filename + "] for writing");
 	}
 
@@ -296,4 +296,36 @@ void FileUtils::loadKeypoints(const std::string& filename,
 bool FileUtils::checkFileExist(const std::string& fname) {
 	struct stat buffer;
 	return stat(fname.c_str(), &buffer) == 0;
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadQueriesList(std::string& filePath,
+		std::vector<Query>& list) {
+
+	// Initialize local variables
+	list.clear();
+	std::ifstream inputFileStream;
+	Query query;
+
+	// Open file
+	inputFileStream.open(filePath.c_str(), std::fstream::in);
+
+	// Check file
+	if (inputFileStream.good() == false) {
+		throw std::runtime_error(
+				"Error while opening file [" + filePath + "] for reading");
+	}
+
+	// Load list from file
+	while (inputFileStream >> query.name >> query.x1 >> query.y1 >> query.x2
+			>> query.y2) {
+		list.push_back(query);
+		// Clear variable holding temporary query
+		query.clear();
+	}
+
+	// Close file
+	inputFileStream.close();
+
 }
