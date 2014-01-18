@@ -1043,7 +1043,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	}
 
 	// Recursion base case: done when the last level is reached
-	// or when there are less data than clusters
+	// or when there is less data than clusters
 	if (level == m_depth - 1 || indices_length < m_branching) {
 		node->children = NULL;
 		node->word_id = m_words.size();
@@ -1082,8 +1082,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
+	CV_Assert(centers_length == m_branching);
+
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
+#ifdef SUPPDUPLICATES
 	if (centers_length < m_branching) {
 		node->children = NULL;
 		node->word_id = m_words.size();
@@ -1096,6 +1099,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 		return;
 	}
+#endif
 
 #if DEBUG
 #if VTREEVERBOSE
@@ -1783,6 +1787,6 @@ bool VocabTree<TDescriptor, Distance>::operator!=(
 	return !(*this == other);
 }
 
-} /* namespace cvflann */
+} /* namespace bfeat */
 
 #endif /* VOCAB_TREE_H_ */

@@ -130,12 +130,17 @@ template<typename TDescriptor, typename Distance>
 void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, std::vector<int>& centers, int& centers_length,
 		const cv::Mat& dataset, Distance distance) {
+
+	// Assert there is enough data
+	CV_Assert(k <= indices_length);
+
 	cvflann::UniqueRandom r(indices_length);
 
 	int index;
 	for (index = 0; index < k; ++index) {
-		bool duplicate = true;
 		int rnd;
+#ifdef SUPPDUPLICATES
+		bool duplicate = true;
 		while (duplicate) {
 			duplicate = false;
 			rnd = r.next();
@@ -156,6 +161,12 @@ void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 				}
 			}
 		}
+#else
+		rnd = r.next();
+		// A negative random number is obtained when the period of the generator is hit
+		CV_Assert(rnd >= 0);
+		centers[index] = indices[rnd];
+#endif
 	}
 	centers_length = index;
 }
@@ -292,12 +303,17 @@ template<typename TDescriptor, typename Distance>
 void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, std::vector<int>& centers, int& centers_length,
 		DynamicMat& dataset, Distance distance) {
+
+	// Assert there is enough data
+	CV_Assert(k <= indices_length);
+
 	cvflann::UniqueRandom r(indices_length);
 
 	int index;
 	for (index = 0; index < k; ++index) {
-		bool duplicate = true;
 		int rnd;
+#ifdef SUPPDUPLICATES
+		bool duplicate = true;
 		while (duplicate) {
 			duplicate = false;
 			rnd = r.next();
@@ -318,6 +334,12 @@ void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 				}
 			}
 		}
+#else
+		rnd = r.next();
+		// A negative random number is obtained when the period of the generator is hit
+		CV_Assert(rnd >= 0);
+		centers[index] = indices[rnd];
+#endif
 	}
 	centers_length = index;
 }
