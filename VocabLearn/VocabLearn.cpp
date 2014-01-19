@@ -1,10 +1,9 @@
-//============================================================================
-// Name        : MediaEval-PlacingTask.cpp
-// Author      : Andrés Pérez
-// Version     :
-// Copyright   : Your copyright notice
-// Description : Hello World in C, Ansi-style
-//============================================================================
+/*
+ * VocabLearn.cpp
+ *
+ *  Created on: Oct 6, 2013
+ *      Author: andresf
+ */
 
 #include <bitset>
 #include <stdio.h>
