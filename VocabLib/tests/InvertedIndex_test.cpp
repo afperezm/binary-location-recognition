@@ -10,26 +10,6 @@
 
 #include <InvertedIndex.hpp>
 
-TEST(InvertedIndex, InstantiateOnHeap) {
-
-	cv::Ptr<vlr::InvertedIndex> index;
-
-	EXPECT_TRUE(index == NULL);
-
-	index = new vlr::InvertedIndex();
-
-	EXPECT_TRUE(index != NULL);
-
-}
-
-TEST(InvertedIndex, InstantiateOnStack) {
-
-	vlr::InvertedIndex index;
-
-	EXPECT_TRUE(index.size() == 0);
-
-}
-
 TEST(ImageCount, EmptyConstructor) {
 
 	vlr::ImageCount counter;
@@ -52,16 +32,54 @@ TEST(Word, EmptyConstructor) {
 
 	vlr::Word w;
 
-	EXPECT_TRUE(w.m_id == -1);
 	EXPECT_TRUE(w.m_weight == 0.0);
 
 }
 
 TEST(Word, DefaultConstructor) {
 
-	vlr::Word w(10, 180.0);
+	vlr::Word w(180.0);
 
-	EXPECT_TRUE(w.m_id == 10);
 	EXPECT_TRUE(w.m_weight == 180.0);
+
+}
+
+TEST(InvertedIndex, InstantiateOnHeap) {
+
+	cv::Ptr<vlr::InvertedIndex> index;
+
+	EXPECT_TRUE(index == NULL);
+
+	index = new vlr::InvertedIndex();
+
+	EXPECT_TRUE(index != NULL);
+
+}
+
+TEST(InvertedIndex, InstantiateOnStack) {
+
+	vlr::InvertedIndex index;
+
+	EXPECT_TRUE(index.size() == 0);
+
+}
+
+TEST(InvertedIndex, SaveLoad) {
+
+	vlr::InvertedIndex index;
+
+	vlr::Word w(1.0);
+	for (int imgIdx = 0; imgIdx < 5; ++imgIdx) {
+		w.m_imageList.clear();
+		w.m_imageList.push_back(vlr::ImageCount(imgIdx, 1.0));
+		index.push_back(w);
+	}
+
+	index.save("test_inv_idx.yaml.gz");
+
+	vlr::InvertedIndex indexLoaded;
+	indexLoaded.load("test_inv_idx.yaml.gz");
+
+	EXPECT_TRUE(index == indexLoaded);
 
 }

@@ -30,30 +30,28 @@ InvertedIndex::~InvertedIndex() {
 // --------------------------------------------------------------------------
 
 bool InvertedIndex::operator==(const InvertedIndex &other) const {
-	if (this->size() != other.size()) {
+	// Check indices have same size
+	if (size() != other.size()) {
+		printf("Indices have different size, [%lu] against [%lu]\n", size(),
+				other.size());
 		return false;
 	}
-	for (size_t i = 0; i < this->size(); i++) {
-		int idWordA = this->at(i).m_id;
-		int idWordB = other.at(i).m_id;
-		assert(idWordA == idWordB);
-		double weightWordA = this->at(i).m_weight;
-		double weightWordB = other.at(i).m_weight;
-		assert(weightWordA == weightWordB);
-
-		size_t invertedFileLengthWordA = this->at(i).m_imageList.size();
-		size_t invertedFileLengthWordB = other.at(i).m_imageList.size();
-		assert(invertedFileLengthWordA == invertedFileLengthWordB);
+	// Check words are equal
+	for (int i = 0; i < int(size()); ++i) {
+		if (at(i) != other.at(i)) {
+			printf("Words at position [%d] are unequal\n", i);
+			return false;
+		}
 	}
 	return true;
 }
 
 // --------------------------------------------------------------------------
 
-void InvertedIndex::saveInvertedIndex(const std::string& filename) const {
+void InvertedIndex::save(const std::string& filename) const {
 
-	if (this->empty() == true) {
-		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
+	if (empty() == true) {
+		throw std::runtime_error("[VocabTree::save] "
 				"Vocabulary is empty");
 	}
 
@@ -69,12 +67,12 @@ void InvertedIndex::saveInvertedIndex(const std::string& filename) const {
 
 	fs << "Words" << "[";
 
-	for (size_t i = 0; i < this->size(); ++i) {
+	for (size_t i = 0; i < size(); ++i) {
 		fs << "{";
 
-		fs << "weight" << this->at(i).m_weight;
+		fs << "weight" << at(i).m_weight;
 		fs << "imageList" << "[";
-		for (ImageCount img : this->at(i).m_imageList) {
+		for (ImageCount img : at(i).m_imageList) {
 			fs << "{:" << "m_index" << int(img.m_index) << "m_count"
 					<< img.m_count << "}";
 		}
@@ -90,12 +88,10 @@ void InvertedIndex::saveInvertedIndex(const std::string& filename) const {
 
 // --------------------------------------------------------------------------
 
-void InvertedIndex::loadInvertedIndex(const std::string& filename) {
+void InvertedIndex::load(const std::string& filename) {
 
-	if (this->empty() == true) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Vocabulary is empty");
-	}
+	// Clear index
+	clear();
 
 	// Initializing variables
 	std::ifstream inputZippedFileStream;
@@ -133,8 +129,9 @@ void InvertedIndex::loadInvertedIndex(const std::string& filename) {
 		while (getline(inputFileStream, line)) {
 			if (line.compare(wordHeader) == 0) {
 				++wordId;
+				push_back(vlr::Word());
 			} else if (line.find(weightHeader) != std::string::npos) {
-				sscanf(line.c_str(), "%*s %lf", &this->at(wordId).m_weight);
+				sscanf(line.c_str(), "%*s %lf", &at(wordId).m_weight);
 			} else if (line.find(pairHeader) != std::string::npos) {
 				line.replace(line.find('-'), 1, " ");
 				std::replace(line.begin(), line.end(), ':', ' ');
@@ -143,7 +140,7 @@ void InvertedIndex::loadInvertedIndex(const std::string& filename) {
 				std::replace(line.begin(), line.end(), '}', ' ');
 				sscanf(line.c_str(), "%*s %d %*s %f", &index, &count);
 				ImageCount img(index, count);
-				this->at(wordId).m_imageList.push_back(img);
+				at(wordId).m_imageList.push_back(img);
 			}
 		}
 	} catch (const boost::iostreams::gzip_error& e) {
