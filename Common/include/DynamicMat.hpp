@@ -31,7 +31,7 @@ static std::vector<std::string> DEFAULT_FILENAMES;
 
 namespace vlr {
 
-class DynamicMat {
+class Mat {
 
 public:
 
@@ -61,26 +61,26 @@ public:
 	/**
 	 * Class empty constructor.
 	 */
-	DynamicMat();
+	Mat();
 
 	/**
 	 * Copy constructor.
 	 *
 	 * @param other - Reference to an instance where to copy properties from
 	 */
-	DynamicMat(const DynamicMat& other);
+	Mat(const Mat& other);
 
 	/**
 	 * Class constructor.
 	 *
 	 * @param keysFilenames - Reference to a vector of descriptor filenames
 	 */
-	DynamicMat(std::vector<std::string>& keysFilenames);
+	Mat(std::vector<std::string>& keysFilenames);
 
 	/**
 	 * Class destroyer.
 	 */
-	virtual ~DynamicMat();
+	virtual ~Mat();
 
 	/**
 	 * Assignment operator.
@@ -88,7 +88,7 @@ public:
 	 * @param other - Reference to an instance where to copy properties from
 	 * @return reference to the new instance
 	 */
-	DynamicMat& operator=(const DynamicMat& other);
+	Mat& operator=(const Mat& other);
 
 	/**
 	 * Retrieves the requested descriptor by obtaining it from cache

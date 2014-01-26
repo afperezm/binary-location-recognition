@@ -11,7 +11,7 @@
 
 namespace vlr {
 
-HCTree::HCTree(vlr::DynamicMat& inputData, const HCTreeParams& params) :
+HCTree::HCTree(vlr::Mat& inputData, const HCTreeParams& params) :
 		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
 				Distance()) {
 

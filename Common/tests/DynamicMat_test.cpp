@@ -18,7 +18,7 @@
 
 TEST(DynamicMat, EmptyInstantiation) {
 
-	DynamicMat data;
+	vlr::Mat data;
 
 	EXPECT_TRUE(data.empty());
 	EXPECT_TRUE(data.getDescriptorsIndex().size() == 0);
@@ -37,7 +37,7 @@ TEST(DynamicMat, Instantiation) {
 	keysFilenames.push_back("sift_0.yaml.gz");
 	keysFilenames.push_back("sift_0.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	EXPECT_FALSE(data.empty());
@@ -55,10 +55,10 @@ TEST(DynamicMat, InitByCopy) {
 	keysFilenames.push_back("sift_0.yaml.gz");
 	keysFilenames.push_back("sift_0.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	DynamicMat dataCopy(data);
+	vlr::Mat dataCopy(data);
 
 	EXPECT_FALSE(data.empty());
 	EXPECT_TRUE(data.rows == dataCopy.rows);
@@ -80,10 +80,10 @@ TEST(DynamicMat, InitByAssignment) {
 	keysFilenames.push_back("sift_0.yaml.gz");
 	keysFilenames.push_back("sift_0.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	DynamicMat dataCopy = data;
+	vlr::Mat dataCopy = data;
 
 	EXPECT_FALSE(data.empty());
 	EXPECT_TRUE(data.rows == dataCopy.rows);
@@ -109,7 +109,7 @@ TEST(DynamicMat, RowExtraction) {
 
 	std::vector<std::string> keysFilenames(10, "sift_0.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Mat extractedRow, originalRow;
@@ -153,7 +153,7 @@ TEST(DynamicMat, Stress) {
 
 	std::vector<std::string> descriptorsList;
 	FileUtils::loadList("list.txt", descriptorsList);
-	DynamicMat data(descriptorsList);
+	vlr::Mat data(descriptorsList);
 	cv::Mat row = cv::Mat();
 
 	for (int i = 0; i < data.rows; ++i) {

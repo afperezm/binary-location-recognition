@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
 	// Step 3: build tree
 	printf("-- Initializing dynamic descriptors matrix\n");
-	vlr::DynamicMat dataset(descriptorsFilenames);
+	vlr::Mat dataset(descriptorsFilenames);
 	printf("   Initialized, got [%d] descriptors\n", dataset.rows);
 
 	// Cluster descriptors using Vocabulary Tree

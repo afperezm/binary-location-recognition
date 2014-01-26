@@ -12,7 +12,7 @@
 
 namespace vlr {
 
-DynamicMat::DynamicMat() :
+Mat::Mat() :
 		m_capacity(0.0), m_descriptorType(-1), m_imagesIndex(DEFAULT_INDICES), m_descriptorsFilenames(
 				DEFAULT_FILENAMES), m_memoryCount(0), m_cachedMat(cv::Mat()), m_cachedMatStartIdx(
 				-1), rows(0), cols(0) {
@@ -23,7 +23,7 @@ DynamicMat::DynamicMat() :
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(const DynamicMat& other) {
+Mat::Mat(const Mat& other) {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing by copy\n");
@@ -44,7 +44,7 @@ DynamicMat::DynamicMat(const DynamicMat& other) {
 
 // --------------------------------------------------------------------------
 
-DynamicMat::DynamicMat(std::vector<std::string>& descriptorsFilenames) :
+Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 		m_descriptorsFilenames(descriptorsFilenames), m_cachedMatStartIdx(-1) {
 
 #if DYNMATVERBOSE
@@ -126,7 +126,7 @@ DynamicMat::DynamicMat(std::vector<std::string>& descriptorsFilenames) :
 
 // --------------------------------------------------------------------------
 
-DynamicMat::~DynamicMat() {
+Mat::~Mat() {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Destroying\n");
 #endif
@@ -135,7 +135,7 @@ DynamicMat::~DynamicMat() {
 
 // --------------------------------------------------------------------------
 
-DynamicMat& DynamicMat::operator=(const DynamicMat& other) {
+Mat& Mat::operator=(const Mat& other) {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing by assignment\n");
@@ -157,7 +157,7 @@ DynamicMat& DynamicMat::operator=(const DynamicMat& other) {
 
 // --------------------------------------------------------------------------
 
-cv::Mat DynamicMat::row(int descriptorIdx) {
+cv::Mat Mat::row(int descriptorIdx) {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Obtaining descriptor [%d]\n", descriptorIdx);
@@ -251,17 +251,17 @@ cv::Mat DynamicMat::row(int descriptorIdx) {
 
 // --------------------------------------------------------------------------
 
-int DynamicMat::type() const {
+int Mat::type() const {
 	return m_descriptorType;
 }
 
 // --------------------------------------------------------------------------
 
-bool DynamicMat::empty() const {
+bool Mat::empty() const {
 	return rows == 0;
 }
 
-void DynamicMat::clearCache() {
+void Mat::clearCache() {
 	m_descriptorsCache.clear();
 	m_cachingOrder = std::stack<int>();
 	m_memoryCount = 0;

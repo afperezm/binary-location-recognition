@@ -24,7 +24,7 @@ public:
 			std::vector<int>& centers, int& centers_length,
 			const cv::Mat& dataset, Distance distance = Distance()) = 0;
 	virtual void chooseCenters(int k, int* indices, int indices_length,
-			std::vector<int>& centers, int& centers_length, vlr::DynamicMat& dataset,
+			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance()) = 0;
 	static cv::Ptr<CentersChooser<TDescriptor, Distance> > create(
 			const cvflann::flann_centers_init_t& chooserType);
@@ -57,7 +57,7 @@ public:
 			const cv::Mat& dataset, Distance distance = Distance());
 
 	virtual void chooseCenters(int k, int* indices, int indices_length,
-			std::vector<int>& centers, int& centers_length, vlr::DynamicMat& dataset,
+			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance());
 
 };
@@ -89,7 +89,7 @@ public:
 			const cv::Mat& dataset, Distance distance = Distance());
 
 	virtual void chooseCenters(int k, int* indices, int indices_length,
-			std::vector<int>& centers, int& centers_length, vlr::DynamicMat& dataset,
+			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance());
 
 };
@@ -119,7 +119,7 @@ public:
 			const cv::Mat& m_dataset, Distance distance = Distance());
 
 	virtual void chooseCenters(int k, int* indices, int indices_length,
-			std::vector<int>& centers, int& centers_length, vlr::DynamicMat& dataset,
+			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance());
 
 };
@@ -302,7 +302,7 @@ void KmeansppCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 template<typename TDescriptor, typename Distance>
 void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, std::vector<int>& centers, int& centers_length,
-		vlr::DynamicMat& dataset, Distance distance) {
+		vlr::Mat& dataset, Distance distance) {
 
 	// Assert there is enough data
 	CV_Assert(k <= indices_length);
@@ -349,7 +349,7 @@ void RandomCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 template<typename TDescriptor, typename Distance>
 void GonzalezCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, std::vector<int>& centers, int& centers_length,
-		vlr::DynamicMat& dataset, Distance distance) {
+		vlr::Mat& dataset, Distance distance) {
 	int n = indices_length;
 
 	int rnd = cvflann::rand_int(n);
@@ -393,7 +393,7 @@ void GonzalezCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 template<typename TDescriptor, typename Distance>
 void KmeansppCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 		int indices_length, std::vector<int>& centers, int& centers_length,
-		vlr::DynamicMat& dataset, Distance distance) {
+		vlr::Mat& dataset, Distance distance) {
 	int n = indices_length;
 
 	double currentPot = 0;
