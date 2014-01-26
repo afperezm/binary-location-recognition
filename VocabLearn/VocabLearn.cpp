@@ -29,11 +29,11 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 6 || argc > 7) {
+	if (argc < 6 || argc > 6) {
 		printf("\nUsage:\n"
 				"\tVocabLearn <in.training_images.list> <in.depth>"
 				" <in.branch.factor> <in.restarts>"
-				" <out.tree> [in.type.binary:1]\n\n");
+				" <out.tree>\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -42,11 +42,6 @@ int main(int argc, char **argv) {
 	int branchFactor = atoi(argv[3]);
 	int restarts = atoi(argv[4]);
 	std::string tree_out = argv[5];
-	bool isDescriptorBinary = true;
-
-	if (argc >= 7) {
-		isDescriptorBinary = atoi(argv[6]);
-	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
@@ -58,14 +53,14 @@ int main(int argc, char **argv) {
 
 	// Step 1: read list of descriptors files to build the tree
 	printf("-- Loading list of descriptors files\n");
-	std::vector<std::string> descsFilenames;
-	FileUtils::loadList(list_in, descsFilenames);
-	printf("   Loaded, got [%lu] entries\n", descsFilenames.size());
+	std::vector<std::string> descriptorsFilenames;
+	FileUtils::loadList(list_in, descriptorsFilenames);
+	printf("   Loaded, got [%lu] entries\n", descriptorsFilenames.size());
 
 	// Step 3: build tree
 	printf("-- Initializing dynamic descriptors matrix\n");
-	DynamicMat mergedDescriptors(descsFilenames);
-	printf("   Initialized, got [%d] descriptors\n", mergedDescriptors.rows);
+	vlr::DynamicMat dataset(descriptorsFilenames);
+	printf("   Initialized, got [%d] descriptors\n", dataset.rows);
 
 	// Cluster descriptors using Vocabulary Tree
 	bfeat::VocabTreeParams params;
@@ -75,23 +70,18 @@ int main(int argc, char **argv) {
 
 	cv::Ptr<bfeat::VocabTreeBase> tree;
 
-	if ((mergedDescriptors.type() == CV_8U) != isDescriptorBinary) {
-		fprintf(stderr,
-				"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
-				isDescriptorBinary == true ? "binary" : "non-binary",
-				mergedDescriptors.type() == CV_8U ? "binary" : "non-binary");
-		return EXIT_FAILURE;
-	}
+	printf("-- Descriptor type is [%s]\n",
+			dataset.type() == CV_8U ? "binary" : "non-binary");
 
-	if (isDescriptorBinary == true) {
-		tree = new bfeat::VocabTreeBin(mergedDescriptors, params);
+	if (dataset.type() == CV_8U) {
+		tree = new bfeat::VocabTreeBin(dataset, params);
 	} else {
-		tree = new bfeat::VocabTreeReal(mergedDescriptors, params);
+		tree = new bfeat::VocabTreeReal(dataset, params);
 	}
 
 	printf(
 			"-- Building vocabulary tree from [%d] feature vectors, branch factor [%d], max iterations [%d], depth [%d], centers initialization algorithm [%s]\n",
-			mergedDescriptors.rows, params["branching"].cast<int>(),
+			dataset.rows, params["branching"].cast<int>(),
 			params["iterations"].cast<int>(), params["depth"].cast<int>(),
 			params["centers_init"].cast<cvflann::flann_centers_init_t>()
 					== cvflann::FLANN_CENTERS_RANDOM ? "random" :
@@ -107,7 +97,7 @@ int main(int argc, char **argv) {
 			* 1000;
 	printf(
 			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
-			mergedDescriptors.rows, mytime, tree->size());
+			dataset.rows, mytime, tree->size());
 
 	printf("-- Saving tree to [%s]\n", tree_out.c_str());
 

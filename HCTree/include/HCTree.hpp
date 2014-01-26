@@ -18,7 +18,7 @@
 
 namespace vlr {
 
-static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
+static vlr::DynamicMat DEFAULT_INPUTDATA = DynamicMat();
 typedef uchar TDescriptor;
 typedef cv::Hamming Distance;
 typedef typename Distance::ResultType DistanceType;
@@ -73,7 +73,7 @@ protected:
 
 	/** Attributes useful for building the tree **/
 	// The data set over which to build the tree
-	DynamicMat& m_dataset;
+	vlr::DynamicMat& m_dataset;
 
 	/** Attributes of the tree **/
 	// Branching factor (number of partitions in which
@@ -100,7 +100,7 @@ public:
 	 * @param inputData - Reference to the matrix with the data to be clustered.
 	 * @param params - Parameters to the hierarchical clustering tree
 	 */
-	HCTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
+	HCTree(vlr::DynamicMat& inputData = DEFAULT_INPUTDATA,
 			const HCTreeParams& params = HCTreeParams());
 
 	/**

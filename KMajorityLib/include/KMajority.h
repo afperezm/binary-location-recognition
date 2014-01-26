@@ -1,5 +1,5 @@
 /*
- * kmajority_index.h
+ * KMajority.h
  *
  *  Created on: Aug 28, 2013
  *      Author: andresf

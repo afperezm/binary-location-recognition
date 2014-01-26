@@ -32,7 +32,7 @@ TEST(HCTree, InitParams) {
 	std::vector<std::string> keysFilenames;
 	keysFilenames.push_back("brief_0.yaml.gz");
 	keysFilenames.push_back("brief_1.yaml.gz");
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 	vlr::HCTree tree(data);
 
 	cv::Mat descriptors;
@@ -47,7 +47,7 @@ TEST(HCTree, TreeBuilding) {
 	std::vector<std::string> keysFilenames;
 	keysFilenames.push_back("brief_0.yaml.gz");
 	keysFilenames.push_back("brief_1.yaml.gz");
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 
 	vlr::HCTree tree(data);
 
@@ -64,7 +64,7 @@ TEST(HCTree, SaveLoad) {
 	std::vector<std::string> keysFilenames;
 	keysFilenames.push_back("brief_0.yaml.gz");
 	keysFilenames.push_back("brief_1.yaml.gz");
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 
 	vlr::HCTree tree(data);
 

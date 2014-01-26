@@ -10,7 +10,7 @@
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
 
-// --------------------------------------------------------------------------
+namespace vlr {
 
 DynamicMat::DynamicMat() :
 		m_capacity(0.0), m_descriptorType(-1), m_imagesIndex(DEFAULT_INDICES), m_descriptorsFilenames(
@@ -266,3 +266,5 @@ void DynamicMat::clearCache() {
 	m_cachingOrder = std::stack<int>();
 	m_memoryCount = 0;
 }
+
+} /* namespace vlr */

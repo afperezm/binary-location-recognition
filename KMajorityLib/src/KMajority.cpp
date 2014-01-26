@@ -1,11 +1,11 @@
 /*
- * KMajorityIndex.cpp
+ * KMajority.cpp
  *
  *  Created on: Aug 28, 2013
  *      Author: andresf
  */
 
-#include <KMajorityIndex.h>
+#include <KMajority.h>
 #include <CentersChooser.h>
 
 #include <opencv2/highgui/highgui.hpp>

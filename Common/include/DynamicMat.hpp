@@ -29,6 +29,8 @@ typedef int Image;
 static std::vector<Image> DEFAULT_INDICES;
 static std::vector<std::string> DEFAULT_FILENAMES;
 
+namespace vlr {
+
 class DynamicMat {
 
 public:
@@ -172,5 +174,7 @@ private:
 	}
 
 };
+
+} /* namespace vlr */
 
 #endif /* DYNAMICMAT_HPP_ */

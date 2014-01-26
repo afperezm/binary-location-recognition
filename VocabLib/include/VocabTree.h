@@ -49,7 +49,7 @@
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
-#include <KMajorityIndex.h>
+#include <KMajority.h>
 #include <InvertedIndex.hpp>
 
 #include <fstream>
@@ -127,7 +127,7 @@ public:
 
 };
 
-static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
+static vlr::DynamicMat DEFAULT_INPUTDATA = vlr::DynamicMat();
 
 template<class TDescriptor, class Distance>
 class VocabTree: public VocabTreeBase {
@@ -184,7 +184,7 @@ protected:
 	// Maximum number of iterations to use when performing k-means clustering
 	int m_iterations;
 	// The data set used by this index
-	DynamicMat& m_dataset;
+	vlr::DynamicMat& m_dataset;
 
 	/** Attributes of the tree **/
 	// Branching factor (number of partitions in which
@@ -215,7 +215,7 @@ public:
 	 * @inputData - Reference to the matrix with the data to be clustered
 	 * @param params - Parameters to the hierarchical k-means algorithm
 	 */
-	VocabTree(DynamicMat& inputData = DEFAULT_INPUTDATA,
+	VocabTree(vlr::DynamicMat& inputData = DEFAULT_INPUTDATA,
 			const VocabTreeParams& params = VocabTreeParams());
 
 	/**
@@ -478,7 +478,7 @@ typedef VocabTree<uchar, cv::Hamming> VocabTreeBin;
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
+VocabTree<TDescriptor, Distance>::VocabTree(vlr::DynamicMat& inputData,
 		const VocabTreeParams& params) :
 		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
 				Distance()) {

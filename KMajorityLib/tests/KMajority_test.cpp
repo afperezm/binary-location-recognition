@@ -12,7 +12,7 @@
 #include <Clustering.h>
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
-#include <KMajorityIndex.h>
+#include <KMajority.h>
 
 TEST(KMajority, InstantiateOnHeap) {
 	cv::Ptr<KMajority> obj;

@@ -31,7 +31,7 @@ TEST(VocabTreeReal, LoadSave) {
 	keysFilenames.push_back("sift_0.yaml.gz");
 	keysFilenames.push_back("sift_1.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Ptr<bfeat::VocabTreeReal> tree = new bfeat::VocabTreeReal(data);
@@ -59,7 +59,7 @@ TEST(VocabTreeBinary, LoadSave) {
 	keysFilenames.push_back("brief_0.yaml.gz");
 	keysFilenames.push_back("brief_1.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
 	cv::Ptr<bfeat::VocabTreeBin> tree;
@@ -91,7 +91,7 @@ TEST(VocabTreeReal, TestDatabase) {
 	keysFilenames.push_back("sift_0.yaml.gz");
 	keysFilenames.push_back("sift_1.yaml.gz");
 
-	DynamicMat data(keysFilenames);
+	vlr::DynamicMat data(keysFilenames);
 
 	cv::Ptr<bfeat::VocabTreeBase> tree = new bfeat::VocabTreeReal(data);
 

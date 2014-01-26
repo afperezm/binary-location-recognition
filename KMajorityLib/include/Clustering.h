@@ -8,7 +8,7 @@
 #ifndef CLUSTERING_HPP_
 #define CLUSTERING_HPP_
 
-#include <KMajorityIndex.h>
+#include <KMajority.h>
 
 namespace clustering {
 

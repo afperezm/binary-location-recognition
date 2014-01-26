@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 	// Step 2: read key files
 	printf("-- Reading keypoint files\n");
 
-	DynamicMat mergedDescriptors(keysFilenames);
+	vlr::DynamicMat mergedDescriptors(keysFilenames);
 
 	// Step 3: randomly select a percentage of the descriptors
 
