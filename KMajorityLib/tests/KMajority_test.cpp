@@ -5,27 +5,84 @@
  *      Author: andresf
  */
 
+#include <ctime>
+
+#include <gtest/gtest.h>
+
+#include <Clustering.h>
+#include <FileUtils.hpp>
+#include <FunctionUtils.hpp>
 #include <KMajorityIndex.h>
 
-// Step 5a/5: Cluster descriptors using k-majority
+TEST(KMajority, InstantiateOnHeap) {
+	cv::Ptr<KMajority> obj;
 
-//	cv::Ptr<int> indices = new int[descriptors.rows];
-//	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
-//		indices[i] = int(i);
-//	}
-//	uint* labels = new uint[0];
-//	cv::Mat centroids;
-//	mytime = cv::getTickCount();
-//	std::srand(unsigned(std::time(0)));
-//	clustering::kmajority(16, 100, descriptors, indices, descriptors.rows,
-//			centroids, labels);
-//	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-//			* 1000;
-//	printf("-- Clustered [%zu] keypoints in [%d] clusters in [%lf] ms\n",
-//			keypoints_1.size(), centroids.rows, mytime);
-//
-//	for (size_t j = 0; (int) j < centroids.rows; j++) {
-//		//printf("   Cluster %u has %u transactions assigned\n", j + 1, kMajIdx->getClusterCounts()[j]);
-//		printf("   Cluster %lu:\n", j + 1);
-//		printDescriptors(centroids.row(j));
-//	}
+	EXPECT_TRUE(obj == NULL);
+
+	obj = new KMajority(0, 0, cv::Mat());
+
+	EXPECT_TRUE(obj != NULL);
+}
+
+TEST(KMajority, InstantiateOnStack) {
+
+	KMajority obj(0, 0, cv::Mat());
+
+	EXPECT_TRUE(obj.getCentroids().empty());
+
+}
+
+TEST(KMajority, CumBitSum) {
+
+}
+
+TEST(KMajority, MajorityVoting) {
+
+}
+
+TEST(KMajority, Clustering) {
+
+	cv::Mat descriptors;
+	FileUtils::loadDescriptors("brief_0.yaml.gz", descriptors);
+
+	KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
+
+	bofModel.cluster();
+
+	for (int k = 0; k < int(bofModel.getClusterCounts().size()); ++k) {
+		printf("%d) %d\n", k, bofModel.getClusterCounts().at(k));
+	}
+
+}
+
+TEST(KMajority, Regression) {
+
+	cv::Mat descriptors;
+	FileUtils::loadDescriptors("brief_0.yaml.gz", descriptors);
+
+	cv::Mat centroids;
+	std::vector<int> labels;
+
+	double mytime = cv::getTickCount();
+
+	clustering::kmajority(16, 100, descriptors, centroids, labels);
+
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+
+	printf("Clustered [%d] points into [%d] clusters in [%lf] ms\n",
+			descriptors.rows, centroids.rows, mytime);
+
+	for (int j = 0; j < centroids.rows; ++j) {
+		printf("   Cluster %d:\n", j + 1);
+		FunctionUtils::printDescriptors(centroids.row(j));
+	}
+
+	for (int i = 0; i < descriptors.rows; ++i) {
+		printf("   Data point [%d] was assigned to cluster [%d]\n", i,
+				labels[i]);
+	}
+
+	EXPECT_FALSE(centroids.empty());
+	EXPECT_FALSE(labels.empty());
+}

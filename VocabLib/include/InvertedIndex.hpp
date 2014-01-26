@@ -42,7 +42,7 @@ public:
 	}
 
 	/**
-	 * Equality operator.
+	 * Strict equality operator.
 	 *
 	 * @param other
 	 * @return true if objects are equal, false otherwise
@@ -63,13 +63,13 @@ public:
 	}
 
 	/**
-	 * Inequality operator.
+	 * Strict inequality operator.
 	 *
 	 * @param other
 	 * @return true if objects are unequal, false otherwise
 	 */
 	bool operator!=(const ImageCount &other) const {
-		return !operator==(other);
+		return !(*this == other);
 	}
 
 };
@@ -140,7 +140,7 @@ public:
 	 * @return true if objects are unequal, false otherwise
 	 */
 	bool operator!=(const Word &other) const {
-		return !operator==(other);
+		return !(*this == other);
 	}
 
 };

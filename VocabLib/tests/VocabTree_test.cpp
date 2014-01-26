@@ -24,7 +24,7 @@ TEST(VocabTree, Instantiation) {
 	EXPECT_TRUE(tree != NULL);
 }
 
-TEST(VocabTree, LoadSaveReal) {
+TEST(VocabTreeReal, LoadSave) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
@@ -52,7 +52,7 @@ TEST(VocabTree, LoadSaveReal) {
 
 }
 
-TEST(VocabTree, LoadSaveBinary) {
+TEST(VocabTreeBinary, LoadSave) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
@@ -82,7 +82,7 @@ TEST(VocabTree, LoadSaveBinary) {
 
 }
 
-TEST(VocabTree, TestDatabase) {
+TEST(VocabTreeReal, TestDatabase) {
 
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
@@ -155,30 +155,9 @@ TEST(VocabTree, TestDatabase) {
 	dbLoad->load("test_tree.yaml.gz");
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
 
-	// Test inverted indices are equal
 	ASSERT_TRUE(db->size() == dbLoad->size());
 
-	for (size_t i = 0; i < db->size(); ++i) {
-
-		int idWordA = db->getWordId(i);
-		int idWordB = dbLoad->getWordId(i);
-		ASSERT_TRUE(idWordA == idWordB);
-
-		double weightWordA = db->getWordWeight(i);
-		double weightWordB = dbLoad->getWordWeight(i);
-		ASSERT_TRUE(weightWordA == weightWordB);
-
-		std::vector<bfeat::ImageCount> invIdxWordA = db->getWordImageList(i);
-		std::vector<bfeat::ImageCount> invIdxWordB = dbLoad->getWordImageList(
-				i);
-
-		ASSERT_TRUE(invIdxWordA.size() == invIdxWordB.size());
-
-		for (size_t j = 0; j < invIdxWordA.size(); ++j) {
-			ASSERT_TRUE(invIdxWordA[j].m_index == invIdxWordB[j].m_index);
-			ASSERT_TRUE(invIdxWordA[j].m_count == invIdxWordB[j].m_count);
-		}
-	}
+	ASSERT_TRUE(db->getInvertedIndex() == dbLoad->getInvertedIndex());
 
 	// Querying the tree using the same documents used for building it,
 	// the top result must be the document itself and hence the score must be 1

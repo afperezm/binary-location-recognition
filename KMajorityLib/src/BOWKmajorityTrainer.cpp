@@ -21,7 +21,7 @@ BOWKmajorityTrainer::~BOWKmajorityTrainer() {
 
 Mat BOWKmajorityTrainer::cluster() const {
 
-	CV_Assert(!descriptors.empty());
+	CV_Assert(descriptors.empty() == false);
 
 	// Compute number of rows of matrix containing all training descriptors,
 	// that is matrix resulting from the concatenation of the images descriptors
@@ -48,14 +48,10 @@ Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const {
 
 	Mat vocabulary;
 
-	cv::Ptr<int> indices = new int[descriptors.rows];
-	for (size_t i = 0; i < (size_t) descriptors.rows; ++i) {
-		indices[i] = int(i);
-	}
-	uint* labels = new uint[0];
+	std::vector<int> labels;
 
-	clustering::kmajority(m_clusterCount, m_maxIterations, descriptors, indices,
-			descriptors.rows, vocabulary, labels, m_centers_init);
+	clustering::kmajority(m_clusterCount, m_maxIterations, descriptors,
+			vocabulary, labels, m_centers_init);
 
 	return vocabulary;
 }

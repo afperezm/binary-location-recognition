@@ -10,32 +10,79 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/flann/flann.hpp>
 
-class KMajorityIndex {
+typedef cvflann::Hamming<uchar> Distance;
+typedef typename Distance::ResultType DistanceType;
+
+namespace vlr {
+
+// Allowed nearest neighbor index algorithms
+enum indexType {
+	LINEAR = 0, HIERARCHICAL = 1
+};
+
+cvflann::NNIndex<Distance>* createIndexByType(
+		const cvflann::Matrix<typename Distance::ElementType>& dataset,
+		const Distance& distance, vlr::indexType type);
+
+} /* namespace vlr */
+
+class KMajority {
+
+protected:
+
+	// Number of clusters
+	int m_numClusters;
+	// Maximum number of iterations
+	int m_maxIterations;
+	// Method for initializing centers
+	cvflann::flann_centers_init_t m_centersInitMethod;
+	// Reference to the matrix with data to cluster
+	const cv::Mat& m_dataset;
+	// Dimensionality of the data under clustering (in Bytes)
+	int m_dim;
+	// Number of data instances
+	int m_numDatapoints;
+	// List of the cluster each data point belongs to
+	std::vector<int> m_belongsTo;
+	// List of distance from each data point to the cluster it belongs to
+	std::vector<DistanceType> m_distanceTo;
+	// Number of data points assigned to each cluster
+	std::vector<int> m_clusterCounts;
+	// Matrix of clusters centers
+	cv::Mat m_centroids;
+	vlr::indexType m_nnMethod;
+	// Index for addressing nearest neighbors search
+	cvflann::NNIndex<Distance>* m_nnIndex = NULL;
+
 public:
 
-	KMajorityIndex(uint _k, uint _max_iterations, const cv::Mat& _data,
-			cv::Ptr<int>& _indices, const int& _indices_length,
-			uint* _belongs_to = NULL,
-			cvflann::flann_centers_init_t centers_init =
+	/**
+	 * Class constructor.
+	 *
+	 * @param numClusters
+	 * @param maxIterations
+	 * @param data
+	 * @param indices - The set of indices indicating the data points to cluster
+	 * @param indicesLength
+	 * @param belongsTo
+	 * @param centersInit
+	 */
+	KMajority(int numClusters, int maxIterations, const cv::Mat& data,
+			vlr::indexType nnMethod = vlr::indexType::LINEAR,
+			cvflann::flann_centers_init_t centersInitMethod =
 					cvflann::FLANN_CENTERS_RANDOM);
 
-	~KMajorityIndex();
+	/**
+	 * Class destroyer.
+	 */
+	~KMajority();
 
 	/**
 	 * Implements k-means clustering loop.
-	 *
-	 * @param indices - The set of indices indicating which data points should be clustered
 	 */
 	void cluster();
-
-	const cv::Mat& getCentroids() const;
-
-	uint* getClusterCounts() const;
-
-	uint* getClusterAssignments() const;
-
-	int getNumberOfClusters() const;
 
 	/**
 	 * Decomposes data into bits and accumulates them into cumResult.
@@ -53,39 +100,20 @@ public:
 	 * @param threshold - Threshold value, typically the number of data points used to compute the accumulator vector
 	 */
 	static void majorityVoting(const cv::Mat& accVector, cv::Mat& result,
-			const uint& threshold);
+			const int& threshold);
+
+	/**** Getters ****/
+
+	const cv::Mat& getCentroids() const;
+
+	const std::vector<int>& getClusterCounts() const;
+
+	const std::vector<int>& getClusterAssignments() const;
 
 private:
-	// Number of clusters
-	uint k;
-	// Maximum number of iterations
-	uint max_iterations;
-	cvflann::flann_centers_init_t m_centers_init;
-	// Reference to the matrix with data to cluster
-	const cv::Mat& data;
-	// Array of indices indicating data points involved in the clustering process
-	cv::Ptr<int>& indices;
-	// Number of indices
-	const int& indices_length;
-	// Dimensionality (in Bytes)
-	uint dim;
-	// Number of data instances
-	uint n;
-	// List of the cluster each data point belongs to
-	uint* belongs_to;
-	// List of distance from each data point to the cluster it belongs to
-	uint* distance_to;
-	// Number of transactions assigned to each cluster
-	uint* cluster_counts;
-	// Matrix of clusters centers
-	cv::Mat centroids;
-	// Flag indicating if belongs_to needs to be deleted in the class destructor
-	bool delete_belongs_to;
 
 	/**
 	 * Initializes cluster centers choosing among the data points indicated by indices.
-	 *
-	 * @param indices - The set of indices among which to choose
 	 */
 	void initCentroids();
 
@@ -93,19 +121,21 @@ private:
 	 * Implements majority voting scheme for cluster centers computation
 	 * based on component wise majority of bits from data matrix
 	 * as proposed by Grana2013.
-	 *
-	 * @param indices - The set of indices indicating the data points
-	 * 					involved in the cluster centers computation
 	 */
 	void computeCentroids();
 
 	/**
-	 * Computes Hamming distance between each descriptor and each cluster center.
+	 * Assigns data to clusters by means of Hamming distance.
 	 *
-	 * @param indices - The set of indices indicating the data points to quantize
+	 * @return true if convergence was achieved (cluster assignment didn't changed), false otherwise
 	 */
 	bool quantize();
 
+	/**
+	 * Fills empty clusters using data assigned to the most populated ones.
+	 */
+	void handleEmptyClusters();
+
 };
 
-#endif /* KMAJORITY_INDEX_H_ */
+#endif /* KMAJORITY_H_ */

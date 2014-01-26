@@ -17,31 +17,28 @@ namespace clustering {
  * a majority voting scheme for centers computation.
  *
  * @param k - Number of clusters
- * @param max_iterations - Maximum number of iterations
+ * @param maxIterations - Maximum number of iterations
  * @param data - Data to cluster composed of n d-dimensional features
- * @param labels - Reference to an integer array with the assignment of data to clusters
- * @param centroids - Reference to a matrix of k d-dimensional centroids
+ * @param centers - Reference to a matrix of k d-dimensional centers
+ * @param labels
+ * @param centersInit
  */
-inline void kmajority(int k, int max_iterations, const cv::Mat& data,
-		cv::Ptr<int>& indices, const int& indices_length, cv::Mat& centroids,
-		uint* labels = NULL, cvflann::flann_centers_init_t centers_init =
+inline void kmajority(int k, int maxIterations, const cv::Mat& data,
+		cv::Mat& centers, std::vector<int>& labels,
+		cvflann::flann_centers_init_t centersInit =
 				cvflann::FLANN_CENTERS_RANDOM) {
 
-	cv::Ptr<KMajorityIndex> kMajIdx = new KMajorityIndex(k, max_iterations,
-			data, indices, indices_length, labels, centers_init);
+	cv::Ptr<KMajority> bofModel = new KMajority(k, maxIterations, data,
+			vlr::indexType::LINEAR, centersInit);
 
-	kMajIdx->cluster();
+	bofModel->cluster();
 
-	centroids = kMajIdx->getCentroids();
+	centers = bofModel->getCentroids();
 
-//	labels = cv::Mat();
-//	labels.create(indices_length, 1, cv::DataType<uint>::type);
-//	for (size_t i = 0; (int) i < indices_length; i++) {
-//		labels.at<uint>(i, 1) = kMajIdx->getClusterAssignments()[i];
-//	}
-}
+	labels = bofModel->getClusterAssignments();
 
 }
-// namespace name
+
+} /* namespace clustering */
 
 #endif /* CLUSTERING_HPP_ */

@@ -1,5 +1,5 @@
 /*
- * kmajority_index.cpp
+ * KMajorityIndex.cpp
  *
  *  Created on: Aug 28, 2013
  *      Author: andresf
@@ -17,200 +17,200 @@
 #include <functional>
 #include <bitset>
 
-typedef cvflann::Hamming<uchar> Distance;
-typedef typename Distance::ResultType DistanceType;
+KMajority::KMajority(int numClusters, int maxIterations, const cv::Mat& data,
+		vlr::indexType nnMethod,
+		cvflann::flann_centers_init_t centersInitMethod) :
+		m_numClusters(numClusters), m_maxIterations(maxIterations), m_nnMethod(
+				nnMethod), m_centersInitMethod(centersInitMethod), m_dataset(
+				data), m_dim(data.cols), m_nnIndex(NULL) {
 
-KMajorityIndex::KMajorityIndex(uint _k, uint _max_iterations,
-		const cv::Mat& _data, cv::Ptr<int>& _indices,
-		const int& _indices_length, uint* _belongs_to,
-		cvflann::flann_centers_init_t centers_init) :
-		k(_k), max_iterations(_max_iterations), m_centers_init(centers_init), data(
-				_data), indices(_indices), indices_length(_indices_length), dim(
-				_data.cols), n(_indices_length), distance_to(
-				new uint[_indices_length]), cluster_counts(new uint[_k]) {
-
-	belongs_to = _belongs_to != NULL ? _belongs_to : new uint[_indices_length];
-	// Set the pointer belongs_to to be deleted
-	delete_belongs_to = _belongs_to == NULL;
+	m_numDatapoints = m_dataset.rows;
 
 	// Initially all transactions belong to any cluster
-	std::fill_n(this->belongs_to, _indices_length, _k);
+	m_belongsTo.clear();
+	m_belongsTo.resize(m_dataset.rows, numClusters);
 
 	// Initially all transactions are at the farthest possible distance
-	// i.e. dim*8 the max hamming distance
-	std::fill_n(this->distance_to, _indices_length, _data.cols * 8);
+	// i.e. m_dim*8 the max Hamming distance
+	m_distanceTo.clear();
+	m_distanceTo.resize(m_dataset.rows, data.cols * 8);
 
 	// Initially no transaction is assigned to any cluster
-	std::fill_n(this->cluster_counts, this->k, 0);
+	m_clusterCounts.clear();
+	m_clusterCounts.resize(numClusters, 0);
+
 }
 
-KMajorityIndex::~KMajorityIndex() {
-	if (delete_belongs_to == true) {
-		delete[] belongs_to;
-	}
-	delete[] distance_to;
-	delete[] cluster_counts;
+KMajority::~KMajority() {
+	delete m_nnIndex;
 }
 
-void KMajorityIndex::cluster() {
-	if (data.type() != CV_8U) {
+void KMajority::cluster() {
+
+	if (m_dataset.type() != CV_8U) {
 		throw std::runtime_error(
-				"KMajorityIndex::cluster: error, descriptors matrix is not binary");
+				"[KMajority::cluster] Descriptors matrix is not binary");
 	}
 
-	if (data.empty()) {
-		throw std::runtime_error(
-				"KMajorityIndex::cluster: error, descriptors is empty");
+	if (m_dataset.empty()) {
+		throw std::runtime_error("[KMajority::cluster] Descriptors is empty");
 	}
 
 	// Trivial case: less data than clusters, assign one data point per cluster
-	if (this->n <= this->k) {
-		centroids.create(this->k, dim, data.type());
-		for (uint i = 0; i < this->n; ++i) {
-			data.row(i).copyTo(
-					centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
-			belongs_to[i] = i;
+	if (m_numDatapoints <= m_numClusters) {
+		m_centroids.create(m_numClusters, m_dim, m_dataset.type());
+		for (int i = 0; i < m_numDatapoints; ++i) {
+			m_dataset.row(i).copyTo(
+					m_centroids(cv::Range(i, i + 1), cv::Range(0, m_dim)));
+			m_belongsTo[i] = i;
 		}
 		return;
 	}
 
 	// Randomly generate clusters
-	this->initCentroids();
+	initCentroids();
 
 	// Assign data to clusters
-	this->quantize();
+	quantize();
 
 	bool converged = false;
-	uint iteration = 0;
+	int iteration = 0;
 
-	while (converged == false && iteration < max_iterations) {
+	while (converged == false && iteration < m_maxIterations) {
 
-		iteration++;
+		++iteration;
 
 		// Compute the new cluster centers
-		this->computeCentroids();
+		computeCentroids();
 
 		// Reassign data to clusters
-		converged = this->quantize();
+		converged = quantize();
 
-		// TODO handle empty clusters case
-		// Find empty clusters
-//		for (unsigned int j = 0; j < k; j++) {
-//			if (cluster_counts[j] == 0) {
-//				printf("Cluster %u is empty\n", j);
-//				// Find farthest element to its assigned cluster
-//				unsigned int farthest_element_idx = 0;
-//				for (unsigned int i = 1; i < n; i++) {
-//					if (distance_to[i] > distance_to[farthest_element_idx]) {
-//						farthest_element_idx = i;
-//					}
-//				}
-//				// Re-assign farthest_element to the found empty cluster
-//				cluster_counts[belongs_to[farthest_element_idx]]--;
-//				belongs_to[farthest_element_idx] = j;
-//				cluster_counts[j]++;
-//				keypoints[farthest_element_idx].class_id = j;
-//				distance_to[farthest_element_idx] = hammingDistance(
-//						descriptors.row(farthest_element_idx),
-//						centroids.row(j));
-//			}
-//		}
+		// Handle empty clusters case
+		handleEmptyClusters();
 	}
 
 }
 
-void KMajorityIndex::initCentroids() {
+void KMajority::initCentroids() {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
-	std::vector<int> centers_idx(k);
+	std::vector<int> centers_idx(m_numClusters);
 	int centers_length;
 
+	// Array of indices indicating data points involved in the clustering process
+	int* indices = new int[m_dataset.rows];
+	for (int i = 0; i < m_dataset.rows; ++i) {
+		indices[i] = i;
+	}
+
 	// Randomly chose centers
-	CentersChooser<uchar, cv::Hamming>::create(m_centers_init)->chooseCenters(k,
-			indices, n, centers_idx, centers_length, this->data);
+	CentersChooser<Distance::ElementType, cv::Hamming>::create(
+			m_centersInitMethod)->chooseCenters(m_numClusters, indices,
+			m_numDatapoints, centers_idx, centers_length, m_dataset);
+
+	delete[] indices;
 
 	// Assign centers based on the chosen indexes
-	centroids.create(centers_length, dim, data.type());
-	for (int i = 0; i < centers_length; i++) {
-		data.row(centers_idx[i]).copyTo(
-				centroids(cv::Range(i, i + 1), cv::Range(0, this->dim)));
+	m_centroids.create(centers_length, m_dim, m_dataset.type());
+	for (int i = 0; i < centers_length; ++i) {
+		m_dataset.row(centers_idx[i]).copyTo(
+				m_centroids(cv::Range(i, i + 1), cv::Range(0, m_dim)));
 	}
+
+	cvflann::IndexParams m_indexParams =
+			cvflann::HierarchicalClusteringIndexParams();
+
+	// Build index for addressing nearest neighbors descriptors search
+
+	m_nnIndex = vlr::createIndexByType(
+			cvflann::Matrix<Distance::ElementType>(m_centroids.data,
+					m_centroids.rows, m_centroids.cols), Distance(),
+			m_nnMethod);
+
+	m_nnIndex->buildIndex();
 
 }
 
-bool KMajorityIndex::quantize() {
+bool KMajority::quantize() {
 
 	bool converged = true;
 
-	// Comparison of all descriptors vs. all centroids
-	for (size_t i = 0; i < this->n; i++) {
-		// Set minimum distance as the distance to its assigned cluster
-		int min_hd = distance_to[i];
+	// Number of nearest neighbors
+	int knn = 1;
 
-		for (size_t j = 0; j < this->k; j++) {
-			// Compute hamming distance between ith descriptor and jth cluster
-			cv::Hamming distance;
-			int hd = distance(data.row(indices[i]).data, centroids.row(j).data,
-					data.cols);
+	// The indices of the nearest neighbors found (numQueries X numNeighbors)
+	cvflann::Matrix<int> indices(new int[1 * knn], 1, knn);
 
-			// Update cluster assignment to the nearest cluster
-			if (hd < min_hd) {
-				min_hd = hd;
-				// If cluster assignment changed that means the algorithm hasn't converged yet
-				if (belongs_to[i] != j) {
-					converged = false;
-				}
-				// Decrease cluster count in case it was assigned to some valid cluster before.
-				// Recall that initially all transaction are assigned to kth cluster which
-				// is not valid since valid clusters run from 0 to k-1 both inclusive.
-				if (belongs_to[i] != k) {
-					cluster_counts[belongs_to[i]]--;
-				}
-				belongs_to[i] = j;
-				cluster_counts[j]++;
-				distance_to[i] = hd;
-			}
+	// Distances to the nearest neighbors found (numQueries X numNeighbors)
+	cvflann::Matrix<DistanceType> distances(new int[1 * knn], 1, knn);
+
+	for (int i = 0; i < m_numDatapoints; ++i) {
+		std::fill(indices.data, indices.data + indices.rows * indices.cols, 0);
+		std::fill(distances.data,
+				distances.data + distances.rows * distances.cols, 0.0f);
+
+		/* Get new cluster it belongs to */
+		m_nnIndex->knnSearch(
+				cvflann::Matrix<Distance::ElementType>(m_dataset.row(i).data, 1,
+						m_dataset.cols), indices, distances, knn,
+				cvflann::SearchParams());
+
+		/* Check if it changed */
+		// If cluster assignment changed that means the algorithm hasn't converged yet
+		if (m_belongsTo[i] != indices[0][0]) {
+			converged = false;
 		}
+
+		/* Update cluster assignment and cluster counts */
+		// Decrease cluster count in case it was assigned to some valid cluster before.
+		// Recall that initially all transaction are assigned to kth cluster which
+		// is not valid since valid clusters run from 0 to k-1 both inclusive.
+		if (m_belongsTo[i] != m_numClusters) {
+			--m_clusterCounts[m_belongsTo[i]];
+		}
+		m_belongsTo[i] = indices[0][0];
+		++m_clusterCounts[indices[0][0]];
+		m_distanceTo[i] = distances[0][0];
 	}
 
 	return converged;
 }
 
-void KMajorityIndex::computeCentroids() {
+void KMajority::computeCentroids() {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
-	cv::Mat bitwiseCount(this->k, this->dim * 8, cv::DataType<int>::type);
+	cv::Mat bitwiseCount(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	// Zeroing matrix of cumulative bits
 	bitwiseCount = cv::Scalar::all(0);
-	// Zeroing all the centroids dimensions
-	centroids = cv::Scalar::all(0);
+	// Zeroing all cluster centers dimensions
+	m_centroids = cv::Scalar::all(0);
 
-	// Bitwise summing the data into each centroid
-	for (size_t i = 0; i < this->n; i++) {
-		uint j = belongs_to[i];
-		cv::Mat b = bitwiseCount.row(j);
-		KMajorityIndex::cumBitSum(data.row(i), b);
+	// Bitwise summing the data into each center
+	for (int i = 0; i < m_numDatapoints; ++i) {
+		cv::Mat b = bitwiseCount.row(m_belongsTo[i]);
+		KMajority::cumBitSum(m_dataset.row(i), b);
 	}
 
 	// Bitwise majority voting
-	for (size_t j = 0; j < k; j++) {
-		cv::Mat centroid = centroids.row(j);
-		KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
-				cluster_counts[j]);
+	for (int j = 0; j < m_numClusters; j++) {
+		cv::Mat centroid = m_centroids.row(j);
+		KMajority::majorityVoting(bitwiseCount.row(j), centroid,
+				m_clusterCounts[j]);
 	}
 }
 
-void KMajorityIndex::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
+void KMajority::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
 
-	// cumResult and data must be a row vectors
+	// cumResult and data must be row vectors
 	if (data.rows != 1 || accVector.rows != 1) {
 		throw std::runtime_error(
-				"KMajorityIndex::cumBitSum: data and cumResult parameters must be row vectors\n");
+				"[KMajority::cumBitSum] data and cumResult parameters must be row vectors\n");
 	}
 	// cumResult and data must be same length
 	if (data.cols * 8 != accVector.cols) {
 		throw std::runtime_error(
-				"KMajorityIndex::cumBitSum: number of columns in cumResult must be that of data times 8\n");
+				"[KMajority::cumBitSum] number of columns in cumResult must be that of data times 8\n");
 	}
 
 	uchar byte = 0;
@@ -220,30 +220,30 @@ void KMajorityIndex::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
 		if ((l % 8) == 0) {
 			byte = *(data.col((int) l / 8).data);
 		}
-		// Warning: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
+		// Note: ignore maybe-uninitialized warning because loop starts with l=0 that means byte gets a value as soon as the loop start
 		// bit at ith position is mod(bitleftshift(byte,i),2) where ith position is 7-mod(l,8) i.e 7, 6, 5, 4, 3, 2, 1, 0
 		accVector.at<int>(0, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
 	}
 
 }
 
-void KMajorityIndex::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
-		const uint& threshold) {
+void KMajority::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
+		const int& threshold) {
 
 	// cumResult and data must be a row vectors
 	if (accVector.rows != 1 || result.rows != 1) {
 		throw std::runtime_error(
-				"KMajorityIndex::majorityVoting: `bitwiseCount` and `centroid` parameters must be row vectors\n");
+				"[KMajority::majorityVoting] `bitwiseCount` and `centroid` parameters must be row vectors\n");
 	}
 
 	// cumResult and data must be same length
 	if (result.cols * 8 != accVector.cols) {
 		throw std::runtime_error(
-				"KMajorityIndex::majorityVoting: number of columns in `bitwiseCount` must be that of `data` times 8\n");
+				"[KMajority::majorityVoting] number of columns in `bitwiseCount` must be that of `data` times 8\n");
 	}
 
 	// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster
-	for (size_t l = 0; (int) l < accVector.cols; l++) {
+	for (int l = 0; l < accVector.cols; ++l) {
 		// If the bitcount for jth cluster at dimension l is greater than half of the data assigned to it
 		// then set lth centroid bit to 1 otherwise set it to 0 (break ties randomly)
 		bool bit;
@@ -261,18 +261,78 @@ void KMajorityIndex::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
 	}
 }
 
-const cv::Mat& KMajorityIndex::getCentroids() const {
-	return centroids;
+void KMajority::handleEmptyClusters() {
+
+	// If some cluster appeared to be empty then:
+	// 1. Find the biggest cluster.
+	// 2. Find farthest point in the biggest cluster
+	// 3. Exclude the farthest point from the biggest cluster and form a new 1-point cluster.
+
+	for (int k = 0; k < m_numClusters; ++k) {
+		if (m_clusterCounts[k] != 0) {
+			continue;
+		}
+
+		// 1. Find the biggest cluster
+		int max_k = 0;
+		for (int k1 = 1; k1 < m_numClusters; ++k1) {
+			if (m_clusterCounts[max_k] < m_clusterCounts[k1])
+				max_k = k1;
+		}
+
+		// 2. Find farthest point in the biggest cluster
+		DistanceType maxDist(-1);
+		int idxFarthestPt = -1;
+		for (int i = 0; i < m_numDatapoints; ++i) {
+			if (m_belongsTo[i] == max_k) {
+				if (maxDist < m_distanceTo[i]) {
+					maxDist = m_distanceTo[i];
+					idxFarthestPt = i;
+				}
+			}
+		}
+
+		// 3. Exclude the farthest point from the biggest cluster and form a new 1-point cluster
+		--m_clusterCounts[max_k];
+		++m_clusterCounts[k];
+		m_belongsTo[idxFarthestPt] = k;
+	}
 }
 
-uint* KMajorityIndex::getClusterCounts() const {
-	return cluster_counts;
+const cv::Mat& KMajority::getCentroids() const {
+	return m_centroids;
 }
 
-uint* KMajorityIndex::getClusterAssignments() const {
-	return belongs_to;
+const std::vector<int>& KMajority::getClusterCounts() const {
+	return m_clusterCounts;
 }
 
-int KMajorityIndex::getNumberOfClusters() const {
-	return centroids.rows;
+const std::vector<int>& KMajority::getClusterAssignments() const {
+	return m_belongsTo;
+}
+
+cvflann::NNIndex<Distance>* vlr::createIndexByType(
+		const cvflann::Matrix<typename Distance::ElementType>& dataset,
+		const Distance& distance, vlr::indexType type) {
+
+	cvflann::IndexParams params;
+	cvflann::NNIndex<Distance>* nnIndex;
+
+	switch (type) {
+	case vlr::indexType::LINEAR:
+		printf("Creating [Linear] index\n");
+		params = cvflann::LinearIndexParams();
+		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params, distance);
+		break;
+	case vlr::indexType::HIERARCHICAL:
+		printf("Creating [HierarchicalClustering] index\n");
+		params = cvflann::HierarchicalClusteringIndexParams();
+		nnIndex = new cvflann::HierarchicalClusteringIndex<Distance>(dataset,
+				params, distance);
+		break;
+	default:
+		throw std::runtime_error("Unknown index type");
+	}
+
+	return nnIndex;
 }

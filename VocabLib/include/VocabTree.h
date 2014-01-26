@@ -50,6 +50,7 @@
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 #include <KMajorityIndex.h>
+#include <InvertedIndex.hpp>
 
 #include <fstream>
 
@@ -74,21 +75,6 @@ struct VocabTreeParams: public cvflann::IndexParams {
 		// Levels to go up the tree to select nodes to store in the direct index
 		(*this)["levels_up"] = levels_up;
 	}
-};
-
-class ImageCount {
-public:
-	ImageCount() :
-			m_index(0), m_count(0.0) {
-	}
-	ImageCount(unsigned int index, float count) :
-			m_index(index), m_count(count) {
-	}
-
-	// Index of the database image this entry corresponds to
-	unsigned int m_index;
-	// (Weighted, normalized) Count of how many times this feature appears
-	float m_count;
 };
 
 class VocabTreeBase {
@@ -131,17 +117,14 @@ public:
 
 	virtual void getDbBoWVector(uint idx, cv::Mat& dbBowVector) const = 0;
 
-	virtual int getWordId(size_t i) const = 0;
-
-	virtual double getWordWeight(size_t i) const = 0;
-
-	virtual const std::vector<ImageCount>& getWordImageList(size_t i) const = 0;
-
 	virtual int getDirectIndexLevel() = 0;
 
 	virtual void setDirectIndexLevel(int levelsUp) = 0;
 
 	virtual int getDepth() const = 0;
+
+	virtual const vlr::InvertedIndex& getInvertedIndex() const = 0;
+
 };
 
 static DynamicMat DEFAULT_INPUTDATA = DynamicMat();
@@ -167,13 +150,8 @@ private:
 		VocabTreeNode** children;
 		// Word id (only for terminal nodes)
 		int word_id;
-		// Weight (only for terminal nodes)
-		double weight;
-		// Inverse document/image list (only for terminal nodes)
-		std::vector<ImageCount> image_list;
 		VocabTreeNode() :
-				node_id(-1), center(NULL), children(NULL), word_id(-1), weight(
-						0.0) {
+				node_id(-1), center(NULL), children(NULL), word_id(-1) {
 		}
 		VocabTreeNode& operator=(const VocabTreeNode& node) {
 			node_id = node.node_id;
@@ -188,7 +166,6 @@ private:
 			}
 			children = node.children;
 			word_id = node.word_id;
-			weight = node.weight;
 			return *this;
 		}
 	};
@@ -201,7 +178,7 @@ private:
 
 protected:
 
-	/** Attributes useful for clustering **/
+	/** Attributes useful for building the tree **/
 	// The function used for choosing the cluster centers
 	cvflann::flann_centers_init_t m_centers_init;
 	// Maximum number of iterations to use when performing k-means clustering
@@ -210,28 +187,24 @@ protected:
 	DynamicMat& m_dataset;
 
 	/** Attributes of the tree **/
-	// The branching factor used in the hierarchical k-means clustering
+	// Branching factor (number of partitions in which
+	// data is divided at each level of the tree)
 	int m_branching;
-	// Depth levels
+	// Number of levels of the tree
 	int m_depth;
-	// Length of each feature.
+	// Length of each feature vector
 	size_t m_veclen;
 	// Number of nodes in the tree
 	size_t m_size;
-	// The root node in the tree.
+	// The root node of the tree
 	VocabTreeNodePtr m_root;
-
-	/** Attributes of the database **/
-	// Words of the vocabulary
-	std::vector<VocabTreeNodePtr> m_words;
-	// Number of DB images, used for creating the scores matrix
-	uint m_numDbImages;
 
 	/** Attributes holding the indices **/
 	bfeat::DirectIndex* m_directIndex;
+	vlr::InvertedIndex m_invertedIndex;
 
-	/** Attributes used by several methods **/
-	// The distance
+	/** Other attributes **/
+	// The distance measure used to evaluate similarity between features
 	Distance m_distance;
 
 public:
@@ -251,16 +224,14 @@ public:
 	virtual ~VocabTree();
 
 	/**
-	 * Returns the vocabulary size.
+	 * Returns the tree size.
 	 *
-	 * @return number of leaf nodes in the tree
+	 * @return number of nodes in the tree
 	 */
 	size_t size();
 
 	/**
 	 * Builds the tree.
-	 *
-	 * @param inputData - Reference to a map with the name of the files containing the data to be clustered
 	 *
 	 * @note After this method is executed m_root holds a pointer to the tree,
 	 *		 while m_words holds pointers to the leaf nodes.
@@ -408,18 +379,6 @@ public:
 		return m_veclen;
 	}
 
-	int getWordId(size_t i) const {
-		return m_words[i]->word_id;
-	}
-
-	double getWordWeight(size_t i) const {
-		return m_words[i]->weight;
-	}
-
-	const std::vector<ImageCount>& getWordImageList(size_t i) const {
-		return m_words[i]->image_list;
-	}
-
 	int getDirectIndexLevel() {
 		return m_directIndex->getLevel();
 	}
@@ -436,6 +395,10 @@ public:
 		m_directIndex->setLevel(directIndexLevel);
 	}
 
+	const vlr::InvertedIndex& getInvertedIndex() const {
+		return m_invertedIndex;
+	}
+
 private:
 
 	/**
@@ -444,16 +407,6 @@ private:
 	 * @param node - A pointer to a node in the tree where to start the releasing
 	 */
 	void free_centers(VocabTreeNodePtr node);
-
-	/**
-	 * Computes the centroid of a node. (Only for the root node)
-	 *
-	 * @param node - The node to use
-	 * @param indices - The array of indices of the points belonging to the node
-	 * @param indices_length - The number of indices in the array of indices
-	 */
-	void computeNodeStatistics(VocabTreeNodePtr node, int* indices,
-			int indices_length);
 
 	/**
 	 * The method responsible with actually doing the recursive hierarchical clustering.
@@ -483,9 +436,9 @@ private:
 			VocabTreeNodePtr& node);
 
 	/**
-	 * Returns whether the vocabulary is empty (i.e. it has not been trained)
+	 * Returns whether the tree is empty.
 	 *
-	 * @return true if and only if the vocabulary is empty
+	 * @return true if and only if the tree is empty
 	 */
 	bool empty() const;
 
@@ -533,18 +486,14 @@ VocabTree<TDescriptor, Distance>::VocabTree(DynamicMat& inputData,
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
 	m_branching = cvflann::get_param(params, "branching", 10);
-	// m_branching = 10;
 	m_iterations = cvflann::get_param(params, "iterations", 10);
-	// m_iterations = 1;
 	m_depth = cvflann::get_param(params, "depth", 7);
-	// m_depth = 7;
 	m_centers_init = cvflann::get_param(params, "centers_init",
 			cvflann::FLANN_CENTERS_RANDOM);
 	// m_centers_init = cvflann::FLANN_CENTERS_RANDOM;
 	m_directIndex = new bfeat::DirectIndex();
 	setDirectIndexLevel(cvflann::get_param(params, "levels_up", 2));
 	// setDirectIndexLevel(2);
-	m_numDbImages = 0;
 
 	if (m_iterations < 0) {
 		m_iterations = std::numeric_limits<int>::max();
@@ -580,7 +529,7 @@ void VocabTree<TDescriptor, Distance>::free_centers(VocabTreeNodePtr node) {
 
 template<class TDescriptor, class Distance>
 size_t VocabTree<TDescriptor, Distance>::size() {
-	return m_words.size();
+	return m_size;
 }
 
 // --------------------------------------------------------------------------
@@ -613,8 +562,8 @@ void VocabTree<TDescriptor, Distance>::build() {
 	}
 
 	m_root = new VocabTreeNode();
-
-	computeNodeStatistics(m_root, indices, size);
+	m_root->center = new TDescriptor[m_veclen];
+	std::fill(m_root->center, m_root->center + m_veclen, 0);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Started clustering\n");
@@ -635,8 +584,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 
 	if (empty()) {
-		throw std::runtime_error(
-				"[VocabTree::save] Error while saving tree, vocabulary is empty");
+		throw std::runtime_error("[VocabTree::save] Tree is empty");
 	}
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
@@ -651,7 +599,7 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 	fs << "branching" << m_branching;
 	fs << "depth" << m_depth;
 	fs << "vectorLength" << (int) m_veclen;
-	fs << "numDbImages" << (int) m_numDbImages;
+	fs << "size" << (int) m_size;
 
 	fs << "nodes" << "[";
 
@@ -668,7 +616,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 		VocabTreeNodePtr node) const {
 
-	// WriteNode
+	// Save node
 	fs << "{";
 	fs << "center"
 			<< cv::Mat(1, m_veclen, cv::DataType<TDescriptor>::type,
@@ -677,8 +625,8 @@ void VocabTree<TDescriptor, Distance>::save_tree(cv::FileStorage& fs,
 	fs << "wordId" << node->word_id;
 	fs << "}";
 
+	// Save children, if any
 	if (node->children != NULL) {
-		// WriteChildren
 		for (int i = 0; i < m_branching; ++i) {
 			save_tree(fs, node->children[i]);
 		}
@@ -698,10 +646,10 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 	std::stringstream ss;
 
 	enum treeFields {
-		iterations, branching, depth, vectorLength, numDbImages, nodes
+		iterations, branching, depth, vectorLength, size, nodes
 	};
 	std::string treeFieldsNames[] = { "iterations:", "branching:", "depth:",
-			"vectorLength:", "numDbImages:", "nodes:" };
+			"vectorLength:", "size:", "nodes:" };
 
 	// Open file
 	inputZippedFileStream.open(filename.c_str(),
@@ -718,27 +666,20 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 		inputFileStream.push(inputZippedFileStream);
 
 		while (getline(inputFileStream, line)) {
-//			printf("%s\n", line.c_str());
 			ss.clear();
 			ss.str(line);
 			ss >> field;
 			if (field.compare(treeFieldsNames[iterations]) == 0) {
 				ss >> m_iterations;
-//				printf("%s %d\n", field.c_str(), m_iterations);
 			} else if (field.compare(treeFieldsNames[branching]) == 0) {
 				ss >> m_branching;
-//				printf("%s %d\n", field.c_str(), m_branching);
 			} else if (field.compare(treeFieldsNames[depth]) == 0) {
 				ss >> m_depth;
-//				printf("%s %d\n", field.c_str(), m_depth);
 			} else if (field.compare(treeFieldsNames[vectorLength]) == 0) {
 				ss >> m_veclen;
-//				printf("%s %lu\n", field.c_str(), m_veclen);
-			} else if (field.compare(treeFieldsNames[numDbImages]) == 0) {
-				ss >> m_numDbImages;
-//				printf("%s %u\n", field.c_str(), m_numDbImages);
+			} else if (field.compare(treeFieldsNames[size]) == 0) {
+				ss >> m_size;
 			} else if (field.compare(treeFieldsNames[nodes]) == 0) {
-//				printf("%s\n", field.c_str());
 				break;
 			}
 		}
@@ -790,13 +731,10 @@ void VocabTree<TDescriptor, Distance>::load_tree(
 			continue;
 		} else if (field.compare(nodeFieldsNames[rows]) == 0) {
 			ss >> _rows;
-//			printf("%s %d\n", field.c_str(), _rows);
 		} else if (field.compare(nodeFieldsNames[cols]) == 0) {
 			ss >> _cols;
-//			printf("%s %d\n", field.c_str(), _cols);
 		} else if (field.compare(nodeFieldsNames[dt]) == 0) {
 			ss >> _type;
-//			printf("%s %s\n", field.c_str(), _type.c_str());
 		} else if (field.compare(nodeFieldsNames[nodeId]) == 0) {
 			ss >> node->node_id;
 		} else if (field.compare(nodeFieldsNames[wordId]) == 0) {
@@ -815,8 +753,6 @@ void VocabTree<TDescriptor, Distance>::load_tree(
 			std::replace(line.begin(), line.end(), ',', ' ');
 			std::replace(line.begin(), line.end(), ']', ' ');
 
-			// printf("[%s] -->", line.c_str());
-
 			ss.clear();
 			ss.str(line);
 
@@ -824,14 +760,10 @@ void VocabTree<TDescriptor, Distance>::load_tree(
 				_center.at<TDescriptor>(0, ++colIdx) = elem;
 			}
 
-			// printf("\n");
-
 			if (isLastLine) {
 				// Check dimensions correctness
 				CV_Assert(_center.rows == 1);
 				CV_Assert(_center.cols == int(m_veclen));
-
-//				std::cout << _center << std::endl;
 
 				// Deep copy
 				node->center = new TDescriptor[m_veclen];
@@ -851,8 +783,8 @@ void VocabTree<TDescriptor, Distance>::load_tree(
 	if (hasChildren == false) {
 		// Node has no children then it's a leaf node
 		node->children = NULL;
-		std::vector<ImageCount>().swap(node->image_list);
-		m_words.push_back(node);
+		m_invertedIndex.push_back(vlr::Word());
+		CV_Assert(node->word_id + 1 == int(m_invertedIndex.size()));
 	} else {
 		// Node has children then it's an interior node
 		node->children = new VocabTreeNodePtr[m_branching];
@@ -870,39 +802,8 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::saveInvertedIndex(
 		const std::string& filename) const {
 
-	if (m_words.empty() == true) {
-		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
-				"Vocabulary is empty");
-	}
+	m_invertedIndex.save(filename);
 
-	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
-
-	if (fs.isOpened() == false) {
-		throw std::runtime_error("[VocabTree::saveInvertedIndex] "
-				"Unable to open file "
-				"[" + filename + "] for writing");
-	}
-
-	fs << "NumDBImages" << int(m_numDbImages);
-
-	fs << "Words" << "[";
-	for (VocabTreeNodePtr node : m_words) {
-		fs << "{";
-
-		fs << "weight" << node->weight;
-		fs << "imageList" << "[";
-		for (ImageCount img : node->image_list) {
-			fs << "{:" << "m_index" << int(img.m_index) << "m_count"
-					<< img.m_count << "}";
-		}
-		fs << "]";
-
-		fs << "}";
-	}
-
-	fs << "]";
-
-	fs.release();
 }
 
 // --------------------------------------------------------------------------
@@ -911,67 +812,7 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::loadInvertedIndex(
 		const std::string& filename) {
 
-	if (m_words.empty() == true) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Vocabulary is empty");
-	}
-
-	// Initializing variables
-	std::ifstream inputZippedFileStream;
-	boost::iostreams::filtering_istream inputFileStream;
-	std::string line, wordHeader = "   -", weightHeader = "weight", pairHeader =
-			"{";
-	int index, wordId = -1;
-	float count;
-
-	// Open file
-	inputZippedFileStream.open(filename.c_str(),
-			std::fstream::in | std::fstream::binary);
-
-	// Check file
-	if (inputZippedFileStream.good() == false) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Unable to open file [" + filename + "] for reading");
-	}
-
-	try {
-		inputFileStream.push(boost::iostreams::gzip_decompressor());
-		inputFileStream.push(inputZippedFileStream);
-
-		// Load/Skip first line
-		getline(inputFileStream, line);
-
-		// Load number of images
-		getline(inputFileStream, line);
-		sscanf(line.c_str(), "%*s %d", &m_numDbImages);
-
-		// Load/Skip words vector header
-		getline(inputFileStream, line);
-
-		// Load list from file
-		while (getline(inputFileStream, line)) {
-			if (line.compare(wordHeader) == 0) {
-				++wordId;
-			} else if (line.find(weightHeader) != std::string::npos) {
-				sscanf(line.c_str(), "%*s %lf", &m_words[wordId]->weight);
-			} else if (line.find(pairHeader) != std::string::npos) {
-				line.replace(line.find('-'), 1, " ");
-				std::replace(line.begin(), line.end(), ':', ' ');
-				std::replace(line.begin(), line.end(), ',', ' ');
-				std::replace(line.begin(), line.end(), '{', ' ');
-				std::replace(line.begin(), line.end(), '}', ' ');
-				sscanf(line.c_str(), "%*s %d %*s %f", &index, &count);
-				ImageCount img(index, count);
-				m_words[wordId]->image_list.push_back(img);
-			}
-		}
-	} catch (const boost::iostreams::gzip_error& e) {
-		throw std::runtime_error("[VocabTree::loadInvertedIndex] "
-				"Got error while parsing file [" + std::string(e.what()) + "]");
-	}
-
-	// Close file
-	inputZippedFileStream.close();
+	m_invertedIndex.load(filename);
 
 }
 
@@ -1000,36 +841,6 @@ void VocabTree<TDescriptor, Distance>::loadDirectIndex(
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::computeNodeStatistics(
-		VocabTreeNodePtr node, int* indices, int indices_length) {
-
-#if VTREEVERBOSE
-	printf("[VocabTree::build] Computing root node statistics\n");
-#endif
-
-	TDescriptor* center = new TDescriptor[m_veclen];
-
-	// Checking indices to be in range, but actually is not necessary
-	// is just to avoid unused variable warning
-	for (size_t i = 0; (int) i < indices_length; ++i) {
-		CV_Assert(0 <= indices[i] && indices[i] < m_dataset.rows);
-	}
-
-	// Zeroing all centroid dimensions
-	cv::Mat centroid = cv::Mat::zeros(1, m_veclen, m_dataset.type());
-
-	// Setting the centroid
-	for (size_t k = 0; k < m_veclen; ++k) {
-		center[k] = centroid.at<TDescriptor>(0, k);
-	}
-	centroid.release();
-
-	node->center = center;
-}
-
-// --------------------------------------------------------------------------
-
-template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		int* indices, int indices_length, int level, bool fitted) {
 
@@ -1046,9 +857,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	// or when there is less data than clusters
 	if (level == m_depth - 1 || indices_length < m_branching) {
 		node->children = NULL;
-		node->word_id = m_words.size();
-		node->weight = 1.0;
-		m_words.push_back(node);
+		node->word_id = m_invertedIndex.size();
+		m_invertedIndex.push_back(vlr::Word(1.0));
 #if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
@@ -1082,16 +892,13 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
-	CV_Assert(centers_length == m_branching);
-
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
 #ifdef SUPPDUPLICATES
 	if (centers_length < m_branching) {
 		node->children = NULL;
-		node->word_id = m_words.size();
-		node->weight = 1.0;
-		m_words.push_back(node);
+		node->word_id = m_invertedIndex.size();
+		m_invertedIndex.push_back(vlr::Word(1.0));
 #if VTREEVERBOSE
 		printf(
 				"[VocabTree::computeClustering] (level %d): got less cluster indices than clusters (%d features)\n",
@@ -1099,6 +906,8 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 		return;
 	}
+#else
+	CV_Assert(centers_length == m_branching);
 #endif
 
 #if DEBUG
@@ -1196,12 +1005,12 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			for (size_t i = 0; (int) i < indices_length; ++i) {
 				uint j = belongs_to[i];
 				cv::Mat b = bitwiseCount.row(j);
-				KMajorityIndex::cumBitSum(m_dataset.row(indices[i]), b);
+				KMajority::cumBitSum(m_dataset.row(indices[i]), b);
 			}
 			// Bitwise majority voting
 			for (size_t j = 0; (int) j < m_branching; ++j) {
 				cv::Mat centroid = dcenters.row(j);
-				KMajorityIndex::majorityVoting(bitwiseCount.row(j), centroid,
+				KMajority::majorityVoting(bitwiseCount.row(j), centroid,
 						count[j]);
 			}
 		} else {
@@ -1266,27 +1075,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
-		// Handle empty clusters
-		for (int i = 0; i < m_branching; ++i) {
-			// if one cluster converges to an empty cluster,
-			// move an element into that cluster
-			if (count[i] == 0) {
-				int j = (i + 1) % m_branching;
-				while (count[j] <= 1) {
-					j = (j + 1) % m_branching;
-				}
-
-				for (int k = 0; k < indices_length; ++k) {
-					if (belongs_to[k] == j) {
-						belongs_to[k] = i;
-						--count[j];
-						++count[i];
-						break;
-					}
-				}
-				converged = false;
-			}
-		}
+		// TODO Handle empty clusters
 
 #if DEBUG
 #if VTREEVERBOSE
@@ -1344,7 +1133,8 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 		cv::Mat& bowVector, const int& normType) const {
 
 	// Initialize query BoW vector
-	bowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
+	bowVector = cv::Mat::zeros(1, m_invertedIndex.size(),
+			cv::DataType<float>::type);
 
 	uint wordIdx;
 	double wordWeight;
@@ -1355,7 +1145,7 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 		quantize(featuresVector.row(i), wordIdx, wordWeight, nodeAtL);
 
-		if (wordIdx > m_words.size() - 1) {
+		if (wordIdx > m_invertedIndex.size() - 1) {
 			throw std::runtime_error(
 					"[VocabTree::transform] Feature quantized into a non-existent word");
 		}
@@ -1401,9 +1191,8 @@ void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
 		++level;
 	}
 
-	// Turn node id into word id
 	word_id = best_node->word_id;
-	weight = best_node->weight;
+	weight = m_invertedIndex[word_id].m_weight;
 }
 
 // --------------------------------------------------------------------------
@@ -1412,27 +1201,28 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 		WeightingType weighting) {
 
-	if (empty()) {
+	if (m_invertedIndex.empty()) {
 		throw std::runtime_error("[VocabTree::computeWordsWeights]"
 				" Error while computing words weights, vocabulary is empty");
 	}
 
 	if (weighting == bfeat::BINARY) {
 		// Setting constant weight equal to 1
-		for (VocabTreeNodePtr& word : m_words) {
-			word->weight = 1.0;
+		for (vlr::Word& word : m_invertedIndex) {
+			word.m_weight = 1.0;
 		}
 	} else if (weighting == bfeat::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
-		for (VocabTreeNodePtr& word : m_words) {
-			int len = word->image_list.size();
+		for (vlr::Word& word : m_invertedIndex) {
+			int len = word.m_imageList.size();
 			// because having that a descriptor from all DB images is quantized
 			// to the same word is quite unlikely
 			if (len > 0) {
-				word->weight = log((double) m_numDbImages / (double) len);
+				word.m_weight = log(
+						(double) m_invertedIndex.m_numDbImages / (double) len);
 			} else {
-				word->weight = 0.0;
+				word.m_weight = 0.0;
 			}
 		}
 	} else {
@@ -1446,16 +1236,16 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::createDatabase() {
 
-	if (empty()) {
+	if (m_invertedIndex.empty()) {
 		throw std::runtime_error("[VocabTree::createDatabase] Error while"
 				" applying weights to words histogram, vocabulary is empty");
 	}
 
 	// Loop over words
-	for (VocabTreeNodePtr& word : m_words) {
+	for (vlr::Word& word : m_invertedIndex) {
 		// Apply word weight to the image count
-		for (ImageCount& image : word->image_list) {
-			image.m_count *= word->weight;
+		for (vlr::ImageCount& image : word.m_imageList) {
+			image.m_count *= word.m_weight;
 		}
 	}
 
@@ -1465,8 +1255,8 @@ void VocabTree<TDescriptor, Distance>::createDatabase() {
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::clearDatabase() {
-	for (VocabTreeNodePtr& word : m_words) {
-		std::vector<ImageCount>().swap(word->image_list);
+	for (vlr::Word& word : m_invertedIndex) {
+		std::vector<vlr::ImageCount>().swap(word.m_imageList);
 	}
 }
 
@@ -1474,7 +1264,7 @@ void VocabTree<TDescriptor, Distance>::clearDatabase() {
 
 template<class TDescriptor, class Distance>
 bool VocabTree<TDescriptor, Distance>::empty() const {
-	return m_words.empty();
+	return m_size == 0;
 }
 
 // --------------------------------------------------------------------------
@@ -1492,7 +1282,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 		throw std::runtime_error(ss.str());
 	}
 
-	if (m_words.empty() == true) {
+	if (m_invertedIndex.empty() == true) {
 		throw std::runtime_error(
 				"[VocabTree::addImageToDatabase] Error while adding image,"
 						" vocabulary is empty");
@@ -1509,7 +1299,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 	}
 
 	// Increasing the counter of images in the DB
-	++m_numDbImages;
+	++m_invertedIndex.m_numDbImages;
 }
 
 // --------------------------------------------------------------------------
@@ -1518,21 +1308,22 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 		uint imgIdx) {
 
-	int n = (int) m_words[wordIdx]->image_list.size();
+	int n = (int) m_invertedIndex[wordIdx].m_imageList.size();
 
 	// Images list is empty: push a new image
 	if (n == 0) {
-		m_words[wordIdx]->image_list.push_back(ImageCount(imgIdx, (float) 1.0));
+		m_invertedIndex[wordIdx].m_imageList.push_back(
+				vlr::ImageCount(imgIdx, (float) 1.0));
 	} else {
 		// Images list is not empty: check if the id of the last added image
 		// is the same than that of the image being added
-		if (m_words[wordIdx]->image_list[n - 1].m_index == imgIdx) {
+		if (m_invertedIndex[wordIdx].m_imageList[n - 1].m_index == imgIdx) {
 			// Images are equal then the counter is increased by one
-			m_words[wordIdx]->image_list[n - 1].m_count += (float) 1.0;
+			m_invertedIndex[wordIdx].m_imageList[n - 1].m_count += (float) 1.0;
 		} else {
 			// Images are different then push a new image
-			m_words[wordIdx]->image_list.push_back(
-					ImageCount(imgIdx, (float) 1.0));
+			m_invertedIndex[wordIdx].m_imageList.push_back(
+					vlr::ImageCount(imgIdx, (float) 1.0));
 		}
 	}
 
@@ -1543,20 +1334,20 @@ void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 
-	if (m_words.empty() == true) {
+	if (m_invertedIndex.empty() == true) {
 		throw std::runtime_error("[VocabTree::normalizeDatabase] Error while"
 				" normalizing DB BoW vectors, vocabulary is empty");
 	}
 
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
-	std::vector<float> mags(m_numDbImages, 0.0);
+	std::vector<float> mags(m_invertedIndex.m_numDbImages, 0.0);
 
 	// Computing DB BoW vectors magnitude
 
 	// Summing vector elements
-	for (VocabTreeNodePtr& word : m_words) {
-		for (ImageCount& image : word->image_list) {
+	for (vlr::Word& word : m_invertedIndex) {
+		for (vlr::ImageCount& image : word.m_imageList) {
 			uint index = image.m_index;
 			double dim = image.m_count;
 
@@ -1581,8 +1372,8 @@ void VocabTree<TDescriptor, Distance>::normalizeDatabase(int normType) {
 	}
 
 	// Normalizing database
-	for (VocabTreeNodePtr& word : m_words) {
-		for (ImageCount& image : word->image_list) {
+	for (vlr::Word& word : m_invertedIndex) {
+		for (vlr::ImageCount& image : word.m_imageList) {
 			uint index = image.m_index;
 			assert(index < mags.size());
 			if (mags[index] > 0.0) {
@@ -1614,7 +1405,7 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 		throw std::runtime_error(ss.str());
 	}
 
-	if (m_words.empty() == true) {
+	if (m_invertedIndex.empty() == true) {
 		throw std::runtime_error("[VocabTree::scoreQuery]"
 				" Error while scoring query, vocabulary is empty");
 	}
@@ -1624,7 +1415,8 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 				"[VocabTree::scoreQuery] Unknown scoring method");
 	}
 
-	scores = cv::Mat::zeros(1, m_numDbImages, cv::DataType<float>::type);
+	scores = cv::Mat::zeros(1, m_invertedIndex.m_numDbImages,
+			cv::DataType<float>::type);
 
 	cv::Mat queryBowVector;
 	transform(queryImgFeatures, queryBowVector, normType);
@@ -1635,8 +1427,8 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 	// ||v - w||_{L2} = sqrt( 2 - 2 * Sum(v_i * w_i) )
 
 	// Calculating sum part of the efficient score implementation
-	for (VocabTreeNodePtr word : m_words) {
-		float qi = queryBowVector.at<float>(0, word->word_id);
+	for (size_t wordId = 0; wordId < m_invertedIndex.size(); ++wordId) {
+		float qi = queryBowVector.at<float>(0, wordId);
 
 		// Early exit
 		if (qi == 0.0) {
@@ -1649,8 +1441,10 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 		// In addition its fair computing qi against di without further verification
 		// since the inverted files contain not null counts
 
-		for (ImageCount& image : word->image_list) {
-			float di = image.m_count;
+		for (int imageId = 0;
+				imageId < int(m_invertedIndex[wordId].m_imageList.size());
+				++imageId) {
+			float di = m_invertedIndex[wordId].m_imageList[imageId].m_count;
 
 			// qi cannot be zero because we are considering only when its non-zero
 			// qi cannot be more than 1 because it is supposed to be normalized
@@ -1662,17 +1456,20 @@ void VocabTree<TDescriptor, Distance>::scoreQuery(
 			// di cannot be zero (unless the weight is zero) because the inverted files
 			// contain only counts for images with a descriptor which was quantized
 			// into that word
-			if (word->weight != 0.0) {
+			if (m_invertedIndex[wordId].m_weight != 0.0) {
 				CV_Assert(di > 0.0);
 			} else {
 				CV_Assert(di >= 0.0);
 			}
 
 			if (normType == cv::NORM_L1) {
-				scores.at<float>(0, image.m_index) += (float) (fabs(qi - di)
-						- fabs(qi) - fabs(di));
+				scores.at<float>(0,
+						m_invertedIndex[wordId].m_imageList[imageId].m_index) +=
+						(float) (fabs(qi - di) - fabs(qi) - fabs(di));
 			} else if (normType == cv::NORM_L2) {
-				scores.at<float>(0, image.m_index) += (float) qi * di;
+				scores.at<float>(0,
+						m_invertedIndex[wordId].m_imageList[imageId].m_index) +=
+						(float) qi * di;
 			}
 		}
 	}
@@ -1694,18 +1491,22 @@ template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::getDbBoWVector(uint idx,
 		cv::Mat& dbBowVector) const {
 
-	if (m_words.empty() == true) {
+	if (m_invertedIndex.empty() == true) {
 		throw std::runtime_error(
 				"[VocabTree::getDbBoWVector] Error while obtaining DB BoW vectors,"
 						" vocabulary is empty");
 	}
 
-	dbBowVector = cv::Mat::zeros(1, m_words.size(), cv::DataType<float>::type);
+	dbBowVector = cv::Mat::zeros(1, m_invertedIndex.size(),
+			cv::DataType<float>::type);
 
-	for (VocabTreeNodePtr word : m_words) {
-		for (ImageCount& image : word->image_list) {
-			if (image.m_index == idx) {
-				dbBowVector.at<float>(0, word->word_id) = image.m_count;
+	for (int wordId = 0; wordId < int(m_invertedIndex.size()); ++wordId) {
+		for (int imageId = 0;
+				imageId < int(m_invertedIndex[wordId].m_imageList.size());
+				++imageId) {
+			if (m_invertedIndex[wordId].m_imageList[imageId].m_index == idx) {
+				dbBowVector.at<float>(0, wordId) =
+						m_invertedIndex[wordId].m_imageList[imageId].m_count;
 			}
 		}
 	}
