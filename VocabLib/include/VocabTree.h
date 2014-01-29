@@ -129,6 +129,41 @@ public:
 
 };
 
+/**
+ * Structure representing a node in the hierarchical k-means tree.
+ */
+template<typename TDescriptor>
+struct VocabTreeNode {
+	// The node id
+	int node_id;
+	// The cluster center
+	TDescriptor* center;
+	// Children nodes (only for non-terminal nodes)
+	// Note: no need to store how many children does it has because
+	// this is a k-ary tree, where 'k' is the branch factor, i.e. it has k children or none
+	VocabTreeNode** children;
+	// Word id (only for terminal nodes)
+	int word_id;
+	VocabTreeNode() :
+			node_id(-1), center(NULL), children(NULL), word_id(-1) {
+	}
+//		VocabTreeNode& operator=(const VocabTreeNode& node) {
+//			node_id = node.node_id;
+//			if (node.center != NULL) {
+//				// Deep copy
+//				center = new TDescriptor[m_veclen];
+//				for (size_t k = 0; k < m_veclen; ++k) {
+//					center[k] = node.center[k];
+//				}
+//			} else {
+//				center = NULL;
+//			}
+//			children = node.children;
+//			word_id = node.word_id;
+//			return *this;
+//		}
+};
+
 static vlr::Mat DEFAULT_INPUTDATA = vlr::Mat();
 
 template<class TDescriptor, class Distance>
@@ -138,41 +173,7 @@ private:
 
 	typedef typename Distance::ResultType DistanceType;
 
-	/**
-	 * Structure representing a node in the hierarchical k-means tree.
-	 */
-	struct VocabTreeNode {
-		// The node id
-		int node_id;
-		// The cluster center
-		TDescriptor* center;
-		// Children nodes (only for non-terminal nodes)
-		// Note: no need to store how many children does it has because
-		// this is a k-ary tree, where 'k' is the branch factor, i.e. it has k children or none
-		VocabTreeNode** children;
-		// Word id (only for terminal nodes)
-		int word_id;
-		VocabTreeNode() :
-				node_id(-1), center(NULL), children(NULL), word_id(-1) {
-		}
-		VocabTreeNode& operator=(const VocabTreeNode& node) {
-			node_id = node.node_id;
-			if (node.center != NULL) {
-				// Deep copy
-				center = new TDescriptor[m_veclen];
-				for (size_t k = 0; k < m_veclen; ++k) {
-					center[k] = node.center[k];
-				}
-			} else {
-				center = NULL;
-			}
-			children = node.children;
-			word_id = node.word_id;
-			return *this;
-		}
-	};
-
-	typedef VocabTreeNode* VocabTreeNodePtr;
+	typedef VocabTreeNode<TDescriptor>* VocabTreeNodePtr;
 
 	typedef std::vector<int> FeatureVector;
 	typedef std::map<int, FeatureVector> TreeNode;
@@ -563,7 +564,7 @@ void VocabTree<TDescriptor, Distance>::build() {
 		indices[i] = i;
 	}
 
-	m_root = new VocabTreeNode();
+	m_root = new VocabTreeNode<TDescriptor>();
 	m_root->center = new TDescriptor[m_veclen];
 	std::fill(m_root->center, m_root->center + m_veclen, 0);
 
@@ -686,7 +687,7 @@ void VocabTree<TDescriptor, Distance>::load(const std::string& filename) {
 			}
 		}
 
-		m_root = new VocabTreeNode();
+		m_root = new VocabTreeNode<TDescriptor>();
 		load_tree(inputFileStream, m_root);
 
 	} catch (const boost::iostreams::gzip_error& e) {
@@ -791,7 +792,7 @@ void VocabTree<TDescriptor, Distance>::load_tree(
 		// Node has children then it's an interior node
 		node->children = new VocabTreeNodePtr[m_branching];
 		for (int c = 0; c < m_branching; ++c) {
-			node->children[c] = new VocabTreeNode();
+			node->children[c] = new VocabTreeNode<TDescriptor>();
 			load_tree(inputFileStream, node->children[c]);
 		}
 	}
@@ -1117,7 +1118,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			}
 		}
 
-		node->children[c] = new VocabTreeNode();
+		node->children[c] = new VocabTreeNode<TDescriptor>();
 		node->children[c]->center = centers[c];
 		computeClustering(node->children[c], indices + start, end - start,
 				level + 1, fitted);
