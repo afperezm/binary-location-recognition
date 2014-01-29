@@ -26,10 +26,10 @@
  * @param matches1to2
  * @param proximityThreshold
  */
-void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int idImg1,
+void matchKeypoints(const cv::Ptr<vlr::DirectIndex> directIndex1, int idImg1,
 		const std::vector<cv::KeyPoint>& keypoints1,
 		std::vector<cv::Point2f>& matchedPoints1,
-		const cv::Ptr<bfeat::DirectIndex> directIndex2, int idImg2,
+		const cv::Ptr<vlr::DirectIndex> directIndex2, int idImg2,
 		const std::vector<cv::KeyPoint>& keypoints2,
 		std::vector<cv::Point2f>& matchedPoints2,
 		std::vector<cv::DMatch>& matches1to2, double proximityThreshold);

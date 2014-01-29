@@ -54,19 +54,19 @@ void VocabDB::addImageToDatabase(int dbImgIdx, cv::Mat dbImgFeatures) {
 
 // --------------------------------------------------------------------------
 
-void VocabDB::computeWordsWeights(bfeat::WeightingType weighting) {
+void VocabDB::computeWordsWeights(vlr::WeightingType weighting) {
 
 	if (m_invertedIndex.empty()) {
 		throw std::runtime_error("[VocabDB::computeWordsWeights]"
 				" Error while computing words weights, vocabulary is empty");
 	}
 
-	if (weighting == bfeat::BINARY) {
+	if (weighting == vlr::BINARY) {
 		// Setting constant weight equal to 1
 		for (vlr::Word& word : m_invertedIndex) {
 			word.m_weight = 1.0;
 		}
-	} else if (weighting == bfeat::TF_IDF) {
+	} else if (weighting == vlr::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (vlr::Word& word : m_invertedIndex) {

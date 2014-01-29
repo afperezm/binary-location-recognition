@@ -54,7 +54,7 @@
 
 #include <fstream>
 
-namespace bfeat {
+namespace vlr {
 
 enum WeightingType {
 	TF_IDF, BINARY
@@ -202,7 +202,7 @@ protected:
 	VocabTreeNodePtr m_root;
 
 	/** Attributes holding the indices **/
-	bfeat::DirectIndex* m_directIndex;
+	vlr::DirectIndex* m_directIndex;
 	vlr::InvertedIndex m_invertedIndex;
 
 	/** Other attributes **/
@@ -493,7 +493,7 @@ VocabTree<TDescriptor, Distance>::VocabTree(vlr::Mat& inputData,
 	m_centers_init = cvflann::get_param(params, "centers_init",
 			cvflann::FLANN_CENTERS_RANDOM);
 	// m_centers_init = cvflann::FLANN_CENTERS_RANDOM;
-	m_directIndex = new bfeat::DirectIndex();
+	m_directIndex = new vlr::DirectIndex();
 	setDirectIndexLevel(cvflann::get_param(params, "levels_up", 2));
 	// setDirectIndexLevel(2);
 
@@ -1210,12 +1210,12 @@ void VocabTree<TDescriptor, Distance>::computeWordsWeights(
 				" Error while computing words weights, vocabulary is empty");
 	}
 
-	if (weighting == bfeat::BINARY) {
+	if (weighting == vlr::BINARY) {
 		// Setting constant weight equal to 1
 		for (vlr::Word& word : m_invertedIndex) {
 			word.m_weight = 1.0;
 		}
-	} else if (weighting == bfeat::TF_IDF) {
+	} else if (weighting == vlr::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
 		for (vlr::Word& word : m_invertedIndex) {
@@ -1592,6 +1592,6 @@ bool VocabTree<TDescriptor, Distance>::operator!=(
 	return !(*this == other);
 }
 
-} /* namespace bfeat */
+} /* namespace vlr */
 
 #endif /* VOCAB_TREE_H_ */

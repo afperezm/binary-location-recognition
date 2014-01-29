@@ -63,20 +63,20 @@ int main(int argc, char **argv) {
 	printf("   Initialized, got [%d] descriptors\n", dataset.rows);
 
 	// Cluster descriptors using Vocabulary Tree
-	bfeat::VocabTreeParams params;
+	vlr::VocabTreeParams params;
 	params["branching"] = branchFactor;
 	params["iterations"] = restarts;
 	params["depth"] = depth;
 
-	cv::Ptr<bfeat::VocabTreeBase> tree;
+	cv::Ptr<vlr::VocabTreeBase> tree;
 
 	printf("-- Descriptor type is [%s]\n",
 			dataset.type() == CV_8U ? "binary" : "non-binary");
 
 	if (dataset.type() == CV_8U) {
-		tree = new bfeat::VocabTreeBin(dataset, params);
+		tree = new vlr::VocabTreeBin(dataset, params);
 	} else {
-		tree = new bfeat::VocabTreeReal(dataset, params);
+		tree = new vlr::VocabTreeReal(dataset, params);
 	}
 
 	printf(

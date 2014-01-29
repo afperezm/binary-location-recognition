@@ -69,7 +69,7 @@ public:
 	 *
 	 * @param weighting - The weighting scheme to apply
 	 */
-	void computeWordsWeights(bfeat::WeightingType weighting);
+	void computeWordsWeights(vlr::WeightingType weighting);
 
 	/**
 	 * Computes the DB BoF vectors by applying the words weights
@@ -131,7 +131,7 @@ class HKMDB: public VocabDB {
 protected:
 
 	// TODO Initialize bofModel at the constructor
-	cv::Ptr<bfeat::VocabTreeBase> bofModel;
+	cv::Ptr<vlr::VocabTreeBase> bofModel;
 
 public:
 

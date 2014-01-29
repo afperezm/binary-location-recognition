@@ -7,10 +7,10 @@
 
 #include <matching.hpp>
 
-void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int idImg1,
+void matchKeypoints(const cv::Ptr<vlr::DirectIndex> directIndex1, int idImg1,
 		const std::vector<cv::KeyPoint>& keypoints1,
 		std::vector<cv::Point2f>& matchedPoints1,
-		const cv::Ptr<bfeat::DirectIndex> directIndex2, int idImg2,
+		const cv::Ptr<vlr::DirectIndex> directIndex2, int idImg2,
 		const std::vector<cv::KeyPoint>& keypoints2,
 		std::vector<cv::Point2f>& matchedPoints2,
 		std::vector<cv::DMatch>& matches1to2, double proximityThreshold) {
@@ -21,12 +21,12 @@ void matchKeypoints(const cv::Ptr<bfeat::DirectIndex> directIndex1, int idImg1,
 	matches1to2.clear();
 
 	// Lookup query and database images in the index and get nodes list
-	bfeat::TreeNode nodes1 = directIndex1->lookUpImg(idImg1);
-	bfeat::TreeNode nodes2 = directIndex2->lookUpImg(idImg2);
+	vlr::TreeNode nodes1 = directIndex1->lookUpImg(idImg1);
+	vlr::TreeNode nodes2 = directIndex2->lookUpImg(idImg2);
 
 	// Declare and initialize iterators to the maps to intersect
-	typename bfeat::TreeNode::const_iterator it1 = nodes1.begin();
-	typename bfeat::TreeNode::const_iterator it2 = nodes2.begin();
+	typename vlr::TreeNode::const_iterator it1 = nodes1.begin();
+	typename vlr::TreeNode::const_iterator it2 = nodes2.begin();
 
 	cv::Point2f point1, point2;
 

@@ -12,18 +12,18 @@
 
 TEST(DirectIndex, InstantiateOnHeap) {
 
-	cv::Ptr<bfeat::DirectIndex> di;
+	cv::Ptr<vlr::DirectIndex> di;
 
 	EXPECT_TRUE(di == NULL);
 
-	di = new bfeat::DirectIndex();
+	di = new vlr::DirectIndex();
 
 	EXPECT_TRUE(di != NULL);
 }
 
 TEST(DirectIndex, AddFeature) {
 
-	cv::Ptr<bfeat::DirectIndex> di = new bfeat::DirectIndex(3);
+	cv::Ptr<vlr::DirectIndex> di = new vlr::DirectIndex(3);
 
 	EXPECT_TRUE(di->getLevel() == 3);
 
@@ -41,12 +41,12 @@ TEST(DirectIndex, AddFeature) {
 	EXPECT_TRUE(di->size() == 5);
 
 	for (size_t imgIdx = 0; imgIdx < 5; ++imgIdx) {
-		bfeat::TreeNode node = di->lookUpImg(imgIdx);
+		vlr::TreeNode node = di->lookUpImg(imgIdx);
 
 		// Check each image index has four nodes
 		EXPECT_TRUE(node.size() == 4);
 
-		for (bfeat::TreeNode::iterator it = node.begin(); it != node.end();
+		for (vlr::TreeNode::iterator it = node.begin(); it != node.end();
 				it++) {
 			// Check each nodes has 3000 features
 			EXPECT_TRUE(it->second.size() == 3000);
@@ -56,7 +56,7 @@ TEST(DirectIndex, AddFeature) {
 
 TEST(DirectIndex, SaveLoad) {
 
-	cv::Ptr<bfeat::DirectIndex> indexOne = new bfeat::DirectIndex();
+	cv::Ptr<vlr::DirectIndex> indexOne = new vlr::DirectIndex();
 
 	size_t nodes[5] = { 3, 6, 7, 14 };
 
@@ -69,7 +69,7 @@ TEST(DirectIndex, SaveLoad) {
 	}
 
 	indexOne->save("test_di.yaml.gz");
-	cv::Ptr<bfeat::DirectIndex> indexTwo = new bfeat::DirectIndex();
+	cv::Ptr<vlr::DirectIndex> indexTwo = new vlr::DirectIndex();
 	indexTwo->load("test_di.yaml.gz");
 
 	// Check level
@@ -79,13 +79,13 @@ TEST(DirectIndex, SaveLoad) {
 	EXPECT_TRUE(indexOne->size() == indexTwo->size());
 
 	for (size_t imgIdx = 0; imgIdx < indexOne->size(); ++imgIdx) {
-		bfeat::TreeNode nodeOne = indexOne->lookUpImg(imgIdx), nodeTwo =
+		vlr::TreeNode nodeOne = indexOne->lookUpImg(imgIdx), nodeTwo =
 				indexTwo->lookUpImg(imgIdx);
 
 		// Check each image index has four nodes
 		EXPECT_TRUE(nodeOne.size() == nodeTwo.size());
 
-		bfeat::TreeNode::iterator itOne = nodeOne.begin(), itTwo =
+		vlr::TreeNode::iterator itOne = nodeOne.begin(), itTwo =
 				nodeTwo.begin();
 
 		for (; itOne != nodeOne.end() && itTwo != nodeTwo.end();

@@ -76,12 +76,12 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree + inverted index
-	cv::Ptr<bfeat::VocabTreeBase> tree;
+	cv::Ptr<vlr::VocabTreeBase> tree;
 
 	if (is_binary == true) {
-		tree = new bfeat::VocabTreeBin();
+		tree = new vlr::VocabTreeBin();
 	} else {
-		tree = new bfeat::VocabTreeReal();
+		tree = new vlr::VocabTreeReal();
 	}
 
 	printf("-- Loading tree from [%s]\n", in_tree.c_str());

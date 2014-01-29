@@ -15,11 +15,11 @@
 #include <VocabTree.h>
 
 TEST(VocabTree, Instantiation) {
-	cv::Ptr<bfeat::VocabTreeBase> tree;
+	cv::Ptr<vlr::VocabTreeBase> tree;
 
 	EXPECT_TRUE(tree == NULL);
 
-	tree = new bfeat::VocabTreeReal();
+	tree = new vlr::VocabTreeReal();
 
 	EXPECT_TRUE(tree != NULL);
 }
@@ -34,13 +34,13 @@ TEST(VocabTreeReal, LoadSave) {
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTreeReal> tree = new bfeat::VocabTreeReal(data);
+	cv::Ptr<vlr::VocabTreeReal> tree = new vlr::VocabTreeReal(data);
 
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTreeReal> treeLoad = new bfeat::VocabTreeReal();
+	cv::Ptr<vlr::VocabTreeReal> treeLoad = new vlr::VocabTreeReal();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -62,15 +62,15 @@ TEST(VocabTreeBinary, LoadSave) {
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTreeBin> tree;
-	tree = new bfeat::VocabTreeBin(data);
+	cv::Ptr<vlr::VocabTreeBin> tree;
+	tree = new vlr::VocabTreeBin(data);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	tree->build();
 
 	tree->save("test_tree.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTreeBin> treeLoad = new bfeat::VocabTreeBin();
+	cv::Ptr<vlr::VocabTreeBin> treeLoad = new vlr::VocabTreeBin();
 
 	treeLoad->load("test_tree.yaml.gz");
 
@@ -93,13 +93,13 @@ TEST(VocabTreeReal, TestDatabase) {
 
 	vlr::Mat data(keysFilenames);
 
-	cv::Ptr<bfeat::VocabTreeBase> tree = new bfeat::VocabTreeReal(data);
+	cv::Ptr<vlr::VocabTreeBase> tree = new vlr::VocabTreeReal(data);
 
 	tree->build();
 	tree->save("test_tree.yaml.gz");
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<bfeat::VocabTreeBase> db = new bfeat::VocabTreeReal();
+	cv::Ptr<vlr::VocabTreeBase> db = new vlr::VocabTreeReal();
 
 	db->load("test_tree.yaml.gz");
 
@@ -132,7 +132,7 @@ TEST(VocabTreeReal, TestDatabase) {
 		ASSERT_TRUE(sumResult.at<float>(0, 0) != 0);
 	}
 
-	db->computeWordsWeights(bfeat::TF_IDF);
+	db->computeWordsWeights(vlr::TF_IDF);
 
 	db->createDatabase();
 
@@ -150,7 +150,7 @@ TEST(VocabTreeReal, TestDatabase) {
 
 	db->saveInvertedIndex("test_idf.yaml.gz");
 
-	cv::Ptr<bfeat::VocabTreeBase> dbLoad = new bfeat::VocabTreeReal();
+	cv::Ptr<vlr::VocabTreeBase> dbLoad = new vlr::VocabTreeReal();
 
 	dbLoad->load("test_tree.yaml.gz");
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");

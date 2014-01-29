@@ -15,7 +15,7 @@
 
 #include <opencv2/core/core.hpp>
 
-namespace bfeat {
+namespace vlr {
 
 typedef std::vector<int> FeatureVector;
 typedef std::map<int, FeatureVector> TreeNode;
@@ -80,6 +80,6 @@ public:
 
 };
 
-} /* namespace bfeat */
+} /* namespace vlr */
 
 #endif /* DIRECTINDEX_H_ */

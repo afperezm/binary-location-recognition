@@ -10,7 +10,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace bfeat {
+namespace vlr {
 
 DirectIndex::DirectIndex(int level) {
 	m_level = level;
@@ -163,4 +163,4 @@ void DirectIndex::clear() const {
 //	std::vector<TreeNode>().swap(m_index);
 }
 
-} /* namespace bfeat */
+} /* namespace vlr */
