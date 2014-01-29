@@ -121,6 +121,7 @@ void _matchKeypointsImpl(const std::vector<cv::KeyPoint>& keypoints1,
 	DistanceType descsDist, dBest, dSecond;
 	int idBest = -1, idSecondBest = -1;
 
+	// TODO Change for a BruteForce matcher
 	// knn(2): for each descriptor in 1 find the best two descriptors in 2
 	for (size_t i = 0; i < keypoints1.size(); i++) {
 

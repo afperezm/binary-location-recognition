@@ -150,7 +150,7 @@ class InvertedIndex: public std::vector<Word> {
 public:
 
 	// Number of database images
-	uint m_numDbImages;
+	int m_numDbImages;
 
 public:
 
@@ -171,6 +171,17 @@ public:
 	 * @return true if indexes are equal, false otherwise
 	 */
 	bool operator==(const InvertedIndex &other) const;
+
+	/**
+	 * Updates the inverted file of the given word by adding the image indicated
+	 * by the given imgIdx.
+	 *
+	 * @param wordIdx - The id of the word whose inverted file to update
+	 * @param imgIdx - The id of the image to add to the inverted file
+	 *
+	 * @note Images are added in sequence
+	 */
+	void addFeatureToInvertedFile(int wordIdx, uint imgIdx);
 
 	/**
 	 * Saves the inverted index to a file stream.

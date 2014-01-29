@@ -48,6 +48,30 @@ bool InvertedIndex::operator==(const InvertedIndex &other) const {
 
 // --------------------------------------------------------------------------
 
+void InvertedIndex::addFeatureToInvertedFile(int wordIdx, uint imgIdx) {
+
+	int n = (int) at(wordIdx).m_imageList.size();
+
+	// Images list is empty: push a new image
+	if (n == 0) {
+		at(wordIdx).m_imageList.push_back(vlr::ImageCount(imgIdx, (float) 1.0));
+	} else {
+		// Images list is not empty: check if the id of the last added image
+		// is the same than that of the image being added
+		if (at(wordIdx).m_imageList[n - 1].m_index == imgIdx) {
+			// Images are equal then the counter is increased by one
+			at(wordIdx).m_imageList[n - 1].m_count += (float) 1.0;
+		} else {
+			// Images are different then push a new image
+			at(wordIdx).m_imageList.push_back(
+					vlr::ImageCount(imgIdx, (float) 1.0));
+		}
+	}
+
+}
+
+// --------------------------------------------------------------------------
+
 void InvertedIndex::save(const std::string& filename) const {
 
 	if (empty() == true) {

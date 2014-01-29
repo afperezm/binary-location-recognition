@@ -17,12 +17,12 @@
 #include <functional>
 #include <bitset>
 
-KMajority::KMajority(int numClusters, int maxIterations, const cv::Mat& data,
+KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 		vlr::indexType nnMethod,
 		cvflann::flann_centers_init_t centersInitMethod) :
-		m_numClusters(numClusters), m_maxIterations(maxIterations), m_nnMethod(
-				nnMethod), m_centersInitMethod(centersInitMethod), m_dataset(
-				data), m_dim(data.cols), m_nnIndex(NULL) {
+		m_numClusters(numClusters), m_maxIterations(maxIterations), m_centersInitMethod(
+				centersInitMethod), m_dataset(data), m_dim(data.cols), m_nnMethod(
+				nnMethod), m_nnIndex(NULL) {
 
 	m_numDatapoints = m_dataset.rows;
 
@@ -108,6 +108,9 @@ void KMajority::initCentroids() {
 	CentersChooser<Distance::ElementType, cv::Hamming>::create(
 			m_centersInitMethod)->chooseCenters(m_numClusters, indices,
 			m_numDatapoints, centers_idx, centers_length, m_dataset);
+	CV_Assert(centers_length == m_numClusters);
+
+	std::sort(centers_idx.begin(), centers_idx.end());
 
 	delete[] indices;
 
@@ -118,10 +121,12 @@ void KMajority::initCentroids() {
 				m_centroids(cv::Range(i, i + 1), cv::Range(0, m_dim)));
 	}
 
-	cvflann::IndexParams m_indexParams =
-			cvflann::HierarchicalClusteringIndexParams();
+	m_dataset.clearCache();
 
 	// Build index for addressing nearest neighbors descriptors search
+
+	cvflann::IndexParams m_indexParams =
+			cvflann::HierarchicalClusteringIndexParams();
 
 	m_nnIndex = vlr::createIndexByType(
 			cvflann::Matrix<Distance::ElementType>(m_centroids.data,
@@ -156,8 +161,8 @@ bool KMajority::quantize() {
 						m_dataset.cols), indices, distances, knn,
 				cvflann::SearchParams());
 
-		/* Check if it changed */
-		// If cluster assignment changed that means the algorithm hasn't converged yet
+		/* Check if cluster assignment changed */
+		// If it did then algorithm hasn't converged yet
 		if (m_belongsTo[i] != indices[0][0]) {
 			converged = false;
 		}
@@ -173,6 +178,9 @@ bool KMajority::quantize() {
 		++m_clusterCounts[indices[0][0]];
 		m_distanceTo[i] = distances[0][0];
 	}
+
+	delete[] indices.data;
+	delete[] distances.data;
 
 	return converged;
 }

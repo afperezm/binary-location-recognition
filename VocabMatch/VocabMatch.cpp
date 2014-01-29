@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 	std::string in_db_desc_list = argv[3];
 	std::string in_queries_desc_list = argv[4];
 	std::string out_ranked_files_folder = argv[5];
-	uint num_nbrs = atoi(argv[6]);
+	int num_nbrs = atoi(argv[6]);
 	bool is_binary = true;
 	std::string output_html("results.html");
 	bool use_regions = false;
@@ -127,7 +127,9 @@ int main(int argc, char **argv) {
 	cv::Mat scores;
 
 	// Compute the number of candidates
-	int top = MIN (num_nbrs, db_desc_list.size());
+	int top =
+			num_nbrs >= 0 && (size_t) num_nbrs > db_desc_list.size() ?
+					db_desc_list.size() : num_nbrs;
 
 	HtmlResultsWriter::getInstance().open(output_html, top);
 

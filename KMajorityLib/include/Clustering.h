@@ -23,7 +23,7 @@ namespace clustering {
  * @param labels
  * @param centersInit
  */
-inline void kmajority(int k, int maxIterations, const cv::Mat& data,
+inline void kmajority(int k, int maxIterations, vlr::Mat& data,
 		cv::Mat& centers, std::vector<int>& labels,
 		cvflann::flann_centers_init_t centersInit =
 				cvflann::FLANN_CENTERS_RANDOM) {

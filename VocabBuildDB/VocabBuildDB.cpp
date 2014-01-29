@@ -75,34 +75,34 @@ int main(int argc, char **argv) {
 
 	printf("-- Building database using [%lu] images\n", descFilenames.size());
 
-	cv::Ptr<bfeat::VocabTreeBase> tree;
+	cv::Ptr<bfeat::VocabTreeBase> db;
 
 	if (isDescriptorBinary == true) {
-		tree = new bfeat::VocabTreeBin();
+		db = new bfeat::VocabTreeBin();
 	} else {
-		tree = new bfeat::VocabTreeReal();
+		db = new bfeat::VocabTreeReal();
 	}
 
 	printf("-- Reading tree from [%s]\n", tree_in.c_str());
 
 	mytime = cv::getTickCount();
-	tree->load(tree_in);
+	db->load(tree_in);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			tree->size());
+			db->size());
 
-	tree->setDirectIndexLevel(levelsUp);
-	printf("-- Direct index level [%d]\n", tree->getDirectIndexLevel());
+	db->setDirectIndexLevel(levelsUp);
+	printf("-- Direct index level [%d]\n", db->getDirectIndexLevel());
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",
 			descFilenames.size());
-	tree->clearDatabase();
+	db->clearDatabase();
 	printf("   Clearing Inverted Files\n");
 
 	cv::Mat imgDescriptors;
-	uint imgIdx = 0;
+	int imgIdx = 0;
 
 	for (std::string& keyFileName : descFilenames) {
 		// Load descriptors
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 		// Add image to database
 		printf("   Adding image [%u] to database\n", imgIdx);
 		try {
-			tree->addImageToDatabase(imgIdx, imgDescriptors);
+			db->addImageToDatabase(imgIdx, imgDescriptors);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
 			return EXIT_FAILURE;
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 	imgDescriptors.release();
 	imgDescriptors = cv::Mat();
 
-	CV_Assert(descFilenames.size() == imgIdx);
+	CV_Assert(imgIdx >= 0 && (size_t ) imgIdx == descFilenames.size());
 
 	printf("   Added [%u] images\n", imgIdx);
 
@@ -152,10 +152,10 @@ int main(int argc, char **argv) {
 			weightingScheme == bfeat::TF_IDF ? "TF-IDF" :
 			weightingScheme == bfeat::BINARY ? "BINARY" : "UNKNOWN");
 
-	tree->computeWordsWeights(weightingScheme);
+	db->computeWordsWeights(weightingScheme);
 
 	printf("-- Applying words weights to the database BoF vectors counts\n");
-	tree->createDatabase();
+	db->createDatabase();
 
 	int normType = cv::NORM_L1;
 
@@ -163,13 +163,13 @@ int main(int argc, char **argv) {
 		printf("-- Normalizing database BoF vectors using [%s]\n",
 				normType == cv::NORM_L1 ? "L1-norm" :
 				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-		tree->normalizeDatabase(normType);
+		db->normalizeDatabase(normType);
 	}
 
 	printf("-- Saving inverted index to [%s]\n", out_inv_index.c_str());
 
 	mytime = cv::getTickCount();
-	tree->saveInvertedIndex(out_inv_index);
+	db->saveInvertedIndex(out_inv_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
 	printf("-- Saving direct index to [%s]\n", out_dir_index.c_str());
 
 	mytime = cv::getTickCount();
-	tree->saveDirectIndex(out_dir_index);
+	db->saveDirectIndex(out_dir_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 

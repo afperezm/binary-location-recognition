@@ -12,6 +12,8 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/flann/flann.hpp>
 
+#include <DynamicMat.hpp>
+
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
 
@@ -39,7 +41,7 @@ protected:
 	// Method for initializing centers
 	cvflann::flann_centers_init_t m_centersInitMethod;
 	// Reference to the matrix with data to cluster
-	const cv::Mat& m_dataset;
+	vlr::Mat& m_dataset;
 	// Dimensionality of the data under clustering (in Bytes)
 	int m_dim;
 	// Number of data instances
@@ -69,7 +71,7 @@ public:
 	 * @param belongsTo
 	 * @param centersInit
 	 */
-	KMajority(int numClusters, int maxIterations, const cv::Mat& data,
+	KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 			vlr::indexType nnMethod = vlr::indexType::LINEAR,
 			cvflann::flann_centers_init_t centersInitMethod =
 					cvflann::FLANN_CENTERS_RANDOM);

@@ -106,7 +106,7 @@ TEST(VocabTreeReal, TestDatabase) {
 	db->clearDatabase();
 
 	bool gotException = false;
-	uint i = 0;
+	int i = 0;
 	for (std::string keyFileName : keysFilenames) {
 		try {
 			FileUtils::loadDescriptors(keyFileName, imgDescriptors);

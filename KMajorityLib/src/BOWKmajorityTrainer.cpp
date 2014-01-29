@@ -7,6 +7,7 @@
 
 #include <BOWKmajorityTrainer.h>
 #include <Clustering.h>
+#include <FileUtils.hpp>
 
 namespace cv {
 
@@ -46,12 +47,19 @@ Mat BOWKmajorityTrainer::cluster() const {
 
 Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const {
 
+	FileUtils::saveDescriptors("mydescriptors.yaml.gz", descriptors);
+
+	std::vector<std::string> filenames;
+	filenames.push_back("mydescriptors.yaml.gz");
+
+	vlr::Mat dataset(filenames);
+
 	Mat vocabulary;
 
 	std::vector<int> labels;
 
-	clustering::kmajority(m_clusterCount, m_maxIterations, descriptors,
-			vocabulary, labels, m_centers_init);
+	clustering::kmajority(m_clusterCount, m_maxIterations, dataset, vocabulary,
+			labels, m_centers_init);
 
 	return vocabulary;
 }

@@ -99,7 +99,7 @@ public:
 
 	virtual void loadDirectIndex(const std::string& filename) = 0;
 
-	virtual void quantize(const cv::Mat& feature, uint &id, double &weight,
+	virtual void quantize(const cv::Mat& feature, int &id, double &weight,
 			int &nodeAtL) const=0;
 
 	virtual void addImageToDatabase(uint imgIdx, cv::Mat dbImgFeatures) = 0;
@@ -124,6 +124,8 @@ public:
 	virtual int getDepth() const = 0;
 
 	virtual const vlr::InvertedIndex& getInvertedIndex() const = 0;
+
+	virtual size_t getVeclen() const = 0;
 
 };
 
@@ -292,7 +294,7 @@ public:
 	 * @param weight - The weight of the found word
 	 * @param nodeAtL - Pointer to a tree node at level l in the path down the tree
 	 */
-	void quantize(const cv::Mat& feature, uint &id, double &weight,
+	void quantize(const cv::Mat& feature, int &id, double &weight,
 			int &nodeAtL) const;
 
 	/**
@@ -451,7 +453,7 @@ private:
 	 *
 	 * @note Images are added in sequence
 	 */
-	void addFeatureToInvertedFile(uint wordIdx, uint imgIdx);
+	void addFeatureToInvertedFile(int wordIdx, uint imgIdx);
 
 	/**
 	 * Transforms a set of data (representing a single image) into a BoW vector.
@@ -975,7 +977,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	bool converged = false;
 	int iteration = 0;
-	while (!converged && iteration < m_iterations) {
+	while (converged == false && iteration < m_iterations) {
 #if DEBUG
 #if VTREEVERBOSE
 		printf("iteration=[%d]\n", iteration);
@@ -1136,16 +1138,18 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 	bowVector = cv::Mat::zeros(1, m_invertedIndex.size(),
 			cv::DataType<float>::type);
 
-	uint wordIdx;
+	int wordIdx;
 	double wordWeight;
 	int nodeAtL; // unused
+
+	int numInvertedFiles = m_invertedIndex.size();
 
 	// Quantize each query image feature vector
 	for (size_t i = 0; (int) i < featuresVector.rows; ++i) {
 
 		quantize(featuresVector.row(i), wordIdx, wordWeight, nodeAtL);
 
-		if (wordIdx > m_invertedIndex.size() - 1) {
+		if (wordIdx > numInvertedFiles - 1) {
 			throw std::runtime_error(
 					"[VocabTree::transform] Feature quantized into a non-existent word");
 		}
@@ -1161,7 +1165,7 @@ void VocabTree<TDescriptor, Distance>::transform(const cv::Mat& featuresVector,
 
 template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::quantize(const cv::Mat& feature,
-		uint &word_id, double &weight, int &nodeAtL) const {
+		int &word_id, double &weight, int &nodeAtL) const {
 
 	VocabTreeNodePtr best_node = m_root;
 
@@ -1288,7 +1292,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 						" vocabulary is empty");
 	}
 
-	uint wordIdx;
+	int wordIdx;
 	double wordWeight; // not needed
 	int nodeAtL;
 
@@ -1305,7 +1309,7 @@ void VocabTree<TDescriptor, Distance>::addImageToDatabase(uint imgIdx,
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(uint wordIdx,
+void VocabTree<TDescriptor, Distance>::addFeatureToInvertedFile(int wordIdx,
 		uint imgIdx) {
 
 	int n = (int) m_invertedIndex[wordIdx].m_imageList.size();

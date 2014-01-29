@@ -19,14 +19,18 @@ TEST(KMajority, InstantiateOnHeap) {
 
 	EXPECT_TRUE(obj == NULL);
 
-	obj = new KMajority(0, 0, cv::Mat());
+	vlr::Mat emptyMat = vlr::Mat();
+
+	obj = new KMajority(0, 0, emptyMat);
 
 	EXPECT_TRUE(obj != NULL);
 }
 
 TEST(KMajority, InstantiateOnStack) {
 
-	KMajority obj(0, 0, cv::Mat());
+	vlr::Mat emptyMat = vlr::Mat();
+
+	KMajority obj(0, 0, emptyMat);
 
 	EXPECT_TRUE(obj.getCentroids().empty());
 
@@ -42,8 +46,10 @@ TEST(KMajority, MajorityVoting) {
 
 TEST(KMajority, Clustering) {
 
-	cv::Mat descriptors;
-	FileUtils::loadDescriptors("brief_0.yaml.gz", descriptors);
+	std::vector<std::string> filenames;
+	filenames.push_back("brief_0.yaml.gz");
+
+	vlr::Mat descriptors(filenames);
 
 	KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
 
@@ -57,8 +63,10 @@ TEST(KMajority, Clustering) {
 
 TEST(KMajority, Regression) {
 
-	cv::Mat descriptors;
-	FileUtils::loadDescriptors("brief_0.yaml.gz", descriptors);
+	std::vector<std::string> filenames;
+	filenames.push_back("brief_0.yaml.gz");
+
+	vlr::Mat descriptors(filenames);
 
 	cv::Mat centroids;
 	std::vector<int> labels;
