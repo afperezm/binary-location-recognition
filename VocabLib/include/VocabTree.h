@@ -175,10 +175,6 @@ private:
 
 	typedef VocabTreeNode<TDescriptor>* VocabTreeNodePtr;
 
-	typedef std::vector<int> FeatureVector;
-	typedef std::map<int, FeatureVector> TreeNode;
-	typedef std::vector<TreeNode> DirectIndex;
-
 protected:
 
 	/** Attributes useful for building the tree **/
