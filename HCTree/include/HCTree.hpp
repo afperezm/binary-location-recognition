@@ -18,7 +18,6 @@
 
 namespace vlr {
 
-static vlr::Mat DEFAULT_INPUTDATA = Mat();
 typedef uchar TDescriptor;
 typedef cv::Hamming Distance;
 typedef typename Distance::ResultType DistanceType;

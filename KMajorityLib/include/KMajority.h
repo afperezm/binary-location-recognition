@@ -71,8 +71,9 @@ public:
 	 * @param belongsTo
 	 * @param centersInit
 	 */
-	KMajority(int numClusters, int maxIterations, vlr::Mat& data,
-			vlr::indexType nnMethod = vlr::indexType::LINEAR,
+	KMajority(int numClusters = 0, int maxIterations = 0, vlr::Mat& data =
+			vlr::DEFAULT_INPUTDATA, vlr::indexType nnMethod =
+			vlr::indexType::LINEAR,
 			cvflann::flann_centers_init_t centersInitMethod =
 					cvflann::FLANN_CENTERS_RANDOM);
 

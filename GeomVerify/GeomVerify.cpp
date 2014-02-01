@@ -17,7 +17,6 @@
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 #include <HtmlResultsWriter.hpp>
-#include <VocabTree.h>
 
 double mytime;
 

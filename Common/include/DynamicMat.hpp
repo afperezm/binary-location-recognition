@@ -175,6 +175,8 @@ private:
 
 };
 
+static vlr::Mat DEFAULT_INPUTDATA = vlr::Mat();
+
 } /* namespace vlr */
 
 #endif /* DYNAMICMAT_HPP_ */

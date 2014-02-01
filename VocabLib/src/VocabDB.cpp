@@ -10,13 +10,13 @@
 namespace vlr {
 
 void VocabDB::saveInvertedIndex(const std::string& filename) const {
-	m_invertedIndex.save(filename);
+	m_invertedIndex->save(filename);
 }
 
 // --------------------------------------------------------------------------
 
 void VocabDB::loadInvertedIndex(const std::string& filename) {
-	m_invertedIndex.load(filename);
+	m_invertedIndex->load(filename);
 }
 
 // --------------------------------------------------------------------------
@@ -34,7 +34,7 @@ void VocabDB::addImageToDatabase(int dbImgIdx, cv::Mat dbImgFeatures) {
 		throw std::runtime_error(ss.str());
 	}
 
-	if (m_invertedIndex.empty() == true) {
+	if (m_invertedIndex->empty() == true) {
 		throw std::runtime_error(
 				"[VocabDB::addImageToDatabase] Error while adding image,"
 						" vocabulary is empty");
@@ -45,37 +45,37 @@ void VocabDB::addImageToDatabase(int dbImgIdx, cv::Mat dbImgFeatures) {
 
 	for (int i = 0; i < dbImgFeatures.rows; ++i) {
 		quantize(dbImgFeatures.row(i), wordId, wordWeight);
-		m_invertedIndex.addFeatureToInvertedFile(wordId, dbImgIdx);
+		m_invertedIndex->addFeatureToInvertedFile(wordId, dbImgIdx);
 	}
 
 	// Increasing the counter of images in the DB
-	++m_invertedIndex.m_numDbImages;
+	++m_invertedIndex->m_numDbImages;
 }
 
 // --------------------------------------------------------------------------
 
 void VocabDB::computeWordsWeights(vlr::WeightingType weighting) {
 
-	if (m_invertedIndex.empty()) {
+	if (m_invertedIndex->empty()) {
 		throw std::runtime_error("[VocabDB::computeWordsWeights]"
 				" Error while computing words weights, vocabulary is empty");
 	}
 
 	if (weighting == vlr::BINARY) {
 		// Setting constant weight equal to 1
-		for (vlr::Word& word : m_invertedIndex) {
+		for (vlr::Word& word : *m_invertedIndex) {
 			word.m_weight = 1.0;
 		}
 	} else if (weighting == vlr::TF_IDF) {
 		// Calculating the IDF part of the TF-IDF score, the complete
 		// TF-IDF score is the result of multiplying the weight by the word count
-		for (vlr::Word& word : m_invertedIndex) {
+		for (vlr::Word& word : *m_invertedIndex) {
 			int len = word.m_imageList.size();
 			// because having that a descriptor from all DB images is quantized
 			// to the same word is quite unlikely
 			if (len > 0) {
 				word.m_weight = log(
-						(double) m_invertedIndex.m_numDbImages / (double) len);
+						(double) m_invertedIndex->m_numDbImages / (double) len);
 			} else {
 				word.m_weight = 0.0;
 			}
@@ -90,13 +90,13 @@ void VocabDB::computeWordsWeights(vlr::WeightingType weighting) {
 
 void VocabDB::createDatabase() {
 
-	if (m_invertedIndex.empty()) {
+	if (m_invertedIndex->empty()) {
 		throw std::runtime_error("[VocabDB::createDatabase] Error while"
 				" applying weights to words histogram, vocabulary is empty");
 	}
 
 	// Loop over words
-	for (vlr::Word& word : m_invertedIndex) {
+	for (vlr::Word& word : *m_invertedIndex) {
 		// Apply word weight to the image count
 		for (vlr::ImageCount& image : word.m_imageList) {
 			image.m_count *= word.m_weight;
@@ -109,19 +109,19 @@ void VocabDB::createDatabase() {
 
 void VocabDB::normalizeDatabase(int normType) {
 
-	if (m_invertedIndex.empty() == true) {
+	if (m_invertedIndex->empty() == true) {
 		throw std::runtime_error("[VocabDB::normalizeDatabase] Error while"
 				" normalizing DB BoF vectors, vocabulary is empty");
 	}
 
 	// Magnitude of a vector is defined as: sum(abs(xi)^p)^(1/p)
 
-	std::vector<float> mags(m_invertedIndex.m_numDbImages, 0.0);
+	std::vector<float> mags(m_invertedIndex->m_numDbImages, 0.0);
 
 	// Computing DB BoF vectors magnitude
 
 	// Summing vector elements
-	for (vlr::Word& word : m_invertedIndex) {
+	for (vlr::Word& word : *m_invertedIndex) {
 		for (vlr::ImageCount& image : word.m_imageList) {
 			uint index = image.m_index;
 			double dim = image.m_count;
@@ -147,7 +147,7 @@ void VocabDB::normalizeDatabase(int normType) {
 	}
 
 	// Normalizing database
-	for (vlr::Word& word : m_invertedIndex) {
+	for (vlr::Word& word : *m_invertedIndex) {
 		for (vlr::ImageCount& image : word.m_imageList) {
 			uint index = image.m_index;
 			assert(index < mags.size());
@@ -162,7 +162,8 @@ void VocabDB::normalizeDatabase(int normType) {
 // --------------------------------------------------------------------------
 
 void VocabDB::clearDatabase() {
-	for (vlr::Word& word : m_invertedIndex) {
+	m_invertedIndex->resize(getNumOfWords(), vlr::Word(1.0));
+	for (vlr::Word& word : *m_invertedIndex) {
 		std::vector<vlr::ImageCount>().swap(word.m_imageList);
 	}
 }
@@ -188,7 +189,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 		throw std::runtime_error(ss.str());
 	}
 
-	if (m_invertedIndex.empty() == true) {
+	if (m_invertedIndex->empty() == true) {
 		throw std::runtime_error("[VocabDB::scoreQuery]"
 				" Error while scoring query, vocabulary is empty");
 	}
@@ -198,7 +199,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 				"[VocabDB::scoreQuery] Unknown scoring method");
 	}
 
-	scores = cv::Mat::zeros(1, m_invertedIndex.m_numDbImages,
+	scores = cv::Mat::zeros(1, m_invertedIndex->m_numDbImages,
 			cv::DataType<float>::type);
 
 	cv::Mat queryBoFVector;
@@ -210,7 +211,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 	// ||v - w||_{L2} = sqrt( 2 - 2 * Sum(v_i * w_i) )
 
 	// Calculating sum part of the efficient score implementation
-	for (size_t wordId = 0; wordId < m_invertedIndex.size(); ++wordId) {
+	for (size_t wordId = 0; wordId < m_invertedIndex->size(); ++wordId) {
 		float qi = queryBoFVector.at<float>(0, wordId);
 
 		// Early exit
@@ -225,9 +226,9 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 		// since the inverted files contain not null counts
 
 		for (int imageId = 0;
-				imageId < int(m_invertedIndex[wordId].m_imageList.size());
+				imageId < int(m_invertedIndex->at(wordId).m_imageList.size());
 				++imageId) {
-			float di = m_invertedIndex[wordId].m_imageList[imageId].m_count;
+			float di = m_invertedIndex->at(wordId).m_imageList[imageId].m_count;
 
 			// qi cannot be zero because we are considering only when its non-zero
 			// qi cannot be more than 1 because it is supposed to be normalized
@@ -239,7 +240,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			// di cannot be zero (unless the weight is zero) because the inverted files
 			// contain only counts for images with a descriptor which was quantized
 			// into that word
-			if (m_invertedIndex[wordId].m_weight != 0.0) {
+			if (m_invertedIndex->at(wordId).m_weight != 0.0) {
 				CV_Assert(di > 0.0);
 			} else {
 				CV_Assert(di >= 0.0);
@@ -247,11 +248,11 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 			if (normType == cv::NORM_L1) {
 				scores.at<float>(0,
-						m_invertedIndex[wordId].m_imageList[imageId].m_index) +=
+						m_invertedIndex->at(wordId).m_imageList[imageId].m_index) +=
 						(float) (fabs(qi - di) - fabs(qi) - fabs(di));
 			} else if (normType == cv::NORM_L2) {
 				scores.at<float>(0,
-						m_invertedIndex[wordId].m_imageList[imageId].m_index) +=
+						m_invertedIndex->at(wordId).m_imageList[imageId].m_index) +=
 						(float) qi * di;
 			}
 		}
@@ -276,13 +277,13 @@ void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
 		const int normType) const {
 
 	// Initialize query BoF vector
-	bofVector = cv::Mat::zeros(1, m_invertedIndex.size(),
+	bofVector = cv::Mat::zeros(1, m_invertedIndex->size(),
 			cv::DataType<float>::type);
 
 	int wordIdx;
 	double wordWeight;
 
-	int numInvertedFiles = m_invertedIndex.size();
+	int numInvertedFiles = m_invertedIndex->size();
 
 	// Quantize each query image feature vector
 	for (int i = 0; i < featuresVector.rows; ++i) {
@@ -304,25 +305,26 @@ void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
 
 // --------------------------------------------------------------------------
 
-void VocabDB::getDbBoFVector(uint dbImgIdx, cv::Mat& dbBoFVector) const {
+void VocabDB::getDatabaseBoFVector(unsigned int dbImgIdx,
+		cv::Mat& dbBoFVector) const {
 
-	if (m_invertedIndex.empty() == true) {
+	if (m_invertedIndex->empty() == true) {
 		throw std::runtime_error(
 				"[VocabDB::getDbBoFVector] Error while obtaining DB BoF vectors,"
 						" vocabulary is empty");
 	}
 
-	dbBoFVector = cv::Mat::zeros(1, m_invertedIndex.size(),
+	dbBoFVector = cv::Mat::zeros(1, m_invertedIndex->size(),
 			cv::DataType<float>::type);
 
-	for (int wordId = 0; wordId < int(m_invertedIndex.size()); ++wordId) {
+	for (int wordId = 0; wordId < int(m_invertedIndex->size()); ++wordId) {
 		for (int imageId = 0;
-				imageId < int(m_invertedIndex[wordId].m_imageList.size());
+				imageId < int(m_invertedIndex->at(wordId).m_imageList.size());
 				++imageId) {
-			if (m_invertedIndex[wordId].m_imageList[imageId].m_index
+			if (m_invertedIndex->at(wordId).m_imageList[imageId].m_index
 					== dbImgIdx) {
 				dbBoFVector.at<float>(0, wordId) =
-						m_invertedIndex[wordId].m_imageList[imageId].m_count;
+						m_invertedIndex->at(wordId).m_imageList[imageId].m_count;
 			}
 		}
 	}
@@ -331,7 +333,7 @@ void VocabDB::getDbBoFVector(uint dbImgIdx, cv::Mat& dbBoFVector) const {
 // --------------------------------------------------------------------------
 
 int HKMDB::getFeaturesLength() const {
-	return bofModel->getVeclen();
+	return m_bofModel->getVeclen();
 }
 
 // --------------------------------------------------------------------------
@@ -339,15 +341,87 @@ int HKMDB::getFeaturesLength() const {
 void HKMDB::quantize(const cv::Mat& feature, int& wordId,
 		double& wordWeight) const {
 
-	int nodeAtL;
-	bofModel->quantize(feature, wordId, wordWeight, nodeAtL);
+	wordId = -1;
+	int nodeAtL = -1;
 
+	m_bofModel->quantize(feature, m_directIndex->getLevel(), wordId, nodeAtL);
+
+	CV_Assert(wordId != -1);
+	// Commented since not needed ==> using linear search in GeomVerify
+	// CV_Assert(nodeAtL != -1);
+
+	wordWeight = m_invertedIndex->at(wordId).m_weight;
+
+}
+
+// --------------------------------------------------------------------------
+
+void HKMDB::loadBoFModel(const std::string& filename) {
+	m_bofModel->load(filename);
+}
+
+// --------------------------------------------------------------------------
+
+size_t HKMDB::getNumOfWords() const {
+	return m_bofModel->getWordsCount();
+}
+
+// --------------------------------------------------------------------------
+
+int HKMDB::getDirectIndexLevel() {
+	return m_directIndex->getLevel();
+}
+
+// --------------------------------------------------------------------------
+
+void HKMDB::setDirectIndexLevel(int levelsUp) {
+	/*
+	 * TODO Theoretical depth might be different than the effective one
+	 * due to the clustering process. This would result in a wrongly computed
+	 * direct index level.
+	 */
+	int directIndexLevel = 0;
+
+	if (levelsUp > m_bofModel->getDepth() - 1) {
+		directIndexLevel = 0;
+	} else if (levelsUp < 0) {
+		directIndexLevel = m_bofModel->getDepth() - 1;
+	} else {
+		directIndexLevel = m_bofModel->getDepth() - 1 - levelsUp;
+	}
+
+	m_directIndex->setLevel(directIndexLevel);
+}
+
+// --------------------------------------------------------------------------
+
+void HKMDB::saveDirectIndex(const std::string& filename) const {
+	m_directIndex->save(filename);
+}
+
+// --------------------------------------------------------------------------
+
+void HKMDB::loadDirectIndex(const std::string& filename) {
+	m_directIndex->clear();
+	m_directIndex->load(filename);
 }
 
 // --------------------------------------------------------------------------
 
 int AKMajDB::getFeaturesLength() const {
 	return bofModel->getCentroids().cols;
+}
+
+// --------------------------------------------------------------------------
+
+void AKMajDB::loadBoFModel(const std::string& filename) {
+	//TODO Implement save/load methods for AKMajDB
+}
+
+// --------------------------------------------------------------------------
+
+size_t AKMajDB::getNumOfWords() const {
+	return bofModel->getCentroids().rows;
 }
 
 // --------------------------------------------------------------------------
@@ -380,7 +454,7 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 
 	// Save word id and weight
 	wordId = indices[0][0];
-	wordWeight = m_invertedIndex[wordId].m_weight;
+	wordWeight = m_invertedIndex->at(wordId).m_weight;
 
 	delete[] indices.data;
 	delete[] distances.data;

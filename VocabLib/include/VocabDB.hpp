@@ -18,17 +18,49 @@ class VocabDB {
 
 protected:
 
-	vlr::InvertedIndex m_invertedIndex;
+	cv::Ptr<vlr::InvertedIndex> m_invertedIndex;
 
 public:
 
 	/**
-	 * Virtual destroyer to enable destruction from a subclass
+	 * Class constructor (always called from derived classes).
 	 */
-	virtual ~VocabDB(){
+	VocabDB() {
+		m_invertedIndex = new vlr::InvertedIndex();
+	}
+
+	/**
+	 * Virtual destroyer to enable destruction from derived classes.
+	 */
+	virtual ~VocabDB() {
 	}
 
 	virtual int getFeaturesLength() const = 0;
+
+	/**
+	 * Quantizes a single feature vector into a word and stores
+	 * the resulting word id and weight.
+	 *
+	 * @param feature - Row vector representing the feature vector to quantize
+	 * @param wordId - The id of the found word
+	 * @param wordWeight - The weight of the found word
+	 */
+	virtual void quantize(const cv::Mat& feature, int& wordId,
+			double& wordWeight) const = 0;
+
+	/**
+	 * Loads the BoF model from a file stream.
+	 *
+	 * @param filename - The name of the file stream from where to load the model
+	 */
+	virtual void loadBoFModel(const std::string& filename) = 0;
+
+	/**
+	 * Retrieve number of words in the vocabulary defined by the BoF model.
+	 *
+	 * @return number of words in the vocabulary
+	 */
+	virtual size_t getNumOfWords() const = 0;
 
 	/**
 	 * Saves the inverted index to a file stream.
@@ -43,17 +75,6 @@ public:
 	 * @param filename - The name of the file stream from where to load the index
 	 */
 	void loadInvertedIndex(const std::string& filename);
-
-	/**
-	 * Quantizes a single feature vector into a word and stores
-	 * the resulting word id and weight.
-	 *
-	 * @param feature - Row vector representing the feature vector to quantize
-	 * @param wordId - The id of the found word
-	 * @param wordWeight - The weight of the found word
-	 */
-	virtual void quantize(const cv::Mat& feature, int& wordId,
-			double& wordWeight) const = 0;
 
 	/**
 	 * Quantizes DB image features into the vocabulary and updates the inverted file.
@@ -120,8 +141,17 @@ public:
 	 * @param dbImgIdx - The index of the DB image
 	 * @param dbBoFVector - A reference to the matrix where BoF vector will be save
 	 */
-	void getDbBoFVector(uint dbImgIdx, cv::Mat& dbBoFVector) const;
+	void getDatabaseBoFVector(unsigned int dbImgIdx,
+			cv::Mat& dbBoFVector) const;
 
+	/**
+	 * Inverted index getter.
+	 *
+	 * @return smart OpenCV pointer to the inverted index
+	 */
+	const cv::Ptr<vlr::InvertedIndex>& getInvertedIndex() const {
+		return m_invertedIndex;
+	}
 };
 
 // --------------------------------------------------------------------------
@@ -130,13 +160,23 @@ class HKMDB: public VocabDB {
 
 protected:
 
-	// TODO Initialize bofModel at the constructor
-	cv::Ptr<vlr::VocabTreeBase> bofModel;
+	cv::Ptr<vlr::VocabTreeBase> m_bofModel;
+	cv::Ptr<vlr::DirectIndex> m_directIndex;
 
 public:
 
-	HKMDB() :
-			bofModel(NULL) {
+	HKMDB(bool isBinary, int levelsUp = 2) :
+			m_bofModel(NULL), m_directIndex(NULL) {
+
+		if (isBinary == true) {
+			m_bofModel = new vlr::VocabTreeBin();
+		} else {
+			m_bofModel = new vlr::VocabTreeReal();
+		}
+
+		m_directIndex = new vlr::DirectIndex();
+
+		setDirectIndexLevel(levelsUp);
 	}
 
 	~HKMDB() {
@@ -147,6 +187,20 @@ public:
 	void quantize(const cv::Mat& feature, int& wordId,
 			double& wordWeight) const;
 
+	void loadBoFModel(const std::string& filename);
+
+private:
+
+	size_t getNumOfWords() const;
+
+	int getDirectIndexLevel();
+
+	void setDirectIndexLevel(int levelsUp);
+
+	void saveDirectIndex(const std::string& filename) const;
+
+	void loadDirectIndex(const std::string& filename);
+
 };
 
 // --------------------------------------------------------------------------
@@ -155,13 +209,13 @@ class AKMajDB: public VocabDB {
 
 protected:
 
-	// TODO Initialize bofModel at the constructor
 	cv::Ptr<KMajority> bofModel;
 
 public:
 
 	AKMajDB() :
 			bofModel(NULL) {
+		bofModel = new KMajority();
 	}
 
 	~AKMajDB() {
@@ -171,6 +225,11 @@ public:
 
 	void quantize(const cv::Mat& feature, int& wordId,
 			double& wordWeight) const;
+
+	void loadBoFModel(const std::string& filename);
+
+	size_t getNumOfWords() const;
+
 };
 
 } /* namespace vlr */

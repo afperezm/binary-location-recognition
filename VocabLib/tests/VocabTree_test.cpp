@@ -13,6 +13,7 @@
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
 #include <VocabTree.h>
+#include <VocabDB.hpp>
 
 TEST(VocabTree, Instantiation) {
 	cv::Ptr<vlr::VocabTreeBase> tree;
@@ -99,15 +100,15 @@ TEST(VocabTreeReal, TestDatabase) {
 	tree->save("test_tree.yaml.gz");
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<vlr::VocabTreeBase> db = new vlr::VocabTreeReal();
+	cv::Ptr<vlr::VocabDB> db = new vlr::HKMDB(false);
 
-	db->load("test_tree.yaml.gz");
+	db->loadBoFModel("test_tree.yaml.gz");
 
 	db->clearDatabase();
 
 	bool gotException = false;
 	int i = 0;
-	for (std::string keyFileName : keysFilenames) {
+	for (std::string& keyFileName : keysFilenames) {
 		try {
 			FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 			db->addImageToDatabase(i, imgDescriptors);
@@ -125,7 +126,7 @@ TEST(VocabTreeReal, TestDatabase) {
 
 	// Asserting inverted files are not empty anymore
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
-		db->getDbBoWVector(imgIdx, dbBowVector);
+		db->getDatabaseBoFVector(imgIdx, dbBowVector);
 		cv::reduce(dbBowVector, sumResult, 1, CV_REDUCE_SUM);
 		ASSERT_TRUE(sumResult.rows == 1);
 		ASSERT_TRUE(sumResult.cols == 1);
@@ -140,7 +141,7 @@ TEST(VocabTreeReal, TestDatabase) {
 
 	// Asserting DB BoW vectors values are in the range [0,1]
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
-		db->getDbBoWVector(imgIdx, dbBowVector);
+		db->getDatabaseBoFVector(imgIdx, dbBowVector);
 		ASSERT_TRUE(dbBowVector.rows == 1);
 		for (int i = 0; i < dbBowVector.cols; ++i) {
 			ASSERT_TRUE(dbBowVector.at<float>(0, i) >= 0);
@@ -150,28 +151,33 @@ TEST(VocabTreeReal, TestDatabase) {
 
 	db->saveInvertedIndex("test_idf.yaml.gz");
 
-	cv::Ptr<vlr::VocabTreeBase> dbLoad = new vlr::VocabTreeReal();
+	cv::Ptr<vlr::VocabDB> dbLoad = new vlr::HKMDB(false);
 
-	dbLoad->load("test_tree.yaml.gz");
+	dbLoad->loadBoFModel("test_tree.yaml.gz");
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
 
-	ASSERT_TRUE(db->size() == dbLoad->size());
+	// Assert vocabularies have same size
+	ASSERT_TRUE(db->getNumOfWords() == dbLoad->getNumOfWords());
 
-	ASSERT_TRUE(db->getInvertedIndex() == dbLoad->getInvertedIndex());
+	// Assert inverted indices are equal
+	ASSERT_TRUE(*(db->getInvertedIndex()) == *(dbLoad->getInvertedIndex()));
 
 	// Querying the tree using the same documents used for building it,
 	// the top result must be the document itself and hence the score must be 1
 	i = 0;
-	for (std::string keyFileName : keysFilenames) {
+	for (std::string& keyFileName : keysFilenames) {
 		cv::Mat scores;
 
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 		dbLoad->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
+
 		// Check that scores is a row vector
 		EXPECT_TRUE(1 == scores.rows);
+
 		// Check all DB images have been scored
 		EXPECT_TRUE((int )keysFilenames.size() == scores.cols);
 
@@ -180,7 +186,7 @@ TEST(VocabTreeReal, TestDatabase) {
 		EXPECT_TRUE(scores.rows == perm.rows);
 		EXPECT_TRUE(scores.cols == perm.cols);
 
-		EXPECT_TRUE((int )i == perm.at<int>(0, 0));
+		EXPECT_TRUE(i == perm.at<int>(0, 0));
 		EXPECT_TRUE(round(scores.at<float>(0, perm.at<int>(0, 0))) == 1.0);
 		++i;
 	}

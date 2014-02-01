@@ -13,7 +13,7 @@ LDFLAGS += -lcommon
 CXXFLAGS += -I../KMajorityLib/include
 LDFLAGS += -lkmajority
 
-# VocabLib
+# VocabLib (dependency upon DirectIndex)
 CXXFLAGS += -I../VocabLib/include
 LDFLAGS += -lvocab
 
