@@ -16,6 +16,7 @@
 #include <opencv2/core/core.hpp>
 
 #include <VocabTree.h>
+#include <VocabDB.hpp>
 
 #include <FileUtils.hpp>
 
@@ -42,7 +43,8 @@ int main(int argc, char **argv) {
 		printf(
 				"\nUsage:\n\t"
 						"VocabMatch <in.tree> <in.inverted.index> <in.db.desc.list> <in.queries.list> <out.ranked.files.folder>"
-						" <in.num.neighbors> [in.type.binary:1] [out.results:results.html] [in.use.regions:0]\n\n");
+						" <in.num.neighbors> <in.vocab.type> [in.scoring:L2] [out.results:results.html] [in.use.regions:0]\n\n");
+		// TODO Add options in usage text
 		return EXIT_FAILURE;
 	}
 
@@ -52,20 +54,22 @@ int main(int argc, char **argv) {
 	std::string in_queries_desc_list = argv[4];
 	std::string out_ranked_files_folder = argv[5];
 	int num_nbrs = atoi(argv[6]);
-	bool is_binary = true;
+	std::string type = argv[7];
+	std::string scoring = "L2";
+
 	std::string output_html("results.html");
 	bool use_regions = false;
 
-	if (argc >= 8) {
-		is_binary = atoi(argv[7]);
-	}
-
 	if (argc >= 9) {
-		output_html = argv[8];
+		scoring = atoi(argv[8]);
 	}
 
 	if (argc >= 10) {
-		use_regions = atoi(argv[9]);
+		output_html = argv[9];
+	}
+
+	if (argc >= 11) {
+		use_regions = atoi(argv[10]);
 	}
 
 	// Checking that database filename refers to a compressed YAML or XML file
@@ -76,27 +80,32 @@ int main(int argc, char **argv) {
 	}
 
 	// Step 1/4: load tree + inverted index
-	cv::Ptr<vlr::VocabTreeBase> tree;
+	cv::Ptr<vlr::VocabDB> db;
 
-	if (is_binary == true) {
-		tree = new vlr::VocabTreeBin();
+	if (type.compare("HKM") == 0) {
+		// HKM
+		db = new vlr::HKMDB(false);
+	} else if (type.compare("HKMAJ") == 0) {
+		// HKMaj
+		db = new vlr::HKMDB(true);
 	} else {
-		tree = new vlr::VocabTreeReal();
+		// AKMaj
+		db = new vlr::AKMajDB();
 	}
 
 	printf("-- Loading tree from [%s]\n", in_tree.c_str());
 
 	mytime = cv::getTickCount();
-	tree->load(in_tree);
+	db->loadBoFModel(in_tree);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			tree->size());
+			db->getNumOfWords());
 
 	printf("-- Loading inverted index [%s]\n", in_inverted_index.c_str());
 
 	mytime = cv::getTickCount();
-	tree->loadInvertedIndex(in_inverted_index);
+	db->loadInvertedIndex(in_inverted_index);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
@@ -116,6 +125,10 @@ int main(int argc, char **argv) {
 
 	// Step 4/4: score each query
 	int normType = cv::NORM_L1;
+
+	if (scoring.compare("L2") == 0) {
+		normType = cv::NORM_L2;
+	}
 
 	printf(
 			"-- Scoring [%lu] query images against [%lu] database images using [%s]\n",
@@ -167,18 +180,19 @@ int main(int argc, char **argv) {
 		}
 
 		// Check type of descriptors
-		if ((imgDescriptors.type() == CV_8U) != is_binary) {
-			fprintf(stderr,
-					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
-					is_binary == true ? "binary" : "non-binary",
-					imgDescriptors.type() == CV_8U ? "binary" : "real");
-			return EXIT_FAILURE;
-		}
+		// TODO Automatically identify if database uses a BoF model for binary or non-binary data
+//		if ((imgDescriptors.type() == CV_8U) != is_binary) {
+//			fprintf(stderr,
+//					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+//					is_binary == true ? "binary" : "non-binary",
+//					imgDescriptors.type() == CV_8U ? "binary" : "real");
+//			return EXIT_FAILURE;
+//		}
 
 		// Score query bow vector against database images bow vectors
 		mytime = cv::getTickCount();
 		try {
-			tree->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+			db->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
 			return EXIT_FAILURE;

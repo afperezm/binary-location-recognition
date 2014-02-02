@@ -8,14 +8,18 @@
 #include <KMajority.h>
 #include <CentersChooser.h>
 
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/flann/random.h>
 #include <opencv2/flann/dist.h>
 
 #include <iostream>
-#include <functional>
 #include <bitset>
+#include <fstream>
+#include <functional>
 
 KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 		vlr::indexType nnMethod,
@@ -41,9 +45,13 @@ KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 
 }
 
+// --------------------------------------------------------------------------
+
 KMajority::~KMajority() {
 	delete m_nnIndex;
 }
+
+// --------------------------------------------------------------------------
 
 void KMajority::cluster() {
 
@@ -92,6 +100,8 @@ void KMajority::cluster() {
 
 }
 
+// --------------------------------------------------------------------------
+
 void KMajority::initCentroids() {
 
 	// Initializing variables useful for obtaining indexes of random chosen center
@@ -136,6 +146,8 @@ void KMajority::initCentroids() {
 	m_nnIndex->buildIndex();
 
 }
+
+// --------------------------------------------------------------------------
 
 bool KMajority::quantize() {
 
@@ -185,6 +197,8 @@ bool KMajority::quantize() {
 	return converged;
 }
 
+// --------------------------------------------------------------------------
+
 void KMajority::computeCentroids() {
 
 	// Warning: using matrix of integers, there might be an overflow when summing too much descriptors
@@ -207,6 +221,113 @@ void KMajority::computeCentroids() {
 				m_clusterCounts[j]);
 	}
 }
+
+// --------------------------------------------------------------------------
+
+void KMajority::save(const std::string& filename) const {
+
+	if (m_centroids.empty()) {
+		throw std::runtime_error("[KMajority::save] Tree is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[KMajority::save] "
+				"Unable to open file [" + filename + "] for writing");
+	}
+
+	fs << "Centers" << m_centroids;
+
+	fs.release();
+
+}
+
+// --------------------------------------------------------------------------
+
+void KMajority::load(const std::string& filename) {
+
+	enum nodeFields {
+		header, start, rows, cols, dt, data
+	};
+	std::string nodeFieldsNames[] = { "YAML", "Centers", "rows:", "cols:",
+			"dt:", "data:" };
+
+	std::ifstream inputZippedFileStream;
+	boost::iostreams::filtering_istream inputFileStream;
+
+	std::string line, field;
+	std::stringstream ss;
+
+	// Open file
+	inputZippedFileStream.open(filename.c_str(),
+			std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (inputZippedFileStream.good() == false) {
+		throw std::runtime_error("[VocabTree::load] "
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	int _rows = -1;
+	int _cols = -1;
+	std::string _type;
+	int elemIdx = -1;
+	unsigned int elem;
+
+	try {
+		inputFileStream.push(boost::iostreams::gzip_decompressor());
+		inputFileStream.push(inputZippedFileStream);
+
+		while (getline(inputFileStream, line)) {
+			ss.clear();
+			ss.str(line);
+			ss >> field;
+			if (field.compare(nodeFieldsNames[header]) == 0) {
+				continue;
+			} else if (field.compare(nodeFieldsNames[start]) == 0) {
+				continue;
+			} else if (field.compare(nodeFieldsNames[rows]) == 0) {
+				ss >> _rows;
+			} else if (field.compare(nodeFieldsNames[cols]) == 0) {
+				ss >> _cols;
+			} else if (field.compare(nodeFieldsNames[dt]) == 0) {
+				ss >> _type;
+			} else {
+				if (field.compare(nodeFieldsNames[data]) == 0) {
+					m_centroids = cv::Mat::zeros(_rows, _cols,
+							_type.compare("f") == 0 ? CV_32F : CV_8U);
+					line.replace(line.find(nodeFieldsNames[data]), 5, " ");
+				}
+
+				std::replace(line.begin(), line.end(), '[', ' ');
+				std::replace(line.begin(), line.end(), ',', ' ');
+				std::replace(line.begin(), line.end(), ']', ' ');
+
+				ss.clear();
+				ss.str(line);
+
+				while ((ss >> elem).fail() == false) {
+					++elemIdx;
+					int row = floor(elemIdx / _cols);
+					int col = elemIdx % _cols;
+					m_centroids.at<uchar>(row, col) = elem;
+				}
+
+			}
+		}
+
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error("[VocabTree::load] "
+				"Got error while parsing file [" + std::string(e.what()) + "]");
+	}
+
+	// Close file
+	inputZippedFileStream.close();
+
+}
+
+// --------------------------------------------------------------------------
 
 void KMajority::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
 
@@ -234,6 +355,8 @@ void KMajority::cumBitSum(const cv::Mat& data, cv::Mat& accVector) {
 	}
 
 }
+
+// --------------------------------------------------------------------------
 
 void KMajority::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
 		const int& threshold) {
@@ -268,6 +391,8 @@ void KMajority::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
 				<< ((accVector.cols - 1 - l) % 8);
 	}
 }
+
+// --------------------------------------------------------------------------
 
 void KMajority::handleEmptyClusters() {
 
@@ -307,17 +432,25 @@ void KMajority::handleEmptyClusters() {
 	}
 }
 
+// --------------------------------------------------------------------------
+
 const cv::Mat& KMajority::getCentroids() const {
 	return m_centroids;
 }
+
+// --------------------------------------------------------------------------
 
 const std::vector<int>& KMajority::getClusterCounts() const {
 	return m_clusterCounts;
 }
 
+// --------------------------------------------------------------------------
+
 const std::vector<int>& KMajority::getClusterAssignments() const {
 	return m_belongsTo;
 }
+
+// --------------------------------------------------------------------------
 
 cvflann::NNIndex<Distance>* vlr::createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,

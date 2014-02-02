@@ -3,7 +3,7 @@
 CXX = g++
 
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./include/
-LDFLAGS = -L../lib/
+LDFLAGS = -L../lib/ -lboost_iostreams
 
 # Common
 CXXFLAGS += -I../Common/include/

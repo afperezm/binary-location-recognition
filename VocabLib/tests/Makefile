@@ -40,4 +40,4 @@ $(EXECUTABLES): $(OBJECTS)
 	$(CXX) $(VTREEVERBOSE) $(DEBUG) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJECTS) $(EXECUTABLES) test_tree.yaml.gz test_idf.yaml.gz test_di.yaml.gz *~
+	rm -rf $(OBJECTS) $(EXECUTABLES) test_vocab.yaml.gz test_idf.yaml.gz *~

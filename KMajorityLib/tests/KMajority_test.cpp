@@ -55,9 +55,42 @@ TEST(KMajority, Clustering) {
 
 	bofModel.cluster();
 
+	EXPECT_FALSE(bofModel.getCentroids().empty());
+
+	EXPECT_TRUE(bofModel.getCentroids().rows == 10);
+
+	EXPECT_TRUE(
+			descriptors.rows >= 0
+					&& (size_t ) descriptors.rows
+							== bofModel.getClusterAssignments().size());
+
+	// Check all data has been assigned to same cluster
+	int cumRes = 0;
 	for (int k = 0; k < int(bofModel.getClusterCounts().size()); ++k) {
-		printf("%d) %d\n", k, bofModel.getClusterCounts().at(k));
+		cumRes = cumRes + bofModel.getClusterCounts().at(k);
 	}
+
+	EXPECT_TRUE(cumRes == descriptors.rows);
+
+}
+
+TEST(KMajority, SaveLoad) {
+
+	std::vector<std::string> filenames;
+	filenames.push_back("brief_0.yaml.gz");
+	vlr::Mat descriptors(filenames);
+
+	KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
+	bofModel.cluster();
+	bofModel.save("test_vocab.yaml.gz");
+
+	KMajority bofModelLoaded;
+	bofModelLoaded.load("test_vocab.yaml.gz");
+
+	EXPECT_TRUE(
+			std::equal(bofModel.getCentroids().begin<uchar>(),
+					bofModel.getCentroids().end<uchar>(),
+					bofModelLoaded.getCentroids().begin<uchar>()));
 
 }
 

@@ -18,18 +18,6 @@ default:
 	cd GeomVerify; $(MAKE)
 	cd ComputeMAP; $(MAKE)
 
-tests:
-	cd Common; $(MAKE)
-	cd VocabLib; $(MAKE)
-	cd Common/tests; $(MAKE)
-	cd VocabLib/tests; $(MAKE)
-
-tests-clean:
-	cd Common; $(MAKE) clean
-	cd VocabLib; $(MAKE) clean
-	cd Common/tests; $(MAKE) clean
-	cd VocabLib/tests; $(MAKE) clean
-
 clean:
 # Clean libraries
 	cd OpenCVExtensions; $(MAKE) clean
@@ -45,3 +33,19 @@ clean:
 	cd VocabMatch; $(MAKE) clean
 	cd GeomVerify; $(MAKE) clean
 	cd ComputeMAP; $(MAKE) clean
+
+tests:
+#	cd Common; $(MAKE)
+#	cd KMajorityLib; $(MAKE)
+#	cd VocabLib; $(MAKE)
+	cd Common/tests; $(MAKE)
+	cd KMajorityLib/tests; $(MAKE)
+	cd VocabLib/tests; $(MAKE)
+
+tests-clean:
+#	cd Common; $(MAKE) clean
+#	cd KMajorityLib; $(MAKE)
+#	cd VocabLib; $(MAKE) clean
+	cd Common/tests; $(MAKE) clean
+	cd KMajorityLib/tests; $(MAKE) clean
+	cd VocabLib/tests; $(MAKE) clean

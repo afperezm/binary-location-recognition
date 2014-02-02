@@ -88,6 +88,20 @@ public:
 	void cluster();
 
 	/**
+	 * Saves the vocabulary to a file stream.
+	 *
+	 * @param filename - The name of the file stream where to save the vocabulary
+	 */
+	void save(const std::string& filename) const;
+
+	/**
+	 * Loads the vocabulary to a file stream.
+	 *
+	 * @param filename - The name of the file stream where to save the vocabulary
+	 */
+	void load(const std::string& filename);
+
+	/**
 	 * Decomposes data into bits and accumulates them into cumResult.
 	 *
 	 * @param data - Row vector containing the data to accumulate

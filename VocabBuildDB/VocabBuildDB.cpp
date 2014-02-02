@@ -16,6 +16,7 @@
 #include <opencv2/core/core.hpp>
 
 #include <VocabTree.h>
+#include <VocabDB.hpp>
 
 #include <FileUtils.hpp>
 
@@ -24,33 +25,29 @@ double mytime;
 int main(int argc, char **argv) {
 
 	if (argc < 6 || argc > 9) {
-		printf(
-				"\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
-						"<in.tree> <out.inverted.index> <out.direct.index> <in.levels.up> [in.type.binary:1]"
-						" [in.use.tfidf:1] [in.normalize:1]\n\n");
+		printf("\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
+				"<in.tree> <out.inverted.index> <in.vocab.type>"
+				" [in.weighting:TFIDF] [in.norm:L1]\n\n");
+		// TODO Add options in usage text
 		return EXIT_FAILURE;
 	}
-
-	bool use_tfidf = true;
-	bool normalize = true;
 
 	std::string list_in = argv[1];
 	std::string tree_in = argv[2];
 	std::string out_inv_index = argv[3];
-	std::string out_dir_index = argv[4];
-	int levelsUp = atoi(argv[5]);
-	bool isDescriptorBinary = true;
+	std::string type = argv[4];
+
+	std::string weighting = "TFIDF";
+	bool normalize = false;
+	std::string norm = "L1";
+
+	if (argc >= 6) {
+		weighting = argv[5];
+	}
 
 	if (argc >= 7) {
-		isDescriptorBinary = atoi(argv[6]);
-	}
-
-	if (argc >= 8) {
-		use_tfidf = atoi(argv[7]);
-	}
-
-	if (argc >= 9) {
-		normalize = atoi(argv[8]);
+		normalize = true;
+		norm = atoi(argv[6]);
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -75,25 +72,27 @@ int main(int argc, char **argv) {
 
 	printf("-- Building database using [%lu] images\n", descFilenames.size());
 
-	cv::Ptr<vlr::VocabTreeBase> db;
+	cv::Ptr<vlr::VocabDB> db;
 
-	if (isDescriptorBinary == true) {
-		db = new vlr::VocabTreeBin();
+	if (type.compare("HKM") == 0) {
+		// HKM
+		db = new vlr::HKMDB(false);
+	} else if (type.compare("HKMAJ") == 0) {
+		// HKMaj
+		db = new vlr::HKMDB(true);
 	} else {
-		db = new vlr::VocabTreeReal();
+		// AKMaj
+		db = new vlr::AKMajDB();
 	}
 
 	printf("-- Reading tree from [%s]\n", tree_in.c_str());
 
 	mytime = cv::getTickCount();
-	db->load(tree_in);
+	db->loadBoFModel(tree_in);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
-			db->size());
-
-	db->setDirectIndexLevel(levelsUp);
-	printf("-- Direct index level [%d]\n", db->getDirectIndexLevel());
+			db->getNumOfWords());
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",
@@ -108,16 +107,17 @@ int main(int argc, char **argv) {
 		// Load descriptors
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
 
-		// Check type of descriptors
+		// Check descriptors type
 		// Note: for empty matrices FileStorage API sets as 0 the descriptor type
-		if (imgDescriptors.empty() == false
-				&& (imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
-			fprintf(stderr,
-					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
-					isDescriptorBinary == true ? "binary" : "non-binary",
-					imgDescriptors.type() == CV_8U ? "binary" : "non-binary");
-			return EXIT_FAILURE;
-		}
+		// TODO Automatically identify if database uses a BoF model for binary or non-binary data
+//		if (imgDescriptors.empty() == false
+//				&& (imgDescriptors.type() == CV_8U) != isDescriptorBinary) {
+//			fprintf(stderr,
+//					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+//					isDescriptorBinary == true ? "binary" : "non-binary",
+//					imgDescriptors.type() == CV_8U ? "binary" : "non-binary");
+//			return EXIT_FAILURE;
+//		}
 
 		// Add image to database
 		printf("   Adding image [%u] to database\n", imgIdx);
@@ -141,15 +141,17 @@ int main(int argc, char **argv) {
 
 	// Step 3/4: Compute words weights and normalize DB
 
-	vlr::WeightingType weightingScheme = vlr::BINARY;
-	if (use_tfidf) {
-		weightingScheme = vlr::TF_IDF;
-	} else {
+	vlr::WeightingType weightingScheme = vlr::TF_IDF;
+
+	if (weighting.compare("TF") == 0) {
+		weightingScheme = vlr::TF;
+	} else if (weighting.compare("BIN") == 0) {
 		weightingScheme = vlr::BINARY;
 	}
 
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
 			weightingScheme == vlr::TF_IDF ? "TF-IDF" :
+			weightingScheme == vlr::TF ? "TF" :
 			weightingScheme == vlr::BINARY ? "BINARY" : "UNKNOWN");
 
 	db->computeWordsWeights(weightingScheme);
@@ -158,6 +160,10 @@ int main(int argc, char **argv) {
 	db->createDatabase();
 
 	int normType = cv::NORM_L1;
+
+	if (norm.compare("L2") == 0) {
+		normType = cv::NORM_L2;
+	}
 
 	if (normalize == true) {
 		printf("-- Normalizing database BoF vectors using [%s]\n",
@@ -174,15 +180,6 @@ int main(int argc, char **argv) {
 			* 1000;
 
 	printf("   Inverted index saved in [%lf] ms\n", mytime);
-
-	printf("-- Saving direct index to [%s]\n", out_dir_index.c_str());
-
-	mytime = cv::getTickCount();
-	db->saveDirectIndex(out_dir_index);
-	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
-			* 1000;
-
-	printf("   Direct index saved in [%lf] ms\n", mytime);
 
 	return EXIT_SUCCESS;
 }

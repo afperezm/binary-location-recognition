@@ -162,11 +162,12 @@ protected:
 
 	cv::Ptr<vlr::VocabTreeBase> m_bofModel;
 	cv::Ptr<vlr::DirectIndex> m_directIndex;
+	int m_levelsUp;
 
 public:
 
 	HKMDB(bool isBinary, int levelsUp = 2) :
-			m_bofModel(NULL), m_directIndex(NULL) {
+			m_bofModel(NULL), m_directIndex(NULL), m_levelsUp(levelsUp) {
 
 		if (isBinary == true) {
 			m_bofModel = new vlr::VocabTreeBin();
@@ -176,7 +177,6 @@ public:
 
 		m_directIndex = new vlr::DirectIndex();
 
-		setDirectIndexLevel(levelsUp);
 	}
 
 	~HKMDB() {

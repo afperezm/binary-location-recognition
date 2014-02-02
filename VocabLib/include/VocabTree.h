@@ -57,7 +57,7 @@
 namespace vlr {
 
 enum WeightingType {
-	TF_IDF, BINARY
+	TF_IDF, TF, BINARY
 };
 
 // --------------------------------------------------------------------------

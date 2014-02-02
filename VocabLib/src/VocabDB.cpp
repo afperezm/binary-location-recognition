@@ -61,7 +61,7 @@ void VocabDB::computeWordsWeights(vlr::WeightingType weighting) {
 				" Error while computing words weights, vocabulary is empty");
 	}
 
-	if (weighting == vlr::BINARY) {
+	if (weighting == vlr::TF) {
 		// Setting constant weight equal to 1
 		for (vlr::Word& word : *m_invertedIndex) {
 			word.m_weight = 1.0;
@@ -358,6 +358,7 @@ void HKMDB::quantize(const cv::Mat& feature, int& wordId,
 
 void HKMDB::loadBoFModel(const std::string& filename) {
 	m_bofModel->load(filename);
+	setDirectIndexLevel(m_levelsUp);
 }
 
 // --------------------------------------------------------------------------
@@ -376,9 +377,9 @@ int HKMDB::getDirectIndexLevel() {
 
 void HKMDB::setDirectIndexLevel(int levelsUp) {
 	/*
-	 * TODO Theoretical depth might be different than the effective one
-	 * due to the clustering process. This would result in a wrongly computed
-	 * direct index level.
+	 * TODO Implement method in VocabTree to retrieve effective depth since it
+	 * might be different than the theoretical one due to the clustering process.
+	 * This would result in a wrongly computed direct index level.
 	 */
 	int directIndexLevel = 0;
 
@@ -415,7 +416,7 @@ int AKMajDB::getFeaturesLength() const {
 // --------------------------------------------------------------------------
 
 void AKMajDB::loadBoFModel(const std::string& filename) {
-	//TODO Implement save/load methods for AKMajDB
+	bofModel->load(filename);
 }
 
 // --------------------------------------------------------------------------
