@@ -252,7 +252,7 @@ TEST(ApproximateKMajority, TestDatabase) {
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<KMajority> tree = new KMajority(1000, 10, data, vlr::HIERARCHICAL);
+	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(1000, 10, data, vlr::HIERARCHICAL);
 
 	tree->cluster();
 

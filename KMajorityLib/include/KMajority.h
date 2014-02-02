@@ -28,8 +28,6 @@ cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
 		const Distance& distance, vlr::indexType type);
 
-} /* namespace vlr */
-
 class KMajority {
 
 protected:
@@ -154,5 +152,7 @@ private:
 	void handleEmptyClusters();
 
 };
+
+} /* namespace vlr */
 
 #endif /* KMAJORITY_H_ */

@@ -15,13 +15,13 @@
 #include <KMajority.h>
 
 TEST(KMajority, InstantiateOnHeap) {
-	cv::Ptr<KMajority> obj;
+	cv::Ptr<vlr::KMajority> obj;
 
 	EXPECT_TRUE(obj == NULL);
 
 	vlr::Mat emptyMat = vlr::Mat();
 
-	obj = new KMajority(0, 0, emptyMat);
+	obj = new vlr::KMajority(0, 0, emptyMat);
 
 	EXPECT_TRUE(obj != NULL);
 }
@@ -30,7 +30,7 @@ TEST(KMajority, InstantiateOnStack) {
 
 	vlr::Mat emptyMat = vlr::Mat();
 
-	KMajority obj(0, 0, emptyMat);
+	vlr::KMajority obj(0, 0, emptyMat);
 
 	EXPECT_TRUE(obj.getCentroids().empty());
 
@@ -51,7 +51,7 @@ TEST(KMajority, Clustering) {
 
 	vlr::Mat descriptors(filenames);
 
-	KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
+	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
 
 	bofModel.cluster();
 
@@ -80,11 +80,11 @@ TEST(KMajority, SaveLoad) {
 	filenames.push_back("brief_0.yaml.gz");
 	vlr::Mat descriptors(filenames);
 
-	KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
+	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
 	bofModel.cluster();
 	bofModel.save("test_vocab.yaml.gz");
 
-	KMajority bofModelLoaded;
+	vlr::KMajority bofModelLoaded;
 	bofModelLoaded.load("test_vocab.yaml.gz");
 
 	EXPECT_TRUE(

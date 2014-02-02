@@ -28,7 +28,7 @@ inline void kmajority(int k, int maxIterations, vlr::Mat& data,
 		cvflann::flann_centers_init_t centersInit =
 				cvflann::FLANN_CENTERS_RANDOM) {
 
-	cv::Ptr<KMajority> bofModel = new KMajority(k, maxIterations, data,
+	cv::Ptr<vlr::KMajority> bofModel = new vlr::KMajority(k, maxIterations, data,
 			vlr::indexType::LINEAR, centersInit);
 
 	bofModel->cluster();

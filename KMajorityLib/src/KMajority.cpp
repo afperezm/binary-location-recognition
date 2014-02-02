@@ -21,6 +21,8 @@
 #include <fstream>
 #include <functional>
 
+namespace vlr {
+
 KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 		vlr::indexType nnMethod,
 		cvflann::flann_centers_init_t centersInitMethod) :
@@ -452,7 +454,7 @@ const std::vector<int>& KMajority::getClusterAssignments() const {
 
 // --------------------------------------------------------------------------
 
-cvflann::NNIndex<Distance>* vlr::createIndexByType(
+cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
 		const Distance& distance, vlr::indexType type) {
 
@@ -477,3 +479,5 @@ cvflann::NNIndex<Distance>* vlr::createIndexByType(
 
 	return nnIndex;
 }
+
+} /* namespace vlr */
