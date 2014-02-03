@@ -42,50 +42,52 @@ int main(int argc, char **argv) {
 	if (argc < 7 || argc > 10) {
 		printf(
 				"\nUsage:\n\t"
-						"VocabMatch <in.tree> <in.inverted.index> <in.db.desc.list> <in.queries.list> <out.ranked.files.folder>"
-						" <in.num.neighbors> <in.vocab.type> [in.scoring:L2] [out.results:results.html] [in.use.regions:0]\n\n");
-		// TODO Add options in usage text
+						"VocabMatch <in.vocab> <in.vocab.type> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
+						" <out.ranked.files.folder> <in.num.neighbors> [in.scoring:L2] [out.results:results.html]"
+						" [in.use.regions:0]\n\n"
+						"Scoring:\n"
+						"\tL1: L1 or Manhattan distance\t\n"
+						"\tL2: L2 or Euclidean distance\t\n\n");
 		return EXIT_FAILURE;
 	}
 
-	std::string in_tree = argv[1];
-	std::string in_inverted_index = argv[2];
-	std::string in_db_desc_list = argv[3];
-	std::string in_queries_desc_list = argv[4];
-	std::string out_ranked_files_folder = argv[5];
-	int num_nbrs = atoi(argv[6]);
-	std::string type = argv[7];
-	std::string scoring = "L2";
-
-	std::string output_html("results.html");
-	bool use_regions = false;
+	std::string in_vocab = argv[1];
+	std::string in_type = argv[2];
+	std::string in_inverted_index = argv[3];
+	std::string in_db_desc_list = argv[4];
+	std::string in_queries_desc_list = argv[5];
+	std::string out_ranked_files_folder = argv[6];
+	int in_num_nbrs = atoi(argv[7]);
+	std::string in_scoring = "L2";
+	std::string out_html("results.html");
+	bool in_use_regions = false;
 
 	if (argc >= 9) {
-		scoring = atoi(argv[8]);
+		in_scoring = atoi(argv[8]);
 	}
 
 	if (argc >= 10) {
-		output_html = argv[9];
+		out_html = argv[9];
 	}
 
 	if (argc >= 11) {
-		use_regions = atoi(argv[10]);
+		in_use_regions = atoi(argv[10]);
 	}
 
 	// Checking that database filename refers to a compressed YAML or XML file
-	if (boost::regex_match(in_tree, DESCRIPTOR_REGEX) == false) {
+	if (boost::regex_match(in_vocab, DESCRIPTOR_REGEX) == false) {
 		fprintf(stderr,
-				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
+				"Input vocabulary file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
-	// Step 1/4: load tree + inverted index
+	// Step 1/4: load vocabulary + inverted index
 	cv::Ptr<vlr::VocabDB> db;
 
-	if (type.compare("HKM") == 0) {
+	if (in_type.compare("HKM") == 0) {
 		// HKM
 		db = new vlr::HKMDB(false);
-	} else if (type.compare("HKMAJ") == 0) {
+	} else if (in_type.compare("HKMAJ") == 0) {
 		// HKMaj
 		db = new vlr::HKMDB(true);
 	} else {
@@ -93,13 +95,13 @@ int main(int argc, char **argv) {
 		db = new vlr::AKMajDB();
 	}
 
-	printf("-- Loading tree from [%s]\n", in_tree.c_str());
+	printf("-- Loading vocabulary from [%s]\n", in_vocab.c_str());
 
 	mytime = cv::getTickCount();
-	db->loadBoFModel(in_tree);
+	db->loadBoFModel(in_vocab);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
-	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
+	printf("   Vocabulary loaded in [%lf] ms, got [%lu] words \n", mytime,
 			db->getNumOfWords());
 
 	printf("-- Loading inverted index [%s]\n", in_inverted_index.c_str());
@@ -126,7 +128,7 @@ int main(int argc, char **argv) {
 	// Step 4/4: score each query
 	int normType = cv::NORM_L1;
 
-	if (scoring.compare("L2") == 0) {
+	if (in_scoring.compare("L2") == 0) {
 		normType = cv::NORM_L2;
 	}
 
@@ -141,10 +143,10 @@ int main(int argc, char **argv) {
 
 	// Compute the number of candidates
 	int top =
-			num_nbrs >= 0 && (size_t) num_nbrs > db_desc_list.size() ?
-					db_desc_list.size() : num_nbrs;
+			in_num_nbrs >= 0 && (size_t) in_num_nbrs > db_desc_list.size() ?
+					db_desc_list.size() : in_num_nbrs;
 
-	HtmlResultsWriter::getInstance().open(output_html, top);
+	HtmlResultsWriter::getInstance().open(out_html, top);
 
 	for (size_t i = 0; i < query_filenames.size(); ++i) {
 		// Initialize descriptors
@@ -153,7 +155,7 @@ int main(int argc, char **argv) {
 		// Load query descriptors
 		FileUtils::loadDescriptors(query_filenames[i].name, imgDescriptors);
 
-		if (use_regions == true) {
+		if (in_use_regions == true) {
 			// Load key-points and use them to filter the features
 
 			int numFilteredFeatures = filterFeaturesByRegion(query_filenames[i],

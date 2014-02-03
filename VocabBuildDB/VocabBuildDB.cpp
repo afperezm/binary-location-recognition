@@ -26,33 +26,44 @@ int main(int argc, char **argv) {
 
 	if (argc < 6 || argc > 9) {
 		printf("\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
-				"<in.tree> <out.inverted.index> <in.vocab.type>"
-				" [in.weighting:TFIDF] [in.norm:L1]\n\n");
-		// TODO Add options in usage text
+				"<in.vocab> <in.vocab.type> <out.inverted.index>"
+				" [in.weighting:TFIDF] [in.norm:L1]\n\n"
+				"Vocabulary type:\n"
+				"\tHKM: Hierarchical K-Means\n"
+				"\tHKMaj: Hierarchical K-Majority\n"
+				"\tAKMaj: Approximate K-Majority\n"
+				"\tAKM: Approximate K-Means\n\n"
+				"Weighting:\n"
+				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
+				"\tTF: Term Frequency\n"
+				"\tBIN: Binary\n\n"
+				"Norm:\n"
+				"\tL1: L1 or Manhattan distance\n"
+				"\tL2: L2 or Euclidean distance\t\n\n");
 		return EXIT_FAILURE;
 	}
 
-	std::string list_in = argv[1];
-	std::string tree_in = argv[2];
-	std::string out_inv_index = argv[3];
-	std::string type = argv[4];
+	std::string in_list = argv[1];
+	std::string in_vocab = argv[2];
+	std::string in_vocab_type = argv[3];
+	std::string out_inv_index = argv[4];
+	std::string in_weighting = "TFIDF";
+	std::string in_norm = "L1";
 
-	std::string weighting = "TFIDF";
 	bool normalize = false;
-	std::string norm = "L1";
 
 	if (argc >= 6) {
-		weighting = argv[5];
+		in_weighting = argv[5];
 	}
 
 	if (argc >= 7) {
 		normalize = true;
-		norm = atoi(argv[6]);
+		in_norm = atoi(argv[6]);
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
-	if (boost::regex_match(tree_in, expression) == false) {
+	if (boost::regex_match(in_vocab, expression) == false) {
 		fprintf(stderr,
 				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
@@ -67,17 +78,17 @@ int main(int argc, char **argv) {
 	// Step 1/4: read list of descriptors that shall be used to build the tree
 	printf("-- Loading list of database images descriptors\n");
 	std::vector<std::string> descFilenames;
-	FileUtils::loadList(list_in, descFilenames);
+	FileUtils::loadList(in_list, descFilenames);
 	printf("   Loaded, got [%lu] entries\n", descFilenames.size());
 
 	printf("-- Building database using [%lu] images\n", descFilenames.size());
 
 	cv::Ptr<vlr::VocabDB> db;
 
-	if (type.compare("HKM") == 0) {
+	if (in_vocab_type.compare("HKM") == 0) {
 		// HKM
 		db = new vlr::HKMDB(false);
-	} else if (type.compare("HKMAJ") == 0) {
+	} else if (in_vocab_type.compare("HKMAJ") == 0) {
 		// HKMaj
 		db = new vlr::HKMDB(true);
 	} else {
@@ -85,10 +96,10 @@ int main(int argc, char **argv) {
 		db = new vlr::AKMajDB();
 	}
 
-	printf("-- Reading tree from [%s]\n", tree_in.c_str());
+	printf("-- Reading tree from [%s]\n", in_vocab.c_str());
 
 	mytime = cv::getTickCount();
-	db->loadBoFModel(tree_in);
+	db->loadBoFModel(in_vocab);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
@@ -143,9 +154,9 @@ int main(int argc, char **argv) {
 
 	vlr::WeightingType weightingScheme = vlr::TF_IDF;
 
-	if (weighting.compare("TF") == 0) {
+	if (in_weighting.compare("TF") == 0) {
 		weightingScheme = vlr::TF;
-	} else if (weighting.compare("BIN") == 0) {
+	} else if (in_weighting.compare("BIN") == 0) {
 		weightingScheme = vlr::BINARY;
 	}
 
@@ -161,7 +172,7 @@ int main(int argc, char **argv) {
 
 	int normType = cv::NORM_L1;
 
-	if (norm.compare("L2") == 0) {
+	if (in_norm.compare("L2") == 0) {
 		normType = cv::NORM_L2;
 	}
 

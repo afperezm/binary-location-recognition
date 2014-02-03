@@ -136,14 +136,13 @@ void KMajority::initCentroids() {
 	m_dataset.clearCache();
 
 	// Build index for addressing nearest neighbors descriptors search
-
 	cvflann::IndexParams m_indexParams =
 			cvflann::HierarchicalClusteringIndexParams();
 
 	m_nnIndex = vlr::createIndexByType(
-			cvflann::Matrix<Distance::ElementType>(m_centroids.data,
-					m_centroids.rows, m_centroids.cols), Distance(),
-			m_nnMethod);
+			cvflann::Matrix<Distance::ElementType>(
+					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
+					m_centroids.cols), Distance(), m_nnMethod);
 
 	m_nnIndex->buildIndex();
 
@@ -162,7 +161,7 @@ bool KMajority::quantize() {
 	cvflann::Matrix<int> indices(new int[1 * knn], 1, knn);
 
 	// Distances to the nearest neighbors found (numQueries X numNeighbors)
-	cvflann::Matrix<DistanceType> distances(new int[1 * knn], 1, knn);
+	cvflann::Matrix<DistanceType> distances(new DistanceType[1 * knn], 1, knn);
 
 	for (int i = 0; i < m_numDatapoints; ++i) {
 		std::fill(indices.data, indices.data + indices.rows * indices.cols, 0);
@@ -171,7 +170,8 @@ bool KMajority::quantize() {
 
 		/* Get new cluster it belongs to */
 		m_nnIndex->knnSearch(
-				cvflann::Matrix<Distance::ElementType>(m_dataset.row(i).data, 1,
+				cvflann::Matrix<Distance::ElementType>(
+						(Distance::ElementType*) m_dataset.row(i).data, 1,
 						m_dataset.cols), indices, distances, knn,
 				cvflann::SearchParams());
 

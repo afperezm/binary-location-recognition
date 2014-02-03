@@ -435,7 +435,8 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 	// Find first exact nearest neighbor
 	cv::Ptr<cvflann::NNIndex<cvflann::Hamming<uchar> > > linearIndex =
 			cvflann::create_index_by_type(
-					cvflann::Matrix<uchar>(bofModel->getCentroids().data,
+					cvflann::Matrix<uchar>(
+							(uchar*) bofModel->getCentroids().data,
 							bofModel->getCentroids().rows,
 							bofModel->getCentroids().cols), params,
 					cvflann::Hamming<uchar>());
@@ -450,8 +451,8 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 			0.0f);
 
 	linearIndex->knnSearch(
-			cvflann::Matrix<uchar>(feature.data, 1, feature.cols), indices,
-			distances, knn, cvflann::SearchParams());
+			cvflann::Matrix<uchar>((uchar*) feature.data, 1, feature.cols),
+			indices, distances, knn, cvflann::SearchParams());
 
 	// Save word id and weight
 	wordId = indices[0][0];

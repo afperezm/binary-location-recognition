@@ -30,22 +30,29 @@ double mytime;
 int main(int argc, char **argv) {
 
 	if (argc < 6 || argc > 6) {
-		printf("\nUsage:\n"
-				"\tVocabLearn <in.training_images.list> <in.depth>"
-				" <in.branch.factor> <in.restarts>"
-				" <out.tree>\n\n");
+		printf(
+				"\nUsage:\n"
+						"\tVocabLearn <in.training.images.list> <in.vocab.type> <out.vocab>"
+						" <in.depth> <in.branch.factor> <in.restarts>\n\n"
+						"Vocabulary type:\n"
+						"\tHKM: Hierarchical K-Means\n"
+						"\tHKMaj: Hierarchical K-Majority\n"
+						"\tAKMaj: Approximate K-Majority\n"
+						"\tAKM: Approximate K-Means\n\n");
 		return EXIT_FAILURE;
 	}
 
-	std::string list_in = argv[1];
-	int depth = atoi(argv[2]);
-	int branchFactor = atoi(argv[3]);
-	int restarts = atoi(argv[4]);
-	std::string tree_out = argv[5];
+	std::string in_train_list = argv[1];
+	std::string in_vocab_type = argv[2];
+	std::string out_vocab = argv[3];
+	// TODO Generalize arguments to any vocabulary
+	int in_depth = atoi(argv[4]);
+	int in_branchFactor = atoi(argv[5]);
+	int in_restarts = atoi(argv[6]);
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
-	if (boost::regex_match(tree_out, expression) == false) {
+	if (boost::regex_match(out_vocab, expression) == false) {
 		fprintf(stderr,
 				"Output tree file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
@@ -54,7 +61,7 @@ int main(int argc, char **argv) {
 	// Step 1: read list of descriptors files to build the tree
 	printf("-- Loading list of descriptors files\n");
 	std::vector<std::string> descriptorsFilenames;
-	FileUtils::loadList(list_in, descriptorsFilenames);
+	FileUtils::loadList(in_train_list, descriptorsFilenames);
 	printf("   Loaded, got [%lu] entries\n", descriptorsFilenames.size());
 
 	// Step 3: build tree
@@ -64,9 +71,9 @@ int main(int argc, char **argv) {
 
 	// Cluster descriptors using Vocabulary Tree
 	vlr::VocabTreeParams params;
-	params["branching"] = branchFactor;
-	params["iterations"] = restarts;
-	params["depth"] = depth;
+	params["branching"] = in_branchFactor;
+	params["iterations"] = in_restarts;
+	params["depth"] = in_depth;
 
 	cv::Ptr<vlr::VocabTreeBase> tree;
 
@@ -99,10 +106,10 @@ int main(int argc, char **argv) {
 			"   Vocabulary created from [%d] descriptors in [%lf] ms with [%lu] words\n",
 			dataset.rows, mytime, tree->size());
 
-	printf("-- Saving tree to [%s]\n", tree_out.c_str());
+	printf("-- Saving tree to [%s]\n", out_vocab.c_str());
 
 	mytime = cv::getTickCount();
-	tree->save(tree_out);
+	tree->save(out_vocab);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
 
