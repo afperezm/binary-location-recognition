@@ -13,6 +13,7 @@
 #include <opencv2/flann/flann.hpp>
 
 #include <DynamicMat.hpp>
+#include <VocabBase.hpp>
 
 typedef cvflann::Hamming<uchar> Distance;
 typedef typename Distance::ResultType DistanceType;
@@ -28,7 +29,7 @@ cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
 		const Distance& distance, vlr::indexType type);
 
-class KMajority {
+class KMajority: public VocabBase {
 
 protected:
 
@@ -71,7 +72,7 @@ public:
 	 */
 	KMajority(int numClusters = 0, int maxIterations = 0, vlr::Mat& data =
 			vlr::DEFAULT_INPUTDATA, vlr::indexType nnMethod =
-			vlr::indexType::LINEAR,
+			vlr::indexType::HIERARCHICAL,
 			cvflann::flann_centers_init_t centersInitMethod =
 					cvflann::FLANN_CENTERS_RANDOM);
 
@@ -83,7 +84,7 @@ public:
 	/**
 	 * Implements k-means clustering loop.
 	 */
-	void cluster();
+	void build();
 
 	/**
 	 * Saves the vocabulary to a file stream.
@@ -98,6 +99,10 @@ public:
 	 * @param filename - The name of the file stream where to save the vocabulary
 	 */
 	void load(const std::string& filename);
+
+	size_t size() const {
+		return m_centroids.rows;
+	}
 
 	/**
 	 * Decomposes data into bits and accumulates them into cumResult.
@@ -150,6 +155,11 @@ private:
 	 * Fills empty clusters using data assigned to the most populated ones.
 	 */
 	void handleEmptyClusters();
+
+	/**
+	 * Build index for addressing nearest neighbors descriptors search.
+	 */
+	void updateIndex();
 
 };
 

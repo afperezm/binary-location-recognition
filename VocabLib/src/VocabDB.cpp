@@ -422,7 +422,7 @@ void AKMajDB::loadBoFModel(const std::string& filename) {
 // --------------------------------------------------------------------------
 
 size_t AKMajDB::getNumOfWords() const {
-	return bofModel->getCentroids().rows;
+	return bofModel->size();
 }
 
 // --------------------------------------------------------------------------

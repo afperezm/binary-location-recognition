@@ -55,7 +55,7 @@ KMajority::~KMajority() {
 
 // --------------------------------------------------------------------------
 
-void KMajority::cluster() {
+void KMajority::build() {
 
 	if (m_dataset.type() != CV_8U) {
 		throw std::runtime_error(
@@ -80,6 +80,9 @@ void KMajority::cluster() {
 	// Randomly generate clusters
 	initCentroids();
 
+	// Update nearest neighbors index upon new centers
+	updateIndex();
+
 	// Assign data to clusters
 	quantize();
 
@@ -92,6 +95,9 @@ void KMajority::cluster() {
 
 		// Compute the new cluster centers
 		computeCentroids();
+
+		// Update nearest neighbors index upon new centers
+		updateIndex();
 
 		// Reassign data to clusters
 		converged = quantize();
@@ -134,17 +140,6 @@ void KMajority::initCentroids() {
 	}
 
 	m_dataset.clearCache();
-
-	// Build index for addressing nearest neighbors descriptors search
-	cvflann::IndexParams m_indexParams =
-			cvflann::HierarchicalClusteringIndexParams();
-
-	m_nnIndex = vlr::createIndexByType(
-			cvflann::Matrix<Distance::ElementType>(
-					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
-					m_centroids.cols), Distance(), m_nnMethod);
-
-	m_nnIndex->buildIndex();
 
 }
 
@@ -436,6 +431,19 @@ void KMajority::handleEmptyClusters() {
 
 // --------------------------------------------------------------------------
 
+void KMajority::updateIndex() {
+
+	m_nnIndex = vlr::createIndexByType(
+			cvflann::Matrix<Distance::ElementType>(
+					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
+					m_centroids.cols), Distance(), m_nnMethod);
+
+	m_nnIndex->buildIndex();
+
+}
+
+// --------------------------------------------------------------------------
+
 const cv::Mat& KMajority::getCentroids() const {
 	return m_centroids;
 }
@@ -461,14 +469,16 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	cvflann::IndexParams params;
 	cvflann::NNIndex<Distance>* nnIndex;
 
+	double mytime = cv::getTickCount();
+
 	switch (type) {
 	case vlr::indexType::LINEAR:
-		printf("Creating [Linear] index\n");
+		printf("-- Creating [Linear] index\n");
 		params = cvflann::LinearIndexParams();
 		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params, distance);
 		break;
 	case vlr::indexType::HIERARCHICAL:
-		printf("Creating [HierarchicalClustering] index\n");
+		printf("-- Creating [HierarchicalClustering] index\n");
 		params = cvflann::HierarchicalClusteringIndexParams();
 		nnIndex = new cvflann::HierarchicalClusteringIndex<Distance>(dataset,
 				params, distance);
@@ -476,6 +486,10 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	default:
 		throw std::runtime_error("Unknown index type");
 	}
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+
+	printf("   Index created in [%lf] ms\n", mytime);
 
 	return nnIndex;
 }

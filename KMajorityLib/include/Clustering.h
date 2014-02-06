@@ -31,7 +31,7 @@ inline void kmajority(int k, int maxIterations, vlr::Mat& data,
 	cv::Ptr<vlr::KMajority> bofModel = new vlr::KMajority(k, maxIterations, data,
 			vlr::indexType::LINEAR, centersInit);
 
-	bofModel->cluster();
+	bofModel->build();
 
 	centers = bofModel->getCentroids();
 

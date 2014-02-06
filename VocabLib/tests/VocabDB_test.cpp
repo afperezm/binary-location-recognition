@@ -22,7 +22,7 @@ TEST(HierarchicalKMeans, TestDatabase) {
 	vlr::VocabTreeParams params;
 	params["depth"] = 4; // To achieve a 1000 words vocabulary
 
-	cv::Ptr<vlr::VocabTreeBase> tree = new vlr::VocabTreeReal(data, params);
+	cv::Ptr<vlr::VocabTreeReal> tree = new vlr::VocabTreeReal(data, params);
 
 	tree->build();
 
@@ -139,7 +139,7 @@ TEST(HierarchicalKMajority, TestDatabase) {
 	vlr::VocabTreeParams params;
 	params["depth"] = 4; // To achieve a 1000 words vocabulary
 
-	cv::Ptr<vlr::VocabTreeBase> tree = new vlr::VocabTreeBin(data, params);
+	cv::Ptr<vlr::VocabTreeBin> tree = new vlr::VocabTreeBin(data, params);
 
 	tree->build();
 
@@ -254,7 +254,7 @@ TEST(ApproximateKMajority, TestDatabase) {
 
 	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(1000, 10, data, vlr::HIERARCHICAL);
 
-	tree->cluster();
+	tree->build();
 
 	tree->save("test_vocab.yaml.gz");
 

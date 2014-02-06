@@ -24,15 +24,15 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 6 || argc > 9) {
+	if (argc < 5 || argc > 7) {
 		printf("\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
 				"<in.vocab> <in.vocab.type> <out.inverted.index>"
 				" [in.weighting:TFIDF] [in.norm:L1]\n\n"
 				"Vocabulary type:\n"
 				"\tHKM: Hierarchical K-Means\n"
-				"\tHKMaj: Hierarchical K-Majority\n"
-				"\tAKMaj: Approximate K-Majority\n"
-				"\tAKM: Approximate K-Means\n\n"
+				"\tHKMAJ: Hierarchical K-Majority\n"
+				"\tAKMAJ: Approximate K-Majority\n"
+				"\tAKM: Approximate K-Means (Not yet supported)\n\n"
 				"Weighting:\n"
 				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
 				"\tTF: Term Frequency\n"

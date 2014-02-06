@@ -15,12 +15,22 @@
 #include <VocabTree.h>
 #include <VocabDB.hpp>
 
-TEST(VocabTree, InstantiateOnHeap) {
-	cv::Ptr<vlr::VocabTreeBase> tree;
+TEST(VocabTreeReal, InstantiateOnHeap) {
+	cv::Ptr<vlr::VocabTreeReal> tree;
 
 	EXPECT_TRUE(tree == NULL);
 
 	tree = new vlr::VocabTreeReal();
+
+	EXPECT_TRUE(tree != NULL);
+}
+
+TEST(VocabTreeBinary, InstantiateOnHeap) {
+	cv::Ptr<vlr::VocabTreeBin> tree;
+
+	EXPECT_TRUE(tree == NULL);
+
+	tree = new vlr::VocabTreeBin();
 
 	EXPECT_TRUE(tree != NULL);
 }

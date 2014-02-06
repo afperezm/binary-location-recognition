@@ -53,7 +53,7 @@ TEST(KMajority, Clustering) {
 
 	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
 
-	bofModel.cluster();
+	bofModel.build();
 
 	EXPECT_FALSE(bofModel.getCentroids().empty());
 
@@ -81,7 +81,7 @@ TEST(KMajority, SaveLoad) {
 	vlr::Mat descriptors(filenames);
 
 	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
-	bofModel.cluster();
+	bofModel.build();
 	bofModel.save("test_vocab.yaml.gz");
 
 	vlr::KMajority bofModelLoaded;

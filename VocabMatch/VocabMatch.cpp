@@ -39,12 +39,17 @@ int filterFeaturesByRegion(FileUtils::Query& query, cv::Mat& descriptors);
 
 int main(int argc, char **argv) {
 
-	if (argc < 7 || argc > 10) {
+	if (argc < 8 || argc > 10) {
 		printf(
 				"\nUsage:\n\t"
 						"VocabMatch <in.vocab> <in.vocab.type> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
 						" <out.ranked.files.folder> <in.num.neighbors> [in.scoring:L2] [out.results:results.html]"
 						" [in.use.regions:0]\n\n"
+						"Vocabulary type:\n\n"
+						"\tHKM: Hierarchical K-Means\n"
+						"\tHKMAJ: Hierarchical K-Majority\n"
+						"\tAKMAJ: Approximate K-Majority\n"
+						"\tAKM: Approximate K-Means (Not yet supported)\n\n"
 						"Scoring:\n"
 						"\tL1: L1 or Manhattan distance\t\n"
 						"\tL2: L2 or Euclidean distance\t\n\n");
@@ -85,13 +90,13 @@ int main(int argc, char **argv) {
 	cv::Ptr<vlr::VocabDB> db;
 
 	if (in_type.compare("HKM") == 0) {
-		// HKM
+		// Instantiate a DB supported by a HKM vocabulary
 		db = new vlr::HKMDB(false);
 	} else if (in_type.compare("HKMAJ") == 0) {
-		// HKMaj
+		// Instantiate a DB supported by a HKMaj vocabulary
 		db = new vlr::HKMDB(true);
 	} else {
-		// AKMaj
+		// Instantiate a DB supported by a AKMaj vocabulary
 		db = new vlr::AKMajDB();
 	}
 

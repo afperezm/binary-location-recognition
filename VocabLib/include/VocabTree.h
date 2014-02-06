@@ -49,8 +49,9 @@
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
-#include <KMajority.h>
 #include <InvertedIndex.hpp>
+#include <KMajority.h>
+#include <VocabBase.hpp>
 
 #include <fstream>
 
@@ -81,7 +82,7 @@ struct VocabTreeParams: public cvflann::IndexParams {
 
 // --------------------------------------------------------------------------
 
-class VocabTreeBase {
+class VocabTreeBase: public VocabBase {
 public:
 
 	/**
@@ -99,7 +100,7 @@ public:
 
 	virtual void load(const std::string& filename) = 0;
 
-	virtual size_t size() = 0;
+	virtual size_t size() const = 0;
 
 	virtual size_t getWordsCount() const = 0;
 
@@ -234,7 +235,7 @@ public:
 	 *
 	 * @return number of nodes in the tree
 	 */
-	size_t size();
+	size_t size() const;
 
 	size_t getWordsCount() const {
 		return m_words.size();
@@ -374,7 +375,7 @@ void VocabTree<TDescriptor, Distance>::free_centers(VocabTreeNodePtr node) {
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-size_t VocabTree<TDescriptor, Distance>::size() {
+size_t VocabTree<TDescriptor, Distance>::size() const {
 	return m_size;
 }
 
