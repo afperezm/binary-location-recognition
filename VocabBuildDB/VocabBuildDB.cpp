@@ -24,10 +24,10 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 7) {
+	if (argc < 5 || argc > 8) {
 		printf("\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
 				"<in.vocab> <in.vocab.type> <out.inverted.index>"
-				" [in.weighting:TFIDF] [in.norm:L1]\n\n"
+				" [in.weighting:TFIDF] [in.norm:L1] [out.nn.index]\n\n"
 				"Vocabulary type:\n"
 				"\tHKM: Hierarchical K-Means\n"
 				"\tHKMAJ: Hierarchical K-Majority\n"
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 				"Weighting:\n"
 				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
 				"\tTF: Term Frequency\n"
-				"\tBIN: Binary\n\n"
+				"\tBIN: Binary (Not yet supported)\n\n"
 				"Norm:\n"
 				"\tL1: L1 or Manhattan distance\n"
 				"\tL2: L2 or Euclidean distance\t\n\n");
@@ -49,23 +49,25 @@ int main(int argc, char **argv) {
 	std::string out_inv_index = argv[4];
 	std::string in_weighting = "TFIDF";
 	std::string in_norm = "L1";
-
-	bool normalize = false;
+	std::string out_nn_index;
 
 	if (argc >= 6) {
 		in_weighting = argv[5];
 	}
 
 	if (argc >= 7) {
-		normalize = true;
-		in_norm = atoi(argv[6]);
+		in_norm = argv[6];
+	}
+
+	if (argc >= 8) {
+		out_nn_index = argv[7];
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
 
 	if (boost::regex_match(in_vocab, expression) == false) {
 		fprintf(stderr,
-				"Input tree file must have the extension .yaml.gz or .xml.gz\n");
+				"Input vocabulary file must have the extension .yaml.gz or .xml.gz\n");
 		return EXIT_FAILURE;
 	}
 
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	// Step 1/4: read list of descriptors that shall be used to build the tree
+	// Step 1/4: read list of descriptors that shall be used to build the vocabulary
 	printf("-- Loading list of database images descriptors\n");
 	std::vector<std::string> descFilenames;
 	FileUtils::loadList(in_list, descFilenames);
@@ -96,14 +98,37 @@ int main(int argc, char **argv) {
 		db = new vlr::AKMajDB();
 	}
 
-	printf("-- Reading tree from [%s]\n", in_vocab.c_str());
+	printf("-- Reading vocabulary from [%s]\n", in_vocab.c_str());
 
 	mytime = cv::getTickCount();
 	db->loadBoFModel(in_vocab);
 	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
 			* 1000;
-	printf("   Tree loaded in [%lf] ms, got [%lu] words \n", mytime,
+
+	printf("   Vocabulary loaded in [%lf] ms, got [%lu] words \n", mytime,
 			db->getNumOfWords());
+
+	if (in_vocab_type.compare("HKM") != 0
+			&& in_vocab_type.compare("HKMAJ") != 0) {
+		printf("-- Building nearest neighbors index\n");
+		mytime = cv::getTickCount();
+
+		((cv::Ptr<vlr::AKMajDB>) db)->buildNNIndex();
+
+		mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+				* 1000;
+		printf("   Built in [%lf] ms\n", mytime);
+
+		printf("-- Saving nearest neighbors index to [%s]\n",
+				out_nn_index.c_str());
+		mytime = cv::getTickCount();
+
+		((cv::Ptr<vlr::AKMajDB>) db)->saveNNIndex(out_nn_index);
+
+		mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+				* 1000;
+		printf("   Saved in [%lf] ms\n", mytime);
+	}
 
 	// Step 2/4: Quantize training data (several image descriptor matrices)
 	printf("-- Creating vocabulary database with [%lu] images\n",
@@ -156,9 +181,11 @@ int main(int argc, char **argv) {
 
 	if (in_weighting.compare("TF") == 0) {
 		weightingScheme = vlr::TF;
-	} else if (in_weighting.compare("BIN") == 0) {
-		weightingScheme = vlr::BINARY;
 	}
+
+//	else if (in_weighting.compare("BIN") == 0) {
+//		weightingScheme = vlr::BINARY;
+//	}
 
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
 			weightingScheme == vlr::TF_IDF ? "TF-IDF" :
@@ -176,12 +203,10 @@ int main(int argc, char **argv) {
 		normType = cv::NORM_L2;
 	}
 
-	if (normalize == true) {
-		printf("-- Normalizing database BoF vectors using [%s]\n",
-				normType == cv::NORM_L1 ? "L1-norm" :
-				normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-		db->normalizeDatabase(normType);
-	}
+	printf("-- Normalizing database BoF vectors using [%s]\n",
+			normType == cv::NORM_L1 ? "L1-norm" :
+			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+	db->normalizeDatabase(normType);
 
 	printf("-- Saving inverted index to [%s]\n", out_inv_index.c_str());
 

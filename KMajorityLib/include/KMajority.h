@@ -27,7 +27,7 @@ enum indexType {
 
 cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
-		const Distance& distance, vlr::indexType type);
+		vlr::indexType type);
 
 class KMajority: public VocabBase {
 

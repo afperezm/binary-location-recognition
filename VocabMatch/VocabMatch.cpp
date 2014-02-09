@@ -39,12 +39,12 @@ int filterFeaturesByRegion(FileUtils::Query& query, cv::Mat& descriptors);
 
 int main(int argc, char **argv) {
 
-	if (argc < 8 || argc > 10) {
+	if (argc < 8 || argc > 12) {
 		printf(
 				"\nUsage:\n\t"
 						"VocabMatch <in.vocab> <in.vocab.type> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
-						" <out.ranked.files.folder> <in.num.neighbors> [in.scoring:L2] [out.results:results.html]"
-						" [in.use.regions:0]\n\n"
+						" <out.ranked.files.folder> <in.num.neighbors> [in.scoring:L1] [out.results:results.html]"
+						" [in.use.regions:0] [in.nn.index]\n\n"
 						"Vocabulary type:\n\n"
 						"\tHKM: Hierarchical K-Means\n"
 						"\tHKMAJ: Hierarchical K-Majority\n"
@@ -63,12 +63,13 @@ int main(int argc, char **argv) {
 	std::string in_queries_desc_list = argv[5];
 	std::string out_ranked_files_folder = argv[6];
 	int in_num_nbrs = atoi(argv[7]);
-	std::string in_scoring = "L2";
-	std::string out_html("results.html");
+	std::string in_norm = "L1";
+	std::string out_html = "results.html";
 	bool in_use_regions = false;
+	std::string in_nn_index;
 
 	if (argc >= 9) {
-		in_scoring = atoi(argv[8]);
+		in_norm = argv[8];
 	}
 
 	if (argc >= 10) {
@@ -77,6 +78,10 @@ int main(int argc, char **argv) {
 
 	if (argc >= 11) {
 		in_use_regions = atoi(argv[10]);
+	}
+
+	if (argc >= 12) {
+		in_nn_index = argv[11];
 	}
 
 	// Checking that database filename refers to a compressed YAML or XML file
@@ -109,6 +114,19 @@ int main(int argc, char **argv) {
 	printf("   Vocabulary loaded in [%lf] ms, got [%lu] words \n", mytime,
 			db->getNumOfWords());
 
+	if (in_type.compare("HKM") != 0 && in_type.compare("HKMAJ") != 0) {
+
+		printf("-- Loading nearest neighbors index from [%s]\n",
+				in_nn_index.c_str());
+
+		mytime = cv::getTickCount();
+		((cv::Ptr<vlr::AKMajDB>) db)->loadNNIndex(in_nn_index);
+		mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+				* 1000;
+
+		printf("   Loaded in [%lf] ms\n", mytime);
+	}
+
 	printf("-- Loading inverted index [%s]\n", in_inverted_index.c_str());
 
 	mytime = cv::getTickCount();
@@ -133,7 +151,7 @@ int main(int argc, char **argv) {
 	// Step 4/4: score each query
 	int normType = cv::NORM_L1;
 
-	if (in_scoring.compare("L2") == 0) {
+	if (in_norm.compare("L2") == 0) {
 		normType = cv::NORM_L2;
 	}
 
@@ -199,7 +217,7 @@ int main(int argc, char **argv) {
 		// Score query bow vector against database images bow vectors
 		mytime = cv::getTickCount();
 		try {
-			db->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+			db->scoreQuery(imgDescriptors, scores, normType);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
 			return EXIT_FAILURE;

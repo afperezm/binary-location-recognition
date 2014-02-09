@@ -262,6 +262,9 @@ TEST(ApproximateKMajority, TestDatabase) {
 
 	db->loadBoFModel("test_vocab.yaml.gz");
 
+	((cv::Ptr<vlr::AKMajDB>) db)->buildNNIndex();
+	((cv::Ptr<vlr::AKMajDB>) db)->saveNNIndex("test_nn_index");
+
 	db->clearDatabase();
 
 	bool gotException = false;
@@ -312,6 +315,9 @@ TEST(ApproximateKMajority, TestDatabase) {
 	cv::Ptr<vlr::VocabDB> dbLoad = new vlr::AKMajDB();
 
 	dbLoad->loadBoFModel("test_vocab.yaml.gz");
+
+	((cv::Ptr<vlr::AKMajDB>) dbLoad)->loadNNIndex("test_nn_index");
+
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
 
 	// Assert vocabularies have same size

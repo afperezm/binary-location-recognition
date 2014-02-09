@@ -436,7 +436,7 @@ void KMajority::updateIndex() {
 	m_nnIndex = vlr::createIndexByType(
 			cvflann::Matrix<Distance::ElementType>(
 					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
-					m_centroids.cols), Distance(), m_nnMethod);
+					m_centroids.cols), m_nnMethod);
 
 	m_nnIndex->buildIndex();
 
@@ -464,7 +464,7 @@ const std::vector<int>& KMajority::getClusterAssignments() const {
 
 cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
-		const Distance& distance, vlr::indexType type) {
+		vlr::indexType type) {
 
 	cvflann::IndexParams params;
 	cvflann::NNIndex<Distance>* nnIndex;
@@ -475,13 +475,14 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	case vlr::indexType::LINEAR:
 		printf("-- Creating [Linear] index\n");
 		params = cvflann::LinearIndexParams();
-		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params, distance);
+		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params,
+				Distance());
 		break;
 	case vlr::indexType::HIERARCHICAL:
 		printf("-- Creating [HierarchicalClustering] index\n");
 		params = cvflann::HierarchicalClusteringIndexParams();
 		nnIndex = new cvflann::HierarchicalClusteringIndex<Distance>(dataset,
-				params, distance);
+				params, Distance());
 		break;
 	default:
 		throw std::runtime_error("Unknown index type");

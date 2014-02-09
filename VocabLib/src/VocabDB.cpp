@@ -28,8 +28,8 @@ void VocabDB::addImageToDatabase(int dbImgIdx, cv::Mat dbImgFeatures) {
 	if (dbImgFeatures.empty() == false && dbImgFeatures.cols != m_veclen) {
 		std::stringstream ss;
 		ss << "Error while adding image, feature vector has different length"
-				" than the ones used for building the tree, it is ["
-				<< dbImgFeatures.cols << "] while it should be[" << m_veclen
+				" than the ones used for building the vocabulary, it is ["
+				<< dbImgFeatures.cols << "] while it should be [" << m_veclen
 				<< "]";
 		throw std::runtime_error(ss.str());
 	}
@@ -182,10 +182,11 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 	if (queryImgFeatures.cols != m_veclen) {
 		std::stringstream ss;
-		ss << "Error while adding image, feature vector has different length"
-				" than the ones used for building the tree, it is ["
-				<< queryImgFeatures.cols << "] while it should be[" << m_veclen
-				<< "]";
+		ss
+				<< "[VocabDB::scoreQuery] Error while scoring query image, feature vector has different length"
+				<< " than the ones used for building the vocabulary,"
+				<< " it is [" << queryImgFeatures.cols
+				<< "] while it should be[" << m_veclen << "]";
 		throw std::runtime_error(ss.str());
 	}
 
@@ -234,7 +235,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			// qi cannot be more than 1 because it is supposed to be normalized
 			CV_Assert(qi > 0 && qi <= 1.0);
 
-			// di cannot more than 1 because it is supposed to be normalized
+			// di cannot be more than 1 because it is supposed to be normalized
 			CV_Assert(di <= 1.0);
 
 			// di cannot be zero (unless the weight is zero) because the inverted files
@@ -417,6 +418,11 @@ int AKMajDB::getFeaturesLength() const {
 
 void AKMajDB::loadBoFModel(const std::string& filename) {
 	bofModel->load(filename);
+	m_nnIndex = vlr::createIndexByType(
+			cvflann::Matrix<uchar>((uchar*) bofModel->getCentroids().data,
+					bofModel->getCentroids().rows,
+					bofModel->getCentroids().cols),
+			vlr::indexType::HIERARCHICAL);
 }
 
 // --------------------------------------------------------------------------
@@ -430,17 +436,6 @@ size_t AKMajDB::getNumOfWords() const {
 void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 		double& wordWeight) const {
 
-	cvflann::LinearIndexParams params;
-
-	// Find first exact nearest neighbor
-	cv::Ptr<cvflann::NNIndex<cvflann::Hamming<uchar> > > linearIndex =
-			cvflann::create_index_by_type(
-					cvflann::Matrix<uchar>(
-							(uchar*) bofModel->getCentroids().data,
-							bofModel->getCentroids().rows,
-							bofModel->getCentroids().cols), params,
-					cvflann::Hamming<uchar>());
-
 	int knn = 1;
 
 	cvflann::Matrix<int> indices(new int[1 * knn], 1, knn);
@@ -450,7 +445,7 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 	std::fill(distances.data, distances.data + distances.rows * distances.cols,
 			0.0f);
 
-	linearIndex->knnSearch(
+	m_nnIndex->knnSearch(
 			cvflann::Matrix<uchar>((uchar*) feature.data, 1, feature.cols),
 			indices, distances, knn, cvflann::SearchParams());
 
@@ -461,6 +456,46 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 	delete[] indices.data;
 	delete[] distances.data;
 
+}
+
+// --------------------------------------------------------------------------
+
+void AKMajDB::buildNNIndex() {
+	m_nnIndex->buildIndex();
+}
+
+// --------------------------------------------------------------------------
+
+void AKMajDB::saveNNIndex(const std::string& filename) const {
+	FILE* f_nnIndex;
+
+	f_nnIndex = fopen(filename.c_str(), "wb");
+
+	if (f_nnIndex == NULL) {
+		throw std::runtime_error(
+				"Error opening file [" + filename + "] for writing");
+	}
+
+	m_nnIndex->saveIndex(f_nnIndex);
+
+	fclose(f_nnIndex);
+}
+
+// --------------------------------------------------------------------------
+
+void AKMajDB::loadNNIndex(const std::string& filename) {
+	FILE* f_nnIndex;
+
+	f_nnIndex = fopen(filename.c_str(), "rb");
+
+	if (f_nnIndex == NULL) {
+		throw std::runtime_error(
+				"Error opening file [" + filename + "] for writing");
+	}
+
+	m_nnIndex->loadIndex(f_nnIndex);
+
+	fclose(f_nnIndex);
 }
 
 } /* namespace vlr */

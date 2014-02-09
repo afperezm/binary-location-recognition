@@ -210,15 +210,17 @@ class AKMajDB: public VocabDB {
 protected:
 
 	cv::Ptr<KMajority> bofModel;
+	cvflann::NNIndex<cvflann::Hamming<uchar> >* m_nnIndex = NULL;
 
 public:
 
 	AKMajDB() :
-			bofModel(NULL) {
+			bofModel(NULL), m_nnIndex(NULL) {
 		bofModel = new KMajority();
 	}
 
 	~AKMajDB() {
+		delete m_nnIndex;
 	}
 
 	int getFeaturesLength() const;
@@ -229,6 +231,12 @@ public:
 	void loadBoFModel(const std::string& filename);
 
 	size_t getNumOfWords() const;
+
+	void buildNNIndex();
+
+	void saveNNIndex(const std::string& filename) const;
+
+	void loadNNIndex(const std::string& filename);
 
 };
 
