@@ -29,7 +29,9 @@ int main(int argc, char **argv) {
 	std::string out_keypointsFolder = argv[3];
 
 	std::vector<std::string> files;
+	printf("   Opening directory [%s]\n", in_descriptorsFolder.c_str());
 	FileUtils::readFolder(in_descriptorsFolder.c_str(), files);
+	printf("   Found [%lu] files\n", files.size());
 
 	std::ifstream is;
 	int rows, cols, idx, row, col;

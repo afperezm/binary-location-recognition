@@ -17,7 +17,6 @@ void FileUtils::readFolder(const char* folderPath,
 	struct dirent *ent;
 	// Try opening folder
 	if ((dir = opendir(folderPath)) != NULL) {
-		fprintf(stdout, "   Opening directory [%s]\n", folderPath);
 		// Save all true directory names into a vector of strings
 		while ((ent = readdir(dir)) != NULL) {
 			// Ignore . and .. as valid folder names
@@ -29,7 +28,6 @@ void FileUtils::readFolder(const char* folderPath,
 		closedir(dir);
 		// Sort alphabetically vector of folder names
 		std::sort(files.begin(), files.end());
-		fprintf(stdout, "   Found [%d] files\n", (int) files.size());
 	} else {
 		throw std::runtime_error(
 				"Could not open directory [" + std::string(folderPath) + "]");
