@@ -31,15 +31,40 @@ double mytime;
  */
 bool isValidAlgorithm(std::string& candidateAlgorithm);
 
+/**
+ * Detect features from an image using some OpenCV supported detector.
+ *
+ * @param imgPath - Path to the images folder
+ * @param imgName - Name of the image
+ * @param keyPoints - Vector of key-points
+ * @param detectorType - Detector algorithm name
+ */
 void detectFeatures(const std::string& imgPath, const std::string& imgName,
-		std::vector<cv::KeyPoint>& keypoints, const std::string detectorType);
+		std::vector<cv::KeyPoint>& keyPoints, const std::string detectorType);
 
+/**
+ * Extract descriptor from the at the indicated key-point positions.
+ *
+ * @param imgPath - Path to the images folder
+ * @param imgName - Name of the image
+ * @param keyPoints - Vector of key-points
+ * @param descriptors - Matrix where to save extracted descriptors
+ * @param descriptorType - Descriptor algorithm name
+ */
 void describeFeatures(const std::string& imgPath, const std::string& imgName,
-		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors,
+		std::vector<cv::KeyPoint>& keyPoints, cv::Mat& descriptors,
 		const std::string descriptorType);
 
+/**
+ * In a given folder finds the last written .yaml.gz file that is also a valid image file.
+ *
+ * @param folderPath - Path to the folder where to search
+ * @param imgFolderFiles - Vector of images names
+ *
+ * @return an iterator to the image where the last written file is positioned
+ */
 std::vector<std::string>::iterator findLastWrittenFile(
-		const std::string& folderpath,
+		const std::string& folderPath,
 		std::vector<std::string>& imgFolderFiles);
 
 int main(int argc, char **argv) {
@@ -265,7 +290,7 @@ bool isValidAlgorithm(std::string& candidateAlgorithm) {
 }
 
 void detectFeatures(const std::string& imgPath, const std::string& imgName,
-		std::vector<cv::KeyPoint>& keypoints, const std::string detectorType) {
+		std::vector<cv::KeyPoint>& keyPoints, const std::string detectorType) {
 
 	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName,
 			CV_LOAD_IMAGE_GRAYSCALE);
@@ -280,10 +305,10 @@ void detectFeatures(const std::string& imgPath, const std::string& imgName,
 			detectorType);
 
 	// Clear key-points
-	std::vector<cv::KeyPoint>().swap(keypoints);
+	std::vector<cv::KeyPoint>().swap(keyPoints);
 	// Detect the key-points
 	printf("   Detecting key-points from image [%s]\n", imgName.c_str());
-	detector->detect(img, keypoints);
+	detector->detect(img, keyPoints);
 
 	//	mytime = cv::getTickCount();
 	//	detector->detect(img_1, key-points);
@@ -298,7 +323,7 @@ void detectFeatures(const std::string& imgPath, const std::string& imgName,
 }
 
 void describeFeatures(const std::string& imgPath, const std::string& imgName,
-		std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors,
+		std::vector<cv::KeyPoint>& keyPoints, cv::Mat& descriptors,
 		const std::string descriptorType) {
 
 	cv::Mat img = cv::imread(imgPath + std::string("/") + imgName,
@@ -320,7 +345,7 @@ void describeFeatures(const std::string& imgPath, const std::string& imgName,
 	// Describe key-points
 	// Notice that number of key-points might be reduced due to border effect
 	printf("   Describing key-points from image [%s]\n", imgName.c_str());
-	extractor->compute(img, keypoints, descriptors);
+	extractor->compute(img, keyPoints, descriptors);
 
 	//	mytime = cv::getTickCount();
 	//	extractor->compute(img_1, key-points, descriptors);
@@ -339,7 +364,7 @@ void describeFeatures(const std::string& imgPath, const std::string& imgName,
 }
 
 std::vector<std::string>::iterator findLastWrittenFile(
-		const std::string& folderpath,
+		const std::string& folderPath,
 		std::vector<std::string>& imgFolderFiles) {
 
 	// By default set to the first file
@@ -348,7 +373,7 @@ std::vector<std::string>::iterator findLastWrittenFile(
 	// Load files from folder into a vector
 	std::vector<std::string> folderFiles;
 	try {
-		FileUtils::readFolder(folderpath.c_str(), folderFiles);
+		FileUtils::readFolder(folderPath.c_str(), folderFiles);
 	} catch (const std::runtime_error& error) {
 		throw std::runtime_error(error.what());
 	}
