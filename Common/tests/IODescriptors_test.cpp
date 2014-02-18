@@ -90,8 +90,6 @@ TEST(STLIOReal, LoadSave) {
 		}
 	}
 
-//	delete[] loaded.data;
-
 }
 
 TEST(STLIOBin, LoadSave) {
@@ -114,7 +112,6 @@ TEST(STLIOBin, LoadSave) {
 		}
 	}
 
-//	delete[] loaded.data;
 }
 
 TEST(STLIOReal, LoadSaveRow) {
@@ -134,8 +131,6 @@ TEST(STLIOReal, LoadSaveRow) {
 
 		// Check elements are equal
 		for (int j = 0; j < original.cols; ++j) {
-//			printf("(%d, %d) %f %f\n", rowIdx, j,
-//					original.row(rowIdx).at<float>(0, j), row.at<float>(0, j));
 			CV_Assert(
 					original.row(rowIdx).at<float>(0, j)
 							== row.at<float>(0, j));
@@ -164,8 +159,6 @@ TEST(STLIOBin, LoadSaveRow) {
 
 		// Check elements are equal
 		for (int j = 0; j < original.cols; ++j) {
-//			printf("(%d, %d) %f %f\n", rowIdx, j,
-//					original.row(rowIdx).at<float>(0, j), row.at<float>(0, j));
 			CV_Assert(
 					original.row(rowIdx).at<unsigned char>(0, j)
 							== row.at<unsigned char>(0, j));
