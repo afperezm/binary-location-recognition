@@ -3,3 +3,5 @@ HtmlResultsWriter_test
 IODescriptors_test
 /db
 /list.txt
+/brief_0.bin
+/sift_0.bin

@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <sys/stat.h>
 
 void FileUtils::readFolder(const char* folderPath,
@@ -325,5 +327,254 @@ void FileUtils::loadQueriesList(std::string& filePath,
 
 	// Close file
 	inputFileStream.close();
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::saveDescriptorsToBin(const std::string& filename,
+		const cv::Mat& descriptors) {
+
+	FILE* filePtr = fopen(filename.c_str(), "wb");
+
+	if (filePtr == NULL) {
+		throw std::runtime_error(
+				"Unable to open file [" + filename + "] for writing");
+	}
+
+	fwrite(&descriptors.rows, sizeof(int), 1, filePtr);
+	fwrite(&descriptors.cols, sizeof(int), 1, filePtr);
+	int type = descriptors.type();
+	fwrite(&type, sizeof(int), 1, filePtr);
+	fwrite(descriptors.data, descriptors.elemSize(),
+			descriptors.rows * descriptors.cols, filePtr);
+
+	fclose(filePtr);
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptorsFromBin(const std::string& filename,
+		cv::Mat& descriptors) {
+
+	FILE* filePtr = fopen(filename.c_str(), "rb");
+
+	if (filePtr == NULL) {
+		throw std::runtime_error(
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	// Obtain data stream size
+	fseek(filePtr, 0, SEEK_END);
+	long fileSize = ftell(filePtr);
+	rewind(filePtr);
+
+	// Read rows byte
+	int rows = -1;
+	size_t result = fread(&rows, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+
+	// Read columns byte into buffer
+	int cols = -1;
+	result = fread(&cols, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+
+	// Read type byte into buffer
+	int type = -1;
+	result = fread(&type, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+
+	// Compute data stream size
+	long posBytes = ftell(filePtr);
+	long dataStreamSize = fileSize - posBytes;
+
+	// Allocate memory to contain the whole file
+	char* buffer = (char*) malloc(sizeof(char) * dataStreamSize);
+
+	if (buffer == NULL) {
+		throw std::runtime_error(
+				"Unable to allocate memory to contain descriptors file");
+	}
+
+	// Read data bytes into buffer
+	result = fread(buffer, dataStreamSize, 1, filePtr);
+	CV_Assert(result == 1);
+
+	descriptors.release();
+	descriptors = cv::Mat();
+	if (type != CV_32F && type != CV_8U) {
+		throw std::runtime_error("Invalid descriptors type");
+	}
+	descriptors.create(rows, cols, type);
+
+	if (type == CV_32F) {
+		descriptors = cv::Mat(rows, cols, CV_32F, (float*) buffer);
+	} else if (type == CV_8U) {
+		descriptors = cv::Mat(rows, cols, CV_8U, (uchar*) buffer);
+	} else {
+		throw std::runtime_error("Invalid descriptors type");
+	}
+
+	// Clean up
+	fclose(filePtr);
+
+//	Mat image;
+//	uint16_t *imageMap = (uint16_t*) buffer;
+//	image.create(rows, cols, CV_16UC1);
+//	memcpy(image.data, imageMap, rows * cols * sizeof(uint16_t));
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptorsRowFromBin(const std::string& filename,
+		cv::Mat& descriptors, int row) {
+
+	FILE* filePtr = fopen(filename.c_str(), "rb");
+
+	if (filePtr == NULL) {
+		throw std::runtime_error(
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	// Obtain data stream size
+	fseek(filePtr, 0, SEEK_END);
+	long fileSize = ftell(filePtr);
+	rewind(filePtr);
+
+	// Read rows byte
+	int rows = -1;
+	size_t result = fread(&rows, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+	CV_Assert(row >= 0 && row < rows);
+
+	// Read columns byte into buffer
+	int cols = -1;
+	result = fread(&cols, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+
+	// Read type byte into buffer
+	int type = -1;
+	result = fread(&type, sizeof(int), 1, filePtr);
+	CV_Assert(result == 1);
+
+	if (type != CV_32F && type != CV_8U) {
+		throw std::runtime_error("Invalid descriptors type");
+	}
+
+	long posBytes = ftell(filePtr);
+
+	descriptors.release();
+	if (type == CV_32F) {
+
+		// Compute data stream size
+		long dataStreamSize = cols * sizeof(float);
+		CV_Assert(posBytes + rows * dataStreamSize == fileSize);
+		fseek(filePtr, row * dataStreamSize, SEEK_CUR);
+
+		// Allocate memory to contain the data bytes
+		float* buffer = (float*) malloc(dataStreamSize);
+
+		// Verify allocation was successful
+		if (buffer == NULL) {
+			throw std::runtime_error(
+					"Unable to allocate memory to contain descriptors file");
+		}
+
+		// Read data bytes into buffer
+		result = fread(buffer, dataStreamSize, 1, filePtr);
+		CV_Assert(result == 1);
+
+		descriptors = cv::Mat(1, cols, CV_32F, buffer);
+
+	} else {
+
+		// Compute data stream size
+		long dataStreamSize = cols * sizeof(unsigned char);
+		CV_Assert(posBytes + rows * dataStreamSize == fileSize);
+		fseek(filePtr, row * dataStreamSize, SEEK_CUR);
+
+		// Allocate memory to contain the data bytes
+		unsigned char* buffer = (unsigned char*) malloc(dataStreamSize);
+
+		// Verify allocation was successful
+		if (buffer == NULL) {
+			throw std::runtime_error(
+					"Unable to allocate memory to contain descriptors file");
+		}
+
+		// Read data bytes into buffer
+		result = fread(buffer, dataStreamSize, 1, filePtr);
+		CV_Assert(result == 1);
+
+		descriptors = cv::Mat(1, cols, CV_8U, buffer);
+
+	}
+
+	// Clean up
+	fclose(filePtr);
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptorsStats(std::string& filename, MatStats& stats) {
+
+	std::ifstream inputZippedFileStream;
+	boost::iostreams::filtering_istream inputFileStream;
+
+	std::string line, field;
+	std::stringstream ss;
+
+	enum fields {
+		rows, cols, dt, data
+	};
+
+	std::string fieldsNames[] = { "rows:", "cols:", "dt:", "data:" };
+
+	// Open file
+	inputZippedFileStream.open(filename.c_str(),
+			std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (inputZippedFileStream.good() == false) {
+		throw std::runtime_error("[VocabTree::load] "
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	int _rows = -1;
+	int _cols = -1;
+	std::string _type;
+
+	try {
+		inputFileStream.push(boost::iostreams::gzip_decompressor());
+		inputFileStream.push(inputZippedFileStream);
+
+		while (getline(inputFileStream, line)) {
+			ss.clear();
+			ss.str(line);
+			ss >> field;
+			if (field.compare(fieldsNames[rows]) == 0) {
+				ss >> _rows;
+			} else if (field.compare(fieldsNames[cols]) == 0) {
+				ss >> _cols;
+			} else if (field.compare(fieldsNames[dt]) == 0) {
+				ss >> _type;
+			} else if (field.compare(fieldsNames[data]) == 0) {
+				break;
+			}
+		}
+
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error("[FileUtils::loadDescriptorsStats] "
+				"Got error while parsing file [" + std::string(e.what()) + "]");
+	}
+
+	// Close file
+	inputZippedFileStream.close();
+
+	stats.rows = _rows;
+	stats.cols = _cols;
+	stats.descType = _type;
 
 }

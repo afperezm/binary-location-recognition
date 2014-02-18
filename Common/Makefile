@@ -1,7 +1,7 @@
 # Makefile for Common
 
 CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./include/
-LDFLAGS =
+LDFLAGS = -lboost_iostreams
 
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`

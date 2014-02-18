@@ -263,7 +263,7 @@ TEST(ApproximateKMajority, TestDatabase) {
 	db->loadBoFModel("test_vocab.yaml.gz");
 
 	((cv::Ptr<vlr::AKMajDB>) db)->buildNNIndex();
-	((cv::Ptr<vlr::AKMajDB>) db)->saveNNIndex("test_nn_index");
+	((cv::Ptr<vlr::AKMajDB>) db)->saveNNIndex("test_nn_index.bin");
 
 	db->clearDatabase();
 
@@ -316,7 +316,7 @@ TEST(ApproximateKMajority, TestDatabase) {
 
 	dbLoad->loadBoFModel("test_vocab.yaml.gz");
 
-	((cv::Ptr<vlr::AKMajDB>) dbLoad)->loadNNIndex("test_nn_index");
+	((cv::Ptr<vlr::AKMajDB>) dbLoad)->loadNNIndex("test_nn_index.bin");
 
 	dbLoad->loadInvertedIndex("test_idf.yaml.gz");
 

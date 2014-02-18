@@ -36,6 +36,26 @@ struct Query {
 
 };
 
+struct MatStats {
+
+	int rows;
+	int cols;
+	std::string descType;
+
+	bool empty() const {
+		return rows == 0;
+	}
+
+	int type() const {
+		return descType.compare("u") == 0 ? CV_8U : CV_32F;
+	}
+
+	size_t elemSize() const {
+		return descType.compare("u") == 0 ? 1 : 4;
+	}
+
+};
+
 /**
  * Opens a directory and saves all the files names onto a vector of strings, it
  * returns a status flag for reporting any error during the opening of the folder.
@@ -134,6 +154,36 @@ bool checkFileExist(const std::string& filename);
  * @param list - List holding the loaded queries
  */
 void loadQueriesList(std::string& filePath, std::vector<Query>& list);
+
+/**
+ * Saves a set of descriptors in binary format onto a file stream using C++ STL.
+ *
+ * @param filename - The path to the file where to save the descriptors
+ * @param descriptors - The descriptors to be saved
+ */
+void saveDescriptorsToBin(const std::string& filename,
+		const cv::Mat& descriptors);
+
+/**
+ * Loads a set of descriptors from binary formatted file stream using C++ STL.
+ *
+ * @note This function does not do any memory deallocation. The invoker is
+ * responsible for deallocating the matrix memory.
+ *
+ * @param filename - The path to the file where to load the descriptors from
+ * @param descriptors - The matrix where to save the loaded descriptors
+ */
+void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors);
+
+/**
+ *
+ * @param filename
+ * @param descriptors
+ * @param row - zero-based index
+ */
+void loadDescriptorsRowFromBin(const std::string& filename, cv::Mat& descriptors, int row);
+
+void loadDescriptorsStats(std::string& filename, MatStats& stats);
 
 } // namespace FileUtils
 

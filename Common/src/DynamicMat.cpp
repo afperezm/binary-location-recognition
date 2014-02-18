@@ -51,7 +51,7 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 	printf("[DynamicMat] Initializing using filenames\n");
 #endif
 
-	cv::Mat imgDescriptors;
+	FileUtils::MatStats imgDescriptors;
 
 	m_imagesIndex.clear();
 	m_descriptorsIndex.clear();
@@ -69,7 +69,7 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 				imgIdx + 1, descriptorsFilenames.size());
 
 		// Load descriptors
-		FileUtils::loadDescriptors(descriptorsFilename, imgDescriptors);
+		FileUtils::loadDescriptorsStats(descriptorsFilename, imgDescriptors);
 
 		// Increase counter if descriptors matrix is not empty
 		if (imgDescriptors.empty() == false) {
