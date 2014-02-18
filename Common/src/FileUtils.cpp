@@ -388,18 +388,6 @@ void FileUtils::loadDescriptorsFromBin(const std::string& filename,
 	long posBytes = ftell(filePtr);
 	long dataStreamSize = fileSize - posBytes;
 
-	// Allocate memory to contain the whole file
-	char* buffer = (char*) malloc(sizeof(char) * dataStreamSize);
-
-	if (buffer == NULL) {
-		throw std::runtime_error(
-				"Unable to allocate memory to contain descriptors file");
-	}
-
-	// Read data bytes into buffer
-	result = fread(buffer, dataStreamSize, 1, filePtr);
-	CV_Assert(result == 1);
-
 	descriptors.release();
 	descriptors = cv::Mat();
 	if (type != CV_32F && type != CV_8U) {
@@ -407,21 +395,12 @@ void FileUtils::loadDescriptorsFromBin(const std::string& filename,
 	}
 	descriptors.create(rows, cols, type);
 
-	if (type == CV_32F) {
-		descriptors = cv::Mat(rows, cols, CV_32F, (float*) buffer);
-	} else if (type == CV_8U) {
-		descriptors = cv::Mat(rows, cols, CV_8U, (uchar*) buffer);
-	} else {
-		throw std::runtime_error("Invalid descriptors type");
-	}
+	// Read data bytes into buffer
+	result = fread(descriptors.data, dataStreamSize, 1, filePtr);
+	CV_Assert(result == 1);
 
 	// Clean up
 	fclose(filePtr);
-
-//	Mat image;
-//	uint16_t *imageMap = (uint16_t*) buffer;
-//	image.create(rows, cols, CV_16UC1);
-//	memcpy(image.data, imageMap, rows * cols * sizeof(uint16_t));
 
 }
 

@@ -90,7 +90,7 @@ TEST(STLIOReal, LoadSave) {
 		}
 	}
 
-	delete[] loaded.data;
+//	delete[] loaded.data;
 
 }
 
@@ -114,7 +114,7 @@ TEST(STLIOBin, LoadSave) {
 		}
 	}
 
-	delete[] loaded.data;
+//	delete[] loaded.data;
 }
 
 TEST(STLIOReal, LoadSaveRow) {
