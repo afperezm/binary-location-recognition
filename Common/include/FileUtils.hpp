@@ -175,13 +175,17 @@ void saveDescriptorsToBin(const std::string& filename,
  */
 void loadDescriptorsFromBin(const std::string& filename, cv::Mat& descriptors);
 
+void loadDescriptorsFromZippedBin(const std::string& filename,
+		cv::Mat& descriptors);
+
 /**
  *
  * @param filename
  * @param descriptors
  * @param row - zero-based index
  */
-void loadDescriptorsRowFromBin(const std::string& filename, cv::Mat& descriptors, int row);
+void loadDescriptorsRowFromBin(const std::string& filename,
+		cv::Mat& descriptors, int row);
 
 void loadDescriptorsStats(std::string& filename, MatStats& stats);
 

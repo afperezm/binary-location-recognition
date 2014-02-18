@@ -335,21 +335,35 @@ void FileUtils::loadQueriesList(std::string& filePath,
 void FileUtils::saveDescriptorsToBin(const std::string& filename,
 		const cv::Mat& descriptors) {
 
-	FILE* filePtr = fopen(filename.c_str(), "wb");
+	std::ofstream os;
 
-	if (filePtr == NULL) {
+	// Open file
+	os.open(filename.c_str(),
+			std::ios::out | std::ios::trunc | std::ios::binary);
+
+	// Check file
+	if (os.good() == false) {
 		throw std::runtime_error(
 				"Unable to open file [" + filename + "] for writing");
 	}
 
-	fwrite(&descriptors.rows, sizeof(int), 1, filePtr);
-	fwrite(&descriptors.cols, sizeof(int), 1, filePtr);
-	int type = descriptors.type();
-	fwrite(&type, sizeof(int), 1, filePtr);
-	fwrite(descriptors.data, descriptors.elemSize(),
-			descriptors.rows * descriptors.cols, filePtr);
+	// Write rows byte
+	os.write((char*) &descriptors.rows, sizeof(int));
 
-	fclose(filePtr);
+	// Write columns byte
+	os.write((char*) &descriptors.cols, sizeof(int));
+
+	// Write type byte
+	int type = descriptors.type();
+	os.write((char*) &type, sizeof(int));
+
+	// Write data bytes
+	os.write((char*) descriptors.data,
+			descriptors.elemSize() * descriptors.rows * descriptors.cols);
+
+	// Close file
+	os.close();
+
 }
 
 // --------------------------------------------------------------------------
@@ -357,36 +371,36 @@ void FileUtils::saveDescriptorsToBin(const std::string& filename,
 void FileUtils::loadDescriptorsFromBin(const std::string& filename,
 		cv::Mat& descriptors) {
 
-	FILE* filePtr = fopen(filename.c_str(), "rb");
+	std::ifstream is;
 
-	if (filePtr == NULL) {
+	// Open file
+	is.open(filename.c_str(), std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (is.good() == false) {
 		throw std::runtime_error(
 				"Unable to open file [" + filename + "] for reading");
 	}
 
-	// Obtain data stream size
-	fseek(filePtr, 0, SEEK_END);
-	long fileSize = ftell(filePtr);
-	rewind(filePtr);
+	// Obtain uncompressed file size
+	is.seekg(0, is.end);
+	int fileSize = is.tellg();
+	is.seekg(0, is.beg);
 
 	// Read rows byte
 	int rows = -1;
-	size_t result = fread(&rows, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &rows, sizeof(int));
 
-	// Read columns byte into buffer
+	// Read columns byte
 	int cols = -1;
-	result = fread(&cols, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &cols, sizeof(int));
 
-	// Read type byte into buffer
+	// Read type byte
 	int type = -1;
-	result = fread(&type, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &type, sizeof(int));
 
 	// Compute data stream size
-	long posBytes = ftell(filePtr);
-	long dataStreamSize = fileSize - posBytes;
+	long dataStreamSize = fileSize - 3 * sizeof(int);
 
 	descriptors.release();
 	descriptors = cv::Mat();
@@ -395,12 +409,73 @@ void FileUtils::loadDescriptorsFromBin(const std::string& filename,
 	}
 	descriptors.create(rows, cols, type);
 
-	// Read data bytes into buffer
-	result = fread(descriptors.data, dataStreamSize, 1, filePtr);
-	CV_Assert(result == 1);
+	// Read data bytes
+	is.read((char*) descriptors.data, dataStreamSize);
 
-	// Clean up
-	fclose(filePtr);
+	// Close file
+	is.close();
+
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptorsFromZippedBin(const std::string& filename,
+		cv::Mat& descriptors) {
+
+	std::ifstream zippedFile;
+	boost::iostreams::filtering_istream is;
+
+	// Open file
+	zippedFile.open(filename.c_str(), std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (zippedFile.good() == false) {
+		throw std::runtime_error(
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	// Obtain uncompressed file size
+	zippedFile.seekg(-sizeof(int), zippedFile.end);
+	int fileSize = -1;
+	zippedFile.read((char*) &fileSize, sizeof(int));
+	zippedFile.seekg(0, zippedFile.beg);
+
+	try {
+		is.push(boost::iostreams::gzip_decompressor());
+		is.push(zippedFile);
+
+		// Read rows byte
+		int rows = -1;
+		is.read((char*) &rows, sizeof(int));
+
+		// Read columns byte
+		int cols = -1;
+		is.read((char*) &cols, sizeof(int));
+
+		// Read type byte
+		int type = -1;
+		is.read((char*) &type, sizeof(int));
+
+		// Compute data stream size
+		long dataStreamSize = fileSize - 3 * sizeof(int);
+
+		descriptors.release();
+		descriptors = cv::Mat();
+		if (type != CV_32F && type != CV_8U) {
+			throw std::runtime_error("Invalid descriptors type");
+		}
+		descriptors.create(rows, cols, type);
+
+		// Read data bytes
+		is.read((char*) descriptors.data, dataStreamSize);
+
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error(
+				"Got error while reading file [" + std::string(e.what()) + "]");
+	}
+
+	// Close file
+	zippedFile.close();
 
 }
 
