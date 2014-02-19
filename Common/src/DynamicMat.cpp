@@ -15,7 +15,7 @@ namespace vlr {
 Mat::Mat() :
 		m_capacity(0.0), m_descriptorType(-1), m_imagesIndex(DEFAULT_INDICES), m_descriptorsFilenames(
 				DEFAULT_FILENAMES), m_memoryCount(0), m_cachedMat(cv::Mat()), m_cachedMatStartIdx(
-				-1), rows(0), cols(0) {
+				-1), m_evictionPolicyActive(true), rows(0), cols(0) {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing empty\n");
 #endif
@@ -40,12 +40,14 @@ Mat::Mat(const Mat& other) {
 	m_descriptorType = other.type();
 	rows = other.rows;
 	cols = other.cols;
+	m_evictionPolicyActive = other.isEvictionPolicyActive();
 }
 
 // --------------------------------------------------------------------------
 
 Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
-		m_descriptorsFilenames(descriptorsFilenames), m_cachedMatStartIdx(-1) {
+		m_descriptorsFilenames(descriptorsFilenames), m_cachedMatStartIdx(-1), m_evictionPolicyActive(
+				true) {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing using filenames\n");
@@ -171,17 +173,17 @@ cv::Mat Mat::row(int descriptorIdx) {
 		throw std::out_of_range(ss.str());
 	}
 
-	// Initialize descriptor
-	cv::Mat descriptor = cv::Mat();
-
 	std::map<int, cv::Mat>::iterator it = m_descriptorsCache.find(
 			descriptorIdx);
 
 	if (it == m_descriptorsCache.end()) {
 
 #if DYNMATVERBOSE
-		printf("The descriptor is not loaded in cache\n");
+		printf("   NOT loaded in cache.\n");
 #endif
+
+		// Initialize descriptor
+		cv::Mat descriptor = cv::Mat();
 
 		// Load corresponding descriptors matrix if it isn't loaded
 		if (m_cachedMatStartIdx == -1 || descriptorIdx < m_cachedMatStartIdx
@@ -209,15 +211,23 @@ cv::Mat Mat::row(int descriptorIdx) {
 		// Obtain a reference to the descriptor
 		descriptor = m_cachedMat.row(relIdx);
 
-		// Check whether cache is full, if it does then pop the last added descriptor
+		// Check whether cache is full
 		if (m_memoryCount != 0
 				&& m_memoryCount + computeUsedMemory(descriptor) > MAX_MEM) {
 
+			/* Return row of cached matrix */
+			if (m_evictionPolicyActive == false) {
 #if DYNMATVERBOSE
-			printf("[DynamicMat] Cache full, deleting last descriptor\n");
+				printf("   Cache full, skipping eviction policy.\n");
+#endif
+				return descriptor;
+			}
+
+#if DYNMATVERBOSE
+			printf("   Cache full, executing eviction policy.\n");
 #endif
 
-			/* Remove descriptor from the cache */
+			/* Remove last added descriptor from the cache */
 			// Obtain an iterator to it
 			it = m_descriptorsCache.find(m_cachingOrder.top());
 			// Check the iterator is valid
@@ -234,6 +244,9 @@ cv::Mat Mat::row(int descriptorIdx) {
 		}
 
 		/* Add descriptor to the cache */
+#if DYNMATVERBOSE
+			printf("   Caching descriptor.\n");
+#endif
 		// Increase memory counter
 		m_memoryCount += computeUsedMemory(descriptor);
 		// Insert a new element
@@ -244,6 +257,10 @@ cv::Mat Mat::row(int descriptorIdx) {
 		descriptor.copyTo(m_descriptorsCache.at(descriptorIdx));
 		// Push its index to the stack
 		m_cachingOrder.push(descriptorIdx);
+	} else {
+#if DYNMATVERBOSE
+		printf("   Loaded in cache.\n");
+#endif
 	}
 
 	return it->second;

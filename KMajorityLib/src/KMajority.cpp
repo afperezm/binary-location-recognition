@@ -32,6 +32,8 @@ KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 
 	m_numDatapoints = m_dataset.rows;
 
+	m_dataset.setEvictionPolicyActive(false);
+
 	// Initially all transactions belong to any cluster
 	m_belongsTo.clear();
 	m_belongsTo.resize(m_dataset.rows, numClusters);
@@ -59,11 +61,11 @@ void KMajority::build() {
 
 	if (m_dataset.type() != CV_8U) {
 		throw std::runtime_error(
-				"[KMajority::cluster] Descriptors matrix is not binary");
+				"[KMajority::build] Descriptors matrix is not binary");
 	}
 
 	if (m_dataset.empty()) {
-		throw std::runtime_error("[KMajority::cluster] Descriptors is empty");
+		throw std::runtime_error("[KMajority::build] Descriptors is empty");
 	}
 
 	// Trivial case: less data than clusters, assign one data point per cluster
@@ -77,13 +79,26 @@ void KMajority::build() {
 		return;
 	}
 
+#if KMAJVERBOSE
+	printf("-- Bootstrapping clustering process\n");
+#endif
+
 	// Randomly generate clusters
+#if KMAJVERBOSE
+	printf("   Initializing clusters centers.\n");
+#endif
 	initCentroids();
 
 	// Update nearest neighbors index upon new centers
+#if KMAJVERBOSE
+	printf("   Updating nearest neighbors index.\n");
+#endif
 	updateIndex();
 
 	// Assign data to clusters
+#if KMAJVERBOSE
+	printf("   Quantizing data into clusters.\n");
+#endif
 	quantize();
 
 	bool converged = false;
@@ -93,16 +108,32 @@ void KMajority::build() {
 
 		++iteration;
 
-		// Compute the new cluster centers
+#if KMAJVERBOSE
+		printf("-- Iteration=[%d]\n", iteration);
+#endif
+
+		// Compute the new clusters centers
+#if KMAJVERBOSE
+		printf("   Computing new clusters centers.\n");
+#endif
 		computeCentroids();
 
 		// Update nearest neighbors index upon new centers
+#if KMAJVERBOSE
+		printf("   Updating nearest neighbors index.\n");
+#endif
 		updateIndex();
 
 		// Reassign data to clusters
+#if KMAJVERBOSE
+		printf("   Quantizing data into clusters.\n");
+#endif
 		converged = quantize();
 
 		// Handle empty clusters case
+#if KMAJVERBOSE
+		printf("   Handling empty clusters case.\n");
+#endif
 		handleEmptyClusters();
 	}
 
@@ -163,11 +194,12 @@ bool KMajority::quantize() {
 		std::fill(distances.data,
 				distances.data + distances.rows * distances.cols, 0.0f);
 
+		cvflann::Matrix<Distance::ElementType> descriptor(
+				(Distance::ElementType*) m_dataset.row(i).data, 1,
+				m_dataset.cols);
+
 		/* Get new cluster it belongs to */
-		m_nnIndex->knnSearch(
-				cvflann::Matrix<Distance::ElementType>(
-						(Distance::ElementType*) m_dataset.row(i).data, 1,
-						m_dataset.cols), indices, distances, knn,
+		m_nnIndex->knnSearch(descriptor, indices, distances, knn,
 				cvflann::SearchParams());
 
 		/* Check if cluster assignment changed */
@@ -361,13 +393,13 @@ void KMajority::majorityVoting(const cv::Mat& accVector, cv::Mat& result,
 	// cumResult and data must be a row vectors
 	if (accVector.rows != 1 || result.rows != 1) {
 		throw std::runtime_error(
-				"[KMajority::majorityVoting] `bitwiseCount` and `centroid` parameters must be row vectors\n");
+				"[KMajority::majorityVoting] 'accVector' and 'result' parameters must be row vectors\n");
 	}
 
 	// cumResult and data must be same length
 	if (result.cols * 8 != accVector.cols) {
 		throw std::runtime_error(
-				"[KMajority::majorityVoting] number of columns in `bitwiseCount` must be that of `data` times 8\n");
+				"[KMajority::majorityVoting] number of columns in 'accVector' must be that of 'result' times 8\n");
 	}
 
 	// In this point I already have stored in bitwiseCount the bitwise sum of all data assigned to jth cluster

@@ -51,6 +51,8 @@ private:
 	std::stack<int> m_cachingOrder;
 	std::map<int, cv::Mat> m_descriptorsCache;
 
+	bool m_evictionPolicyActive = true;
+
 public:
 
 	int rows = 0;
@@ -157,6 +159,14 @@ public:
 	 */
 	size_t getMemoryCount() const {
 		return m_memoryCount;
+	}
+
+	bool isEvictionPolicyActive() const {
+		return m_evictionPolicyActive;
+	}
+
+	void setEvictionPolicyActive(bool evictionPolicyActive = true) {
+		m_evictionPolicyActive = evictionPolicyActive;
 	}
 
 private:
