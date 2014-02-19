@@ -14,11 +14,11 @@
 TEST(FileStorageIOReal, LoadSave) {
 
 	cv::Mat original;
-	FileUtils::loadDescriptors("sift_0.yaml.gz", original);
-	FileUtils::saveDescriptors("sift_desc_tmp.yaml.gz", original);
+	FileUtils::loadDescriptors("sift_0.bin", original);
+	FileUtils::saveDescriptors("sift_desc_tmp.bin", original);
 
 	cv::Mat loaded;
-	FileUtils::loadDescriptors("sift_desc_tmp.yaml.gz", loaded);
+	FileUtils::loadDescriptors("sift_desc_tmp.bin", loaded);
 
 	// Check number of rows, columns and type are equal
 	EXPECT_TRUE(original.rows == loaded.rows);
@@ -44,7 +44,7 @@ TEST(FileStorageIOReal, LoadStress) {
 		descriptors = cv::Mat();
 
 		double mytime = cv::getTickCount();
-		FileUtils::loadDescriptors("sift_0.yaml.gz", descriptors);
+		FileUtils::loadDescriptors("sift_0.bin", descriptors);
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
 				* 1000.0;
 
@@ -62,7 +62,7 @@ TEST(FileStorageIOBin, LoadStress) {
 		descriptors = cv::Mat();
 
 		double mytime = cv::getTickCount();
-		FileUtils::loadDescriptors("brief_0.yaml.gz", descriptors);
+		FileUtils::loadDescriptors("brief_0.bin", descriptors);
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
 				* 1000.0;
 
@@ -72,11 +72,11 @@ TEST(FileStorageIOBin, LoadStress) {
 
 TEST(STLIOReal, LoadSave) {
 	cv::Mat original;
-	FileUtils::loadDescriptors("sift_0.yaml.gz", original);
-	FileUtils::saveDescriptorsToBin("sift_0.bin", original);
+	FileUtils::loadDescriptors("sift_0.bin", original);
+	FileUtils::saveDescriptors("sift_0_tmp.bin", original);
 
 	cv::Mat loaded;
-	FileUtils::loadDescriptorsFromBin("sift_0.bin", loaded);
+	FileUtils::loadDescriptors("sift_0.bin", loaded);
 
 	// Check number of rows, columns and type are equal
 	EXPECT_TRUE(original.rows == loaded.rows);
@@ -94,11 +94,11 @@ TEST(STLIOReal, LoadSave) {
 
 TEST(STLIOBin, LoadSave) {
 	cv::Mat original;
-	FileUtils::loadDescriptors("brief_0.yaml.gz", original);
-	FileUtils::saveDescriptorsToBin("brief_0.bin", original);
+	FileUtils::loadDescriptors("brief_0.bin", original);
+	FileUtils::saveDescriptors("brief_0_tmp.bin", original);
 
 	cv::Mat loaded;
-	FileUtils::loadDescriptorsFromBin("brief_0.bin", loaded);
+	FileUtils::loadDescriptors("brief_0_tmp.bin", loaded);
 
 	// Check number of rows, columns and type are equal
 	EXPECT_TRUE(original.rows == loaded.rows);
@@ -118,12 +118,12 @@ TEST(STLIOReal, LoadSaveRow) {
 
 	cv::Mat original, row;
 
-	FileUtils::loadDescriptors("sift_0.yaml.gz", original);
-	FileUtils::saveDescriptorsToBin("sift_0.bin", original);
+	FileUtils::loadDescriptors("sift_0.bin", original);
+	FileUtils::saveDescriptors("sift_0_tmp.bin", original);
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRowFromBin("sift_0.bin", row, rowIdx);
+		FileUtils::loadDescriptorsRowFromBin("sift_0_tmp.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);
@@ -146,12 +146,12 @@ TEST(STLIOBin, LoadSaveRow) {
 
 	cv::Mat original, row;
 
-	FileUtils::loadDescriptors("brief_0.yaml.gz", original);
-	FileUtils::saveDescriptorsToBin("brief_0.bin", original);
+	FileUtils::loadDescriptors("brief_0.bin", original);
+	FileUtils::saveDescriptors("brief_0_tmp.bin", original);
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRowFromBin("brief_0.bin", row, rowIdx);
+		FileUtils::loadDescriptorsRowFromBin("brief_0_tmp.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);

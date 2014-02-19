@@ -14,8 +14,8 @@ TEST(HierarchicalKMeans, TestDatabase) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_0.yaml.gz");
-	keysFilenames.push_back("sift_1.yaml.gz");
+	keysFilenames.push_back("sift_0.bin");
+	keysFilenames.push_back("sift_1.bin");
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
@@ -131,8 +131,8 @@ TEST(HierarchicalKMajority, TestDatabase) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
@@ -247,8 +247,8 @@ TEST(ApproximateKMajority, TestDatabase) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 

@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 		CV_Assert(descriptors.cols == cols - 5);
 
 		std::string descriptorFileName = (out_descriptorsFolder + "/"
-				+ file.substr(0, file.length() - 16) + ".yaml.gz");
+				+ file.substr(0, file.length() - 16) + ".bin");
 
 		printf("-- Saving feature descriptors to [%s]\n",
 				descriptorFileName.c_str());

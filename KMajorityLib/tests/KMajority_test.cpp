@@ -47,7 +47,7 @@ TEST(KMajority, MajorityVoting) {
 TEST(KMajority, Clustering) {
 
 	std::vector<std::string> filenames;
-	filenames.push_back("brief_0.yaml.gz");
+	filenames.push_back("brief_0.bin");
 
 	vlr::Mat descriptors(filenames);
 
@@ -77,7 +77,7 @@ TEST(KMajority, Clustering) {
 TEST(KMajority, SaveLoad) {
 
 	std::vector<std::string> filenames;
-	filenames.push_back("brief_0.yaml.gz");
+	filenames.push_back("brief_0.bin");
 	vlr::Mat descriptors(filenames);
 
 	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
@@ -97,7 +97,7 @@ TEST(KMajority, SaveLoad) {
 TEST(KMajority, Regression) {
 
 	std::vector<std::string> filenames;
-	filenames.push_back("brief_0.yaml.gz");
+	filenames.push_back("brief_0.bin");
 
 	vlr::Mat descriptors(filenames);
 

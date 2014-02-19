@@ -31,11 +31,11 @@ TEST(DynamicMat, Instantiation) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 
-	FileUtils::loadDescriptors("sift_0.yaml.gz", imgDescriptors);
+	FileUtils::loadDescriptors("sift_0.bin", imgDescriptors);
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_0.yaml.gz");
-	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.bin");
+	keysFilenames.push_back("sift_0.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -52,8 +52,8 @@ TEST(DynamicMat, InitByCopy) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_0.yaml.gz");
-	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.bin");
+	keysFilenames.push_back("sift_0.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -77,8 +77,8 @@ TEST(DynamicMat, InitByAssignment) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_0.yaml.gz");
-	keysFilenames.push_back("sift_0.yaml.gz");
+	keysFilenames.push_back("sift_0.bin");
+	keysFilenames.push_back("sift_0.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -105,9 +105,9 @@ TEST(DynamicMat, RowExtraction) {
 	/////////////////////////////////////////////////////////////////////
 	cv::Mat imgDescriptors;
 
-	FileUtils::loadDescriptors("sift_0.yaml.gz", imgDescriptors);
+	FileUtils::loadDescriptors("sift_0.bin", imgDescriptors);
 
-	std::vector<std::string> keysFilenames(10, "sift_0.yaml.gz");
+	std::vector<std::string> keysFilenames(10, "sift_0.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////

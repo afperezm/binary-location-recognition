@@ -29,6 +29,7 @@ VocabMatch/VocabMatch
 # Executables output files
 *.xml.gz
 *.yaml.gz
+*.bin
 VocabMatch/candidates.txt
 VocabMatch/matches.txt
 VocabMatch/results.html

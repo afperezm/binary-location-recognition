@@ -30,8 +30,8 @@ TEST(HCTree, InstantiateOnStack) {
 TEST(HCTree, InitParams) {
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 	vlr::Mat data(keysFilenames);
 	vlr::HCTree tree(data);
 
@@ -45,8 +45,8 @@ TEST(HCTree, InitParams) {
 TEST(HCTree, TreeBuilding) {
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 	vlr::Mat data(keysFilenames);
 
 	vlr::HCTree tree(data);
@@ -62,8 +62,8 @@ TEST(HCTree, TreeBuilding) {
 TEST(HCTree, SaveLoad) {
 
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 	vlr::Mat data(keysFilenames);
 
 	vlr::HCTree tree(data);

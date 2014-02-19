@@ -47,10 +47,10 @@ Mat BOWKmajorityTrainer::cluster() const {
 
 Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const {
 
-	FileUtils::saveDescriptors("mydescriptors.yaml.gz", descriptors);
+	FileUtils::saveDescriptors("mydescriptors.bin", descriptors);
 
 	std::vector<std::string> filenames;
-	filenames.push_back("mydescriptors.yaml.gz");
+	filenames.push_back("mydescriptors.bin");
 
 	vlr::Mat dataset(filenames);
 

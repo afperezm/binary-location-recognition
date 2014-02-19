@@ -39,8 +39,8 @@ TEST(VocabTreeReal, LoadSave) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("sift_0.yaml.gz");
-	keysFilenames.push_back("sift_1.yaml.gz");
+	keysFilenames.push_back("sift_0.bin");
+	keysFilenames.push_back("sift_1.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -67,8 +67,8 @@ TEST(VocabTreeBinary, LoadSave) {
 
 	/////////////////////////////////////////////////////////////////////
 	std::vector<std::string> keysFilenames;
-	keysFilenames.push_back("brief_0.yaml.gz");
-	keysFilenames.push_back("brief_1.yaml.gz");
+	keysFilenames.push_back("brief_0.bin");
+	keysFilenames.push_back("brief_1.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////

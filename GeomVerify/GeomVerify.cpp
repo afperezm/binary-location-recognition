@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 					in_db_keys_folder + "/" + ranked_candidates_list[j]
 							+ "_kpt.yaml.gz", candidateKeypoints);
 			FileUtils::loadDescriptors(
-					"db/" + ranked_candidates_list[j] + ".yaml.gz",
+					"db/" + ranked_candidates_list[j] + ".bin",
 					candidateDescriptors);
 			filterFeatures(candidateKeypoints, candidateDescriptors,
 					topKeypoints);
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 			// Id of database image
 			std::vector<std::string>::iterator it = std::find(
 					db_desc_list.begin(), db_desc_list.end(),
-					"db/" + ranked_candidates_list[j] + ".yaml.gz");
+					"db/" + ranked_candidates_list[j] + ".bin");
 
 			if (it == db_desc_list.end()) {
 				throw std::runtime_error("Candidate [%s] not found "

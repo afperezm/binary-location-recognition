@@ -56,7 +56,7 @@ void describeFeatures(const std::string& imgPath, const std::string& imgName,
 		const std::string descriptorType);
 
 /**
- * In a given folder finds the last written .yaml.gz file that is also a valid image file.
+ * In a given folder finds the last written .bin file that is also a valid image file.
  *
  * @param folderPath - Path to the folder where to search
  * @param imgFolderFiles - Vector of images names
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 				}
 
 				std::string keypointsFileName = keypointsFolder + "/"
-						+ (*image).substr(0, (*image).size() - 4) + ".yaml.gz";
+						+ (*image).substr(0, (*image).size() - 4) + ".bin";
 
 				printf(
 						"-- Saving feature key-points to [%s] using OpenCV FileStorage\n",
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
 				}
 
 				std::string descriptorFileName = descriptorsFolder + "/"
-						+ (*image).substr(0, (*image).size() - 4) + ".yaml.gz";
+						+ (*image).substr(0, (*image).size() - 4) + ".bin";
 
 				printf(
 						"   Saving feature descriptors to [%s] using OpenCV FileStorage\n",

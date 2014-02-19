@@ -110,7 +110,8 @@ void loadFeatures(const std::string& filename,
  * @param filename - The path to the file where to save the descriptors
  * @param descriptors - The descriptors to be saved
  */
-void saveDescriptors(const std::string& filename, const cv::Mat& descriptors);
+void saveDescriptorsToYaml(const std::string& filename,
+		const cv::Mat& descriptors);
 
 /**
  * Loads a set of descriptors from a plain text file using OpenCV FileStorage API.
@@ -118,6 +119,10 @@ void saveDescriptors(const std::string& filename, const cv::Mat& descriptors);
  * @param filename - The path to the file where to load the descriptors from
  * @param descriptors - The matrix where to save the loaded descriptors
  */
+void loadDescriptorsFromYaml(const std::string& filename, cv::Mat& descriptors);
+
+void saveDescriptors(const std::string& filename, const cv::Mat& descriptors);
+
 void loadDescriptors(const std::string& filename, cv::Mat& descriptors);
 
 /**
@@ -188,6 +193,10 @@ void loadDescriptorsRowFromBin(const std::string& filename,
 		cv::Mat& descriptors, int row);
 
 void loadDescriptorsStats(std::string& filename, MatStats& stats);
+
+void loadStatsFromZippedYaml(std::string& filename, MatStats& stats);
+
+void loadStatsFromBin(std::string& filename, MatStats& stats);
 
 } // namespace FileUtils
 

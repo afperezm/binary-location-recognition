@@ -189,7 +189,7 @@ void FileUtils::loadFeatures(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::saveDescriptors(const std::string& filename,
+void FileUtils::saveDescriptorsToYaml(const std::string& filename,
 		const cv::Mat& descriptors) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
@@ -207,7 +207,7 @@ void FileUtils::saveDescriptors(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::loadDescriptors(const std::string& filename,
+void FileUtils::loadDescriptorsFromYaml(const std::string& filename,
 		cv::Mat& descriptors) {
 
 	cv::FileStorage fs(filename.c_str(), cv::FileStorage::READ);
@@ -224,6 +224,20 @@ void FileUtils::loadDescriptors(const std::string& filename,
 
 	fs.release();
 
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::saveDescriptors(const std::string& filename,
+		const cv::Mat& descriptors) {
+	saveDescriptorsToBin(filename, descriptors);
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptors(const std::string& filename,
+		cv::Mat& descriptors) {
+	loadDescriptorsFromBin(filename, descriptors);
 }
 
 // --------------------------------------------------------------------------
@@ -573,6 +587,13 @@ void FileUtils::loadDescriptorsRowFromBin(const std::string& filename,
 // --------------------------------------------------------------------------
 
 void FileUtils::loadDescriptorsStats(std::string& filename, MatStats& stats) {
+	loadStatsFromBin(filename, stats);
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadStatsFromZippedYaml(std::string& filename,
+		MatStats& stats) {
 
 	std::ifstream inputZippedFileStream;
 	boost::iostreams::filtering_istream inputFileStream;
@@ -632,3 +653,38 @@ void FileUtils::loadDescriptorsStats(std::string& filename, MatStats& stats) {
 	stats.descType = _type;
 
 }
+
+void FileUtils::loadStatsFromBin(std::string& filename, MatStats& stats) {
+
+	std::ifstream is;
+
+	// Open file
+	is.open(filename.c_str(), std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (is.good() == false) {
+		throw std::runtime_error(
+				"Unable to open file [" + filename + "] for reading");
+	}
+
+	// Read rows byte
+	int rows = -1;
+	is.read((char*) &rows, sizeof(int));
+
+	// Read columns byte
+	int cols = -1;
+	is.read((char*) &cols, sizeof(int));
+
+	// Read type byte
+	int type = -1;
+	is.read((char*) &type, sizeof(int));
+
+	// Close file
+	is.close();
+
+	stats.rows = rows;
+	stats.cols = cols;
+	stats.descType = type == CV_32F ? "f" : "u";
+
+}
+

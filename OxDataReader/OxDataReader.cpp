@@ -173,7 +173,7 @@ int readOriginalDescriptors(std::string& descriptorsFile,
 		}
 		if (descIdx == cumSum + it->second - 1) {
 			descriptorFileName = descriptorsFolder + "/" + it->first
-					+ ".yaml.gz";
+					+ ".bin";
 			printf("-- Saving feature descriptors to [%s]\n",
 					descriptorFileName.c_str());
 //			FileUtils::saveDescriptors(descriptorFileName, descriptors);

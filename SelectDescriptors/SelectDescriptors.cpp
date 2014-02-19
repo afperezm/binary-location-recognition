@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 			// Prepare filename
 			char buffer[50];
 
-			sprintf(buffer, "descriptors_%04d.yaml.gz",
+			sprintf(buffer, "descriptors_%04d.bin",
 					int(
 							floor(i / DESC_CHUNK)
 									+ ((i % DESC_CHUNK == 0) ? 0 : 1)));
