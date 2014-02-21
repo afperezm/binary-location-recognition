@@ -27,7 +27,7 @@ public:
 			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance()) = 0;
 	static cv::Ptr<CentersChooser<TDescriptor, Distance> > create(
-			const cvflann::flann_centers_init_t& chooserType);
+			const cvflann::flann_centers_init_t& type, bool seedRandom = true);
 
 };
 
@@ -468,16 +468,21 @@ void KmeansppCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 
 template<typename TDescriptor, typename Distance>
 cv::Ptr<CentersChooser<TDescriptor, Distance> > CentersChooser<TDescriptor,
-		Distance>::create(const cvflann::flann_centers_init_t& chooserType) {
+		Distance>::create(const cvflann::flann_centers_init_t& type,
+		bool seedRandom) {
 
 	cv::Ptr<CentersChooser<TDescriptor, Distance> > cc;
 
-	if (chooserType == cvflann::FLANN_CENTERS_RANDOM) {
+	if (seedRandom) {
+		// Seeding random number generator
 		cvflann::seed_random(unsigned(std::time(0)));
+	}
+
+	if (type == cvflann::FLANN_CENTERS_RANDOM) {
 		cc = new RandomCenters<TDescriptor, Distance>();
-	} else if (chooserType == cvflann::FLANN_CENTERS_GONZALES) {
+	} else if (type == cvflann::FLANN_CENTERS_GONZALES) {
 		cc = new GonzalezCenters<TDescriptor, Distance>();
-	} else if (chooserType == cvflann::FLANN_CENTERS_KMEANSPP) {
+	} else if (type == cvflann::FLANN_CENTERS_KMEANSPP) {
 		cc = new KmeansppCenters<TDescriptor, Distance>();
 	} else {
 		CV_Error(CV_StsBadArg,
