@@ -53,7 +53,7 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 	printf("[DynamicMat] Initializing using filenames\n");
 #endif
 
-	FileUtils::MatStats imgDescriptors;
+	FileUtils::MatStats descriptorsStats;
 
 	m_imagesIndex.clear();
 	m_descriptorsIndex.clear();
@@ -71,36 +71,36 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 				imgIdx + 1, descriptorsFilenames.size());
 
 		// Load descriptors
-		FileUtils::loadDescriptorsStats(descriptorsFilename, imgDescriptors);
+		FileUtils::loadDescriptorsStats(descriptorsFilename, descriptorsStats);
 
 		// Increase counter if descriptors matrix is not empty
-		if (imgDescriptors.empty() == false) {
-			m_imagesIndex.insert(m_imagesIndex.end(), imgDescriptors.rows,
+		if (descriptorsStats.empty() == false) {
+			m_imagesIndex.insert(m_imagesIndex.end(), descriptorsStats.rows,
 					imgIdx);
 			m_descriptorsIndex[imgIdx] = descCount;
 			// Increase descriptors counter
-			descCount += imgDescriptors.rows;
+			descCount += descriptorsStats.rows;
 
 			// If initialized check descriptors length
 			if (descLen != 0) {
 				// Recall that all descriptors must be of the same length
-				CV_Assert(descLen == imgDescriptors.cols);
+				CV_Assert(descLen == descriptorsStats.cols);
 			} else {
-				descLen = imgDescriptors.cols;
+				descLen = descriptorsStats.cols;
 			}
 			// If initialized check descriptors type
 			if (descType != -1) {
 				// Recall that all descriptors must be of the same type
-				CV_Assert(descType == imgDescriptors.type());
+				CV_Assert(descType == descriptorsStats.type());
 			} else {
-				descType = imgDescriptors.type();
+				descType = descriptorsStats.type();
 			}
 			// If initialized check descriptors element size
 			if (descElemSize != 0) {
 				// Recall that all descriptors must have the same element size
-				CV_Assert(descElemSize == imgDescriptors.elemSize());
+				CV_Assert(descElemSize == descriptorsStats.elemSize());
 			} else {
-				descElemSize = imgDescriptors.elemSize();
+				descElemSize = descriptorsStats.elemSize();
 			}
 		}
 
@@ -245,7 +245,7 @@ cv::Mat Mat::row(int descriptorIdx) {
 
 		/* Add descriptor to the cache */
 #if DYNMATVERBOSE
-			printf("   Caching descriptor.\n");
+		printf("   Caching descriptor.\n");
 #endif
 		// Increase memory counter
 		m_memoryCount += computeUsedMemory(descriptor);
