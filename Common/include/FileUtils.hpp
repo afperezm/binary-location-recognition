@@ -189,14 +189,14 @@ void loadDescriptorsFromZippedBin(const std::string& filename,
  * @param descriptors
  * @param row - zero-based index
  */
-void loadDescriptorsRowFromBin(const std::string& filename,
+void loadDescriptorsRow(const std::string& filename,
 		cv::Mat& descriptors, int row);
 
 void loadDescriptorsStats(std::string& filename, MatStats& stats);
 
 void loadStatsFromZippedYaml(std::string& filename, MatStats& stats);
 
-void loadStatsFromBin(std::string& filename, MatStats& stats);
+void loadStatsFromBin(const std::string& filename, MatStats& stats);
 
 } // namespace FileUtils
 

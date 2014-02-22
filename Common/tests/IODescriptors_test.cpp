@@ -123,7 +123,7 @@ TEST(STLIOReal, LoadSaveRow) {
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRowFromBin("sift_0_tmp.bin", row, rowIdx);
+		FileUtils::loadDescriptorsRow("sift_0_tmp.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);
@@ -135,8 +135,6 @@ TEST(STLIOReal, LoadSaveRow) {
 					original.row(rowIdx).at<float>(0, j)
 							== row.at<float>(0, j));
 		}
-
-		delete[] row.data;
 
 	}
 
@@ -151,7 +149,7 @@ TEST(STLIOBin, LoadSaveRow) {
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRowFromBin("brief_0_tmp.bin", row, rowIdx);
+		FileUtils::loadDescriptorsRow("brief_0_tmp.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);
@@ -163,8 +161,6 @@ TEST(STLIOBin, LoadSaveRow) {
 					original.row(rowIdx).at<unsigned char>(0, j)
 							== row.at<unsigned char>(0, j));
 		}
-
-		delete[] row.data;
 
 	}
 

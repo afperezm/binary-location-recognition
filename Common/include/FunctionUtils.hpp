@@ -39,6 +39,8 @@ int BinToDec(const cv::Mat& binRow);
 
 void split(const std::string &s, char delim, std::vector<std::string> &tokens);
 
+std::string basify(const std::string& s);
+
 } // namespace FunctionUtils
 
 #endif /* FUNCTIONUTILS_HPP_ */

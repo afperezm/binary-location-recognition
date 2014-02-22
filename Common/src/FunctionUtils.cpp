@@ -126,3 +126,30 @@ void FunctionUtils::split(const std::string &s, char delim,
 	}
 
 }
+
+std::string FunctionUtils::basify(const std::string& s) {
+	char folderDelim = '/';
+	char extensionDelim = '.';
+
+	std::vector<std::string> tokens;
+
+	split(s, folderDelim, tokens);
+	if (tokens.empty()) {
+		throw std::runtime_error(
+				"[FunctionUtils::basify] [" + s
+						+ "] does not contain folder separator [" + folderDelim
+						+ "]");
+	}
+
+	std::string basename = tokens.back();
+	tokens.clear();
+	split(basename, extensionDelim, tokens);
+	if (tokens.empty()) {
+		throw std::runtime_error(
+				"[FunctionUtils::basify] [" + s
+						+ "] does not contain extension separator ["
+						+ extensionDelim + "]");
+	}
+
+	return *tokens.begin();
+}

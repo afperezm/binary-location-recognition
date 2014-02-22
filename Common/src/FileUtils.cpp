@@ -228,20 +228,6 @@ void FileUtils::loadDescriptorsFromYaml(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::saveDescriptors(const std::string& filename,
-		const cv::Mat& descriptors) {
-	saveDescriptorsToBin(filename, descriptors);
-}
-
-// --------------------------------------------------------------------------
-
-void FileUtils::loadDescriptors(const std::string& filename,
-		cv::Mat& descriptors) {
-	loadDescriptorsFromBin(filename, descriptors);
-}
-
-// --------------------------------------------------------------------------
-
 void FileUtils::saveKeypoints(const std::string& filename,
 		const std::vector<cv::KeyPoint>& keypoints) {
 
@@ -413,14 +399,17 @@ void FileUtils::loadDescriptorsFromBin(const std::string& filename,
 	int type = -1;
 	is.read((char*) &type, sizeof(int));
 
-	// Compute data stream size
-	long dataStreamSize = fileSize - 3 * sizeof(int);
-
-	descriptors.release();
-	descriptors = cv::Mat();
+	// Check type
 	if (type != CV_32F && type != CV_8U) {
 		throw std::runtime_error("Invalid descriptors type");
 	}
+
+	// Compute data stream size
+	long dataStreamSize = fileSize - 3 * sizeof(int);
+
+	// Allocate memory to contain the data bytes
+	descriptors.release();
+	descriptors = cv::Mat();
 	descriptors.create(rows, cols, type);
 
 	// Read data bytes
@@ -495,99 +484,69 @@ void FileUtils::loadDescriptorsFromZippedBin(const std::string& filename,
 
 // --------------------------------------------------------------------------
 
-void FileUtils::loadDescriptorsRowFromBin(const std::string& filename,
+void FileUtils::loadDescriptorsRow(const std::string& filename,
 		cv::Mat& descriptors, int row) {
 
-	FILE* filePtr = fopen(filename.c_str(), "rb");
+	std::ifstream is;
 
-	if (filePtr == NULL) {
+	// Open file
+	is.open(filename.c_str(), std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (is.good() == false) {
 		throw std::runtime_error(
 				"Unable to open file [" + filename + "] for reading");
 	}
 
 	// Obtain data stream size
-	fseek(filePtr, 0, SEEK_END);
-	long fileSize = ftell(filePtr);
-	rewind(filePtr);
+	is.seekg(0, is.end);
+	int fileSize = is.tellg();
+	is.seekg(0, is.beg);
 
 	// Read rows byte
 	int rows = -1;
-	size_t result = fread(&rows, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &rows, sizeof(int));
 	CV_Assert(row >= 0 && row < rows);
 
 	// Read columns byte into buffer
 	int cols = -1;
-	result = fread(&cols, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &cols, sizeof(int));
 
 	// Read type byte into buffer
 	int type = -1;
-	result = fread(&type, sizeof(int), 1, filePtr);
-	CV_Assert(result == 1);
+	is.read((char*) &type, sizeof(int));
 
+	// Check type
 	if (type != CV_32F && type != CV_8U) {
 		throw std::runtime_error("Invalid descriptors type");
 	}
 
-	long posBytes = ftell(filePtr);
-
-	descriptors.release();
+	// Compute feature vector size
+	long featureVectorSize = 0;
 	if (type == CV_32F) {
-
-		// Compute data stream size
-		long dataStreamSize = cols * sizeof(float);
-		CV_Assert(posBytes + rows * dataStreamSize == fileSize);
-		fseek(filePtr, row * dataStreamSize, SEEK_CUR);
-
-		// Allocate memory to contain the data bytes
-		float* buffer = (float*) malloc(dataStreamSize);
-
-		// Verify allocation was successful
-		if (buffer == NULL) {
-			throw std::runtime_error(
-					"Unable to allocate memory to contain descriptors file");
-		}
-
-		// Read data bytes into buffer
-		result = fread(buffer, dataStreamSize, 1, filePtr);
-		CV_Assert(result == 1);
-
-		descriptors = cv::Mat(1, cols, CV_32F, buffer);
-
+		featureVectorSize = cols * sizeof(float);
 	} else {
-
-		// Compute data stream size
-		long dataStreamSize = cols * sizeof(unsigned char);
-		CV_Assert(posBytes + rows * dataStreamSize == fileSize);
-		fseek(filePtr, row * dataStreamSize, SEEK_CUR);
-
-		// Allocate memory to contain the data bytes
-		unsigned char* buffer = (unsigned char*) malloc(dataStreamSize);
-
-		// Verify allocation was successful
-		if (buffer == NULL) {
-			throw std::runtime_error(
-					"Unable to allocate memory to contain descriptors file");
-		}
-
-		// Read data bytes into buffer
-		result = fread(buffer, dataStreamSize, 1, filePtr);
-		CV_Assert(result == 1);
-
-		descriptors = cv::Mat(1, cols, CV_8U, buffer);
-
+		featureVectorSize = cols * sizeof(unsigned char);
 	}
 
-	// Clean up
-	fclose(filePtr);
+	// Check feature vector size correctness
+	int posBytes = is.tellg();
+	CV_Assert(posBytes + rows * featureVectorSize == fileSize);
 
-}
+	// Move file pointer to the right position
+	is.seekg(row * featureVectorSize, is.cur);
 
-// --------------------------------------------------------------------------
+	// Allocate memory to contain the data bytes
+	descriptors.release();
+	descriptors = cv::Mat();
+	descriptors.create(1, cols, type);
 
-void FileUtils::loadDescriptorsStats(std::string& filename, MatStats& stats) {
-	loadStatsFromBin(filename, stats);
+	// Read data bytes
+	is.read((char*) descriptors.data, featureVectorSize);
+
+	// Close file
+	is.close();
+
 }
 
 // --------------------------------------------------------------------------
@@ -654,7 +613,9 @@ void FileUtils::loadStatsFromZippedYaml(std::string& filename,
 
 }
 
-void FileUtils::loadStatsFromBin(std::string& filename, MatStats& stats) {
+// --------------------------------------------------------------------------
+
+void FileUtils::loadStatsFromBin(const std::string& filename, MatStats& stats) {
 
 	std::ifstream is;
 
@@ -688,3 +649,22 @@ void FileUtils::loadStatsFromBin(std::string& filename, MatStats& stats) {
 
 }
 
+// --------------------------------------------------------------------------
+
+void FileUtils::saveDescriptors(const std::string& filename,
+		const cv::Mat& descriptors) {
+	saveDescriptorsToBin(filename, descriptors);
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptors(const std::string& filename,
+		cv::Mat& descriptors) {
+	loadDescriptorsFromBin(filename, descriptors);
+}
+
+// --------------------------------------------------------------------------
+
+void FileUtils::loadDescriptorsStats(std::string& filename, MatStats& stats) {
+	loadStatsFromBin(filename, stats);
+}
