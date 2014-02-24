@@ -19,14 +19,9 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-#ifndef MAX_CACHE_SIZE
 #define MAX_CACHE_SIZE 524288000 // ~500 MB
-#endif
 
-// Pair holding image index (first) and (inclusive) starting descriptors index (second)
-typedef int Image;
-
-static std::vector<Image> DEFAULT_INDICES;
+static std::vector<int> DEFAULT_INDICES;
 static std::vector<std::string> DEFAULT_FILENAMES;
 
 namespace vlr {
@@ -42,7 +37,7 @@ private:
 	double m_capacity = 0.0;
 	int m_descriptorType = -1;
 	size_t m_elemSize = 0;
-	std::vector<Image> m_imagesIndex, m_descriptorsIndex;
+	std::vector<int> m_imagesIndex, m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
 
 	/** Attributes of the cache **/
@@ -138,7 +133,7 @@ public:
 	 *
 	 * @return index of descriptors
 	 */
-	const std::vector<Image>& getDescriptorsIndex() const {
+	const std::vector<int>& getDescriptorsIndex() const {
 		return m_imagesIndex;
 	}
 
