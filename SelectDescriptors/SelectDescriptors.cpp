@@ -25,66 +25,51 @@ static const size_t DESC_CHUNK = 4000;
 int main(int argc, char **argv) {
 
 	if (argc != 4) {
-		printf("\nUsage:\n"
-				"\t%s <in.list> <in.percentage> <out.folder>\n\n", argv[0]);
+		printf(
+				"\nUsage:\n"
+						"\tSelectDescriptors <in.descriptors.folder> <in.percentage> <out.sampled.descriptors.folder>\n\n",
+				argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	const char *list_in = argv[1];
-	double percentage = atof(argv[2]);
+	std::string in_descs_folder = argv[1];
+	double in_percentage = atof(argv[2]);
+	std::string out_folder = argv[3];
 
-	const char *folder_out = argv[3];
-
-	if (percentage <= 0.0 || percentage >= 100.0) {
+	if (in_percentage <= 0.0 || in_percentage >= 100.0) {
 		fprintf(stderr,
 				"<in.percentage> must be a number between 0 and 100 excluding limits\n");
 		return EXIT_FAILURE;
 	} else {
-		percentage = percentage / 100.0;
+		in_percentage = in_percentage / 100.0;
 	}
 
-	// Step 1: read list of key files
-	printf("-- Loading list of keypoint files [%s]\n", list_in);
-	std::vector<std::string> keysFilenames;
-	std::ifstream keysList(list_in, std::fstream::in);
+	// Step 1: read descriptors list
+	printf("-- Reading files in folder [%s]\n", in_descs_folder.c_str());
+	std::vector<std::string> descriptorsFilenames;
+	FileUtils::readFolder(in_descs_folder.c_str(), descriptorsFilenames);
+	printf("   Done, got [%lu] entries\n", descriptorsFilenames.size());
 
-	if (keysList.is_open() == false) {
-		fprintf(stderr, "Error opening file [%s] for reading\n", list_in);
-		return EXIT_FAILURE;
+	for (std::string& descriptors : descriptorsFilenames) {
+		descriptors = in_descs_folder + "/" + descriptors;
 	}
 
-	// Loading file names in list into a vector
-	std::string line;
-	while (getline(keysList, line)) {
-		struct stat buffer;
-		// Checking if file exist, if not print error and exit
-		if (stat(line.c_str(), &buffer) == 0) {
-			keysFilenames.push_back(line);
-		} else {
-			fprintf(stderr, "Keypoints file [%s] doesn't exist\n",
-					line.c_str());
-			return EXIT_FAILURE;
-		}
-	}
-	// Close file
-	keysList.close();
+	// Step 2: read descriptors files
+	printf("-- Reading descriptors files\n");
 
-	// Step 2: read key files
-	printf("-- Reading keypoint files\n");
-
-	vlr::Mat mergedDescriptors(keysFilenames);
+	vlr::Mat mergedDescriptors(descriptorsFilenames);
 
 	// Step 3: randomly select a percentage of the descriptors
 
-	printf("-- Selecting [%f] of descriptors randomly, hence [%d] of [%d]\n",
-			percentage, int(mergedDescriptors.rows * percentage),
+	printf("-- Selecting randomly [%f] of descriptors, hence [%d] of [%d]\n",
+			in_percentage, int(mergedDescriptors.rows * in_percentage),
 			mergedDescriptors.rows);
 
 	cvflann::seed_random(unsigned(std::time(0)));
 	cvflann::UniqueRandom randGen(mergedDescriptors.rows);
 
-	std::vector<int> indices(int(mergedDescriptors.rows * percentage));
-	for (size_t i = 0; i < indices.size(); i++) {
+	std::vector<int> indices(int(mergedDescriptors.rows * in_percentage));
+	for (int i = 0; i < indices.size(); ++i) {
 		indices[i] = randGen.next();
 	}
 
@@ -93,13 +78,12 @@ int main(int argc, char **argv) {
 
 	// Step 4: iterate over the loaded descriptors and save to files in chunks
 	printf("-- Accessing chosen descriptor and saving them into [%s]\n",
-			folder_out);
+			out_folder.c_str());
 
-	// Declare variables for holding keypoints and descriptors
 	cv::Mat imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
 			mergedDescriptors.type());
 
-	for (size_t i = 0; i < indices.size(); i++) {
+	for (size_t i = 0; i < indices.size(); ++i) {
 
 		// If it is a starting descriptor or the last one then save
 		if (i > 0 && ((i % DESC_CHUNK) == 0 || i + 1 == indices.size())) {
@@ -123,11 +107,10 @@ int main(int argc, char **argv) {
 			CV_Assert(imgDescriptors.rows == (int )DESC_CHUNK);
 
 			// Save features
-			FileUtils::saveDescriptors(
-					std::string(folder_out) + "/" + std::string(buffer),
+			FileUtils::saveDescriptors(out_folder + "/" + std::string(buffer),
 					imgDescriptors);
 
-			// Clean descriptors matrix and keypoints vector
+			// Clean descriptors matrix and key-points vector
 			imgDescriptors.release();
 			imgDescriptors = cv::Mat::zeros(DESC_CHUNK, mergedDescriptors.cols,
 					mergedDescriptors.type());

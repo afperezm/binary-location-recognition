@@ -108,6 +108,7 @@ int main(int argc, char **argv) {
 	printf("   Vocabulary loaded in [%lf] ms, got [%lu] words \n", mytime,
 			db->getNumOfWords());
 
+	// Create and save nearest neighbor index when building AKMaj vocabulary
 	if (in_vocab_type.compare("HKM") != 0
 			&& in_vocab_type.compare("HKMAJ") != 0) {
 		printf("-- Building nearest neighbors index\n");

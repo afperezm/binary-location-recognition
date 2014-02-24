@@ -32,8 +32,6 @@ KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 
 	m_numDatapoints = m_dataset.rows;
 
-	m_dataset.setEvictionPolicyActive(false);
-
 	// Initially all transactions belong to any cluster
 	m_belongsTo.clear();
 	m_belongsTo.resize(m_dataset.rows, numClusters);

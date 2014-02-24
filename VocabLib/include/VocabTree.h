@@ -715,6 +715,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 	printf(
 			"[VocabTree::computeClustering] (level %d): Running k-means (%d features)\n",
 			level, indices_length);
+	fflush(stdout);
 #endif
 
 	std::vector<int> centers_idx(m_branching);

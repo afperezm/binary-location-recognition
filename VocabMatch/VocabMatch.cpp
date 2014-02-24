@@ -114,6 +114,7 @@ int main(int argc, char **argv) {
 	printf("   Vocabulary loaded in [%lf] ms, got [%lu] words \n", mytime,
 			db->getNumOfWords());
 
+	// Load nearest neighbor index when scoring using an AKMaj vocabulary
 	if (in_type.compare("HKM") != 0 && in_type.compare("HKMAJ") != 0) {
 
 		printf("-- Loading nearest neighbors index from [%s]\n",
@@ -252,9 +253,10 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 		for (int j = 0; j < top; ++j) {
-			std::string d_base = db_desc_list[perm.at<int>(0, j)];
-			fprintf(f_ranked_list, "%s\n",
-					d_base.substr(0, d_base.size() - 8).substr(3).c_str());
+			// Get base filename: remove extension and folder path
+			std::string d_base = FunctionUtils::basify(
+					db_desc_list[perm.at<int>(0, j)]);
+			fprintf(f_ranked_list, "%s\n", d_base.c_str());
 		}
 		fclose(f_ranked_list);
 

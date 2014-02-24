@@ -20,7 +20,7 @@
 #include <opencv2/features2d/features2d.hpp>
 
 #ifndef MAX_CACHE_SIZE
-#define MAX_CACHE_SIZE 1073700000 // ~1 GB
+#define MAX_CACHE_SIZE 524288000 // ~500 MB
 #endif
 
 // Pair holding image index (first) and (inclusive) starting descriptors index (second)
@@ -41,17 +41,14 @@ private:
 
 	double m_capacity = 0.0;
 	int m_descriptorType = -1;
+	size_t m_elemSize = 0;
 	std::vector<Image> m_imagesIndex, m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
 
 	/** Attributes of the cache **/
 	size_t m_memoryCount = 0;
-	cv::Mat m_cachedMat;
-	int m_cachedMatStartIdx;
 	std::stack<int> m_cachingOrder;
-	std::map<int, cv::Mat> m_descriptorsCache;
-
-	bool m_evictionPolicyActive = true;
+	std::map<int, cv::Mat>* m_descriptorsCache;
 
 public:
 
@@ -108,6 +105,8 @@ public:
 	 */
 	int type() const;
 
+	size_t elemSize() const;
+
 	/**
 	 * Returns true if the matrix is empty.
 	 *
@@ -161,14 +160,6 @@ public:
 		return m_memoryCount;
 	}
 
-	bool isEvictionPolicyActive() const {
-		return m_evictionPolicyActive;
-	}
-
-	void setEvictionPolicyActive(bool evictionPolicyActive = true) {
-		m_evictionPolicyActive = evictionPolicyActive;
-	}
-
 private:
 
 	/**
@@ -177,10 +168,8 @@ private:
 	 * @param descriptors - a reference to a matrix containing descriptors
 	 * @return number of bytes used
 	 */
-	static size_t computeUsedMemory(cv::Mat& descriptors) {
-		CV_Assert(descriptors.rows >= 0);
-		CV_Assert(descriptors.cols >= 0);
-		return descriptors.rows * descriptors.cols * descriptors.elemSize();
+	size_t rowMemorySize() {
+		return cols * m_elemSize;
 	}
 
 };

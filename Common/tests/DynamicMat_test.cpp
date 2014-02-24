@@ -154,10 +154,9 @@ TEST(DynamicMat, Stress) {
 	std::vector<std::string> descriptorsList;
 	FileUtils::loadList("list.txt", descriptorsList);
 	vlr::Mat data(descriptorsList);
-	cv::Mat row = cv::Mat();
 
 	for (int i = 0; i < data.rows; ++i) {
-		row = data.row(i);
+		data.row(i);
 		ASSERT_TRUE(data.getMemoryCount() <= data.MAX_MEM);
 	}
 
