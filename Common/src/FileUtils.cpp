@@ -537,9 +537,9 @@ void FileUtils::loadDescriptorsRow(const std::string& filename,
 	is.seekg(row * featureVectorSize, is.cur);
 
 	// Allocate memory to contain the data bytes
-	descriptors.release();
-	descriptors = cv::Mat();
-	descriptors.create(1, cols, type);
+//	descriptors.release();
+//	descriptors = cv::Mat();
+//	descriptors.create(1, cols, type);
 
 	// Read data bytes
 	is.read((char*) descriptors.data, featureVectorSize);

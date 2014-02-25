@@ -37,13 +37,18 @@ private:
 	double m_capacity = 0.0;
 	int m_descriptorType = -1;
 	size_t m_elemSize = 0;
-	std::vector<int> m_imagesIndex, m_descriptorsIndex;
+	// key=descIdx value=imgIdx
+	std::vector<int> m_imagesIndex;
+	// key=imgIdx value=startDescIdx
+	std::vector<int> m_descriptorsIndex;
 	std::vector<std::string> m_descriptorsFilenames;
 
 	/** Attributes of the cache **/
 	size_t m_memoryCount = 0;
-	std::stack<int> m_cachingOrder;
-	std::map<int, cv::Mat>* m_descriptorsCache;
+	std::stack<int>* m_cachingOrder;
+	// key=descIdx value=cacheIdx
+	std::vector<int>* m_cacheIndex;
+	cv::Mat* m_cache;
 
 public:
 

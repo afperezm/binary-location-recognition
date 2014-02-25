@@ -15,7 +15,8 @@ namespace vlr {
 Mat::Mat() :
 		m_capacity(0.0), m_descriptorType(-1), m_elemSize(0), m_imagesIndex(
 				DEFAULT_INDICES), m_descriptorsFilenames(DEFAULT_FILENAMES), m_memoryCount(
-				0), m_descriptorsCache(NULL), rows(0), cols(0) {
+				0), m_cachingOrder(NULL), m_cacheIndex(NULL), m_cache(NULL), rows(
+				0), cols(0) {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing empty\n");
 #endif
@@ -32,8 +33,9 @@ Mat::Mat(const Mat& other) {
 	m_capacity = other.getCapacity();
 	m_imagesIndex = other.getDescriptorsIndex();
 	m_descriptorsFilenames = other.getDescriptorsFilenames();
-	m_descriptorsCache = new std::map<int, cv::Mat>();
-	m_cachingOrder = std::stack<int>();
+	m_cachingOrder = new std::stack<int>();
+	m_cacheIndex = new std::vector<int>();
+	m_cache = new cv::Mat(0, cols, m_descriptorType);
 	m_memoryCount = other.m_memoryCount;
 	m_elemSize = other.elemSize();
 	m_descriptorType = other.type();
@@ -121,7 +123,9 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 
 	m_capacity = floor(double(MAX_MEM / (cols * descElemSize)));
 
-	m_descriptorsCache = new std::map<int, cv::Mat>();
+	m_cachingOrder = new std::stack<int>();
+	m_cacheIndex = new std::vector<int>(rows, -1);
+	m_cache = new cv::Mat(0, cols, m_descriptorType);
 }
 
 // --------------------------------------------------------------------------
@@ -130,7 +134,9 @@ Mat::~Mat() {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Destroying\n");
 #endif
-	delete m_descriptorsCache;
+	delete m_cachingOrder;
+	delete m_cacheIndex;
+	delete m_cache;
 }
 
 // --------------------------------------------------------------------------
@@ -144,8 +150,9 @@ Mat& Mat::operator=(const Mat& other) {
 	m_capacity = other.getCapacity();
 	m_imagesIndex = other.getDescriptorsIndex();
 	m_descriptorsFilenames = other.getDescriptorsFilenames();
-	m_descriptorsCache = new std::map<int, cv::Mat>();
-	m_cachingOrder = std::stack<int>();
+	m_cachingOrder = new std::stack<int>();
+	m_cacheIndex = new std::vector<int>();
+	m_cache = new cv::Mat(0, cols, m_descriptorType);
 	m_memoryCount = other.m_memoryCount;
 	m_elemSize = other.elemSize();
 	m_descriptorType = other.type();
@@ -163,18 +170,20 @@ cv::Mat Mat::row(int descriptorIdx) {
 	printf("[DynamicMat] Obtaining descriptor [%d]\n", descriptorIdx);
 #endif
 
-	if (descriptorIdx < 0 || descriptorIdx > int(m_imagesIndex.size())) {
+	if (descriptorIdx < 0 || descriptorIdx > rows) {
 		std::stringstream ss;
 		ss << "[DynamicMat] Error while obtaining descriptor,"
 				" the index should be in the range"
-				" [0, " << m_imagesIndex.size() << ")";
+				" [0, " << rows << ")";
 		throw std::out_of_range(ss.str());
 	}
 
-	std::map<int, cv::Mat>::iterator it = m_descriptorsCache->find(
-			descriptorIdx);
+	std::vector<int>::iterator it = m_cacheIndex->begin() + descriptorIdx;
 
-	if (it == m_descriptorsCache->end()) {
+	// Iterator is invalid if cache index doesn't contain descriptor index
+	CV_Assert(it != m_cacheIndex->end());
+
+	if (*it == -1) {
 
 #if DYNMATVERBOSE
 		printf("   NOT loaded in cache.\n");
@@ -193,15 +202,16 @@ cv::Mat Mat::row(int descriptorIdx) {
 
 			/* Remove last added descriptor from the cache */
 			// Obtain an iterator to it
-			it = m_descriptorsCache->find(m_cachingOrder.top());
+			it = m_cacheIndex->begin() + m_cachingOrder->top();
 			// Check the iterator is valid
-			CV_Assert(it != m_descriptorsCache->end());
+			CV_Assert(it != m_cacheIndex->end());
 			// Decrease memory counter
 			m_memoryCount -= rowMemorySize();
 			// Remove element from cache
-			m_descriptorsCache->erase(it);
+			m_cacheIndex->at(*it) = -1;
+			m_cache->pop_back();
 			// Pop its index from the stack
-			m_cachingOrder.pop();
+			m_cachingOrder->pop();
 		}
 
 		/* Add descriptor to the cache */
@@ -211,20 +221,25 @@ cv::Mat Mat::row(int descriptorIdx) {
 		// Increase memory counter
 		m_memoryCount += rowMemorySize();
 		// Insert a new element
-		it = m_descriptorsCache->insert(
-				std::make_pair(descriptorIdx, cv::Mat(1, cols, type()))).first;
+		m_cacheIndex->at(descriptorIdx) = m_cache->rows;
+		m_cache->push_back(cv::Mat(1, cols, type()));
+		it = m_cacheIndex->begin() + descriptorIdx;
+		// Check the iterator is valid
+		CV_Assert(it != m_cacheIndex->end());
+		// Load descriptor
+		cv::Mat row = m_cache->row(*it);
 		FileUtils::loadDescriptorsRow(
-				m_descriptorsFilenames[m_imagesIndex[descriptorIdx]],
-				it->second, relIdx);
+				m_descriptorsFilenames[m_imagesIndex[descriptorIdx]], row,
+				relIdx);
 		// Push its index to the stack
-		m_cachingOrder.push(descriptorIdx);
+		m_cachingOrder->push(descriptorIdx);
 	} else {
 #if DYNMATVERBOSE
 		printf("   Loaded in cache.\n");
 #endif
 	}
 
-	return it->second;
+	return m_cache->row(*it);
 }
 
 // --------------------------------------------------------------------------
@@ -246,9 +261,14 @@ bool Mat::empty() const {
 }
 
 void Mat::clearCache() {
-	m_descriptorsCache->clear();
-	m_cachingOrder = std::stack<int>();
 	m_memoryCount = 0;
+	while (m_cachingOrder->empty() == false) {
+		m_cachingOrder->pop();
+	}
+//	while (m_cache->empty() == false) {
+//		m_cache->pop_back();
+//	}
+	m_cache->release();
 }
 
 } /* namespace vlr */
