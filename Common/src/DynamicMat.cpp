@@ -15,8 +15,8 @@ namespace vlr {
 Mat::Mat() :
 		m_capacity(0.0), m_descriptorType(-1), m_elemSize(0), m_imagesIndex(
 				DEFAULT_INDICES), m_descriptorsFilenames(DEFAULT_FILENAMES), m_memoryCount(
-				0), m_cachingOrder(NULL), m_cacheIndex(NULL), m_cache(NULL), rows(
-				0), cols(0) {
+				0), m_cachedMat(cv::Mat()), m_cachedMatStartIdx(-1), m_cachingOrder(
+				NULL), m_cacheIndex(NULL), m_cache(NULL), rows(0), cols(0) {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing empty\n");
 #endif
@@ -33,6 +33,8 @@ Mat::Mat(const Mat& other) {
 	m_capacity = other.getCapacity();
 	m_imagesIndex = other.getDescriptorsIndex();
 	m_descriptorsFilenames = other.getDescriptorsFilenames();
+	m_cachedMat = cv::Mat();
+	m_cachedMatStartIdx = -1;
 	m_cachingOrder = new std::stack<int>();
 	m_cacheIndex = new std::vector<int>();
 	m_cache = new cv::Mat(0, cols, m_descriptorType);
@@ -46,7 +48,7 @@ Mat::Mat(const Mat& other) {
 // --------------------------------------------------------------------------
 
 Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
-		m_descriptorsFilenames(descriptorsFilenames) {
+		m_descriptorsFilenames(descriptorsFilenames), m_cachedMatStartIdx(-1) {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing using filenames\n");
@@ -150,6 +152,7 @@ Mat& Mat::operator=(const Mat& other) {
 	m_capacity = other.getCapacity();
 	m_imagesIndex = other.getDescriptorsIndex();
 	m_descriptorsFilenames = other.getDescriptorsFilenames();
+	m_cachedMat = cv::Mat();
 	m_cachingOrder = new std::stack<int>();
 	m_cacheIndex = new std::vector<int>();
 	m_cache = new cv::Mat(0, cols, m_descriptorType);
@@ -189,9 +192,29 @@ cv::Mat Mat::row(int descriptorIdx) {
 		printf("   NOT loaded in cache.\n");
 #endif
 
+		// Initialize descriptor
+		// cv::Mat descriptor = cv::Mat();
+
+		// Load corresponding descriptors matrix if it isn't loaded
+		if (m_cachedMatStartIdx == -1 || descriptorIdx < m_cachedMatStartIdx
+				|| descriptorIdx >= m_cachedMatStartIdx + m_cachedMat.rows) {
+			m_cachedMat.release();
+			FileUtils::loadDescriptors(
+					m_descriptorsFilenames[m_imagesIndex[descriptorIdx]],
+					m_cachedMat);
+			m_cachedMatStartIdx =
+					m_descriptorsIndex[m_imagesIndex[descriptorIdx]];
+		}
+
 		// Compute descriptor index relative to the descriptors matrix it belongs to
 		int relIdx = descriptorIdx
 				- m_descriptorsIndex[m_imagesIndex[descriptorIdx]];
+
+		// Check relative descriptor index to be in range
+		CV_Assert(relIdx >= 0 || relIdx < m_cachedMat.rows);
+
+		// Obtain a reference to the descriptor
+		// descriptor = m_cachedMat.row(relIdx);
 
 		// Check whether cache is full
 		if (m_memoryCount != 0 && m_memoryCount + rowMemorySize() > MAX_MEM) {
@@ -227,10 +250,9 @@ cv::Mat Mat::row(int descriptorIdx) {
 		// Check the iterator is valid
 		CV_Assert(it != m_cacheIndex->end());
 		// Load descriptor
-		cv::Mat row = m_cache->row(*it);
-		FileUtils::loadDescriptorsRow(
-				m_descriptorsFilenames[m_imagesIndex[descriptorIdx]], row,
-				relIdx);
+		m_cachedMat.row(relIdx).copyTo(m_cache->row(*it));
+//		cv::Mat row = m_cache->row(*it);
+//		FileUtils::loadDescriptorsRow(m_descriptorsFilenames[m_imagesIndex[descriptorIdx]], row, relIdx);
 		// Push its index to the stack
 		m_cachingOrder->push(descriptorIdx);
 	} else {

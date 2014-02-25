@@ -45,6 +45,8 @@ private:
 
 	/** Attributes of the cache **/
 	size_t m_memoryCount = 0;
+	cv::Mat m_cachedMat;
+	int m_cachedMatStartIdx;
 	std::stack<int>* m_cachingOrder;
 	// key=descIdx value=cacheIdx
 	std::vector<int>* m_cacheIndex;
