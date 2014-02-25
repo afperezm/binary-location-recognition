@@ -2,6 +2,6 @@ DynamicMat_test
 HtmlResultsWriter_test
 IODescriptors_test
 /db
-/list.txt
+/*.txt
 /brief_0.bin
 /sift_0.bin
