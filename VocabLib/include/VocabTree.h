@@ -476,6 +476,11 @@ void VocabTree<TDescriptor, Distance>::save(const std::string& filename) const {
 						+ " for writing");
 	}
 
+	std::string vocabType =
+			typeid(TDescriptor) == typeid(float) ? "HKM" :
+			typeid(TDescriptor) == typeid(uchar) ? "HKMAJ" : "UNKNOWN";
+
+	fs << "type" << vocabType;
 	fs << "iterations" << m_iterations;
 	fs << "branching" << m_branching;
 	fs << "depth" << m_depth;

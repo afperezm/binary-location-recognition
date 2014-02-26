@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 		norm = vlr::NORM_L2;
 	}
 
-	vlr::DistanceType distance = vlr::COS;
+	vlr::ScoringType distance = vlr::COS;
 
 	if (in_scoring.compare("L1") == 0) {
 		distance = vlr::L1;
@@ -184,6 +184,7 @@ int main(int argc, char **argv) {
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
 
+//	db->getInvertedIndex()->m_numDbImages;
 	// Compute the number of candidates
 	int top =
 			in_num_nbrs >= 0 && (size_t) in_num_nbrs > db_desc_list.size() ?

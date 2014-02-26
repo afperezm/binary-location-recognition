@@ -264,6 +264,7 @@ void KMajority::save(const std::string& filename) const {
 				"Unable to open file [" + filename + "] for writing");
 	}
 
+	fs << "type" << "AKMAJ";
 	fs << "Centers" << m_centroids;
 
 	fs.release();

@@ -22,7 +22,7 @@ enum NormType {
 	NORM_L1, NORM_L2
 };
 
-enum DistanceType {
+enum ScoringType {
 	L1, L2, COS
 };
 
@@ -136,7 +136,7 @@ public:
 	 * @note DB BoF vectors must be normalized beforehand
 	 */
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-			vlr::NormType norm, vlr::DistanceType distance) const;
+			vlr::NormType norm, vlr::ScoringType distance) const;
 
 	/**
 	 * Transforms a set of data (representing a single image) into a BoF vector.
@@ -222,14 +222,14 @@ class AKMajDB: public VocabDB {
 
 protected:
 
-	cv::Ptr<KMajority> bofModel;
+	cv::Ptr<KMajority> m_bofModel;
 	cvflann::NNIndex<cvflann::Hamming<uchar> >* m_nnIndex = NULL;
 
 public:
 
 	AKMajDB() :
-			bofModel(NULL), m_nnIndex(NULL) {
-		bofModel = new KMajority();
+			m_bofModel(NULL), m_nnIndex(NULL) {
+		m_bofModel = new KMajority();
 	}
 
 	~AKMajDB() {

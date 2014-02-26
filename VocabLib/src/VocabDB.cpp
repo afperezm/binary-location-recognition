@@ -185,7 +185,7 @@ void VocabDB::clearDatabase() {
 // --------------------------------------------------------------------------
 
 void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-		vlr::NormType norm, vlr::DistanceType distance) const {
+		vlr::NormType norm, vlr::ScoringType distance) const {
 
 	int m_veclen = getFeaturesLength();
 
@@ -441,24 +441,24 @@ void HKMDB::loadDirectIndex(const std::string& filename) {
 // --------------------------------------------------------------------------
 
 int AKMajDB::getFeaturesLength() const {
-	return bofModel->getCentroids().cols;
+	return m_bofModel->getCentroids().cols;
 }
 
 // --------------------------------------------------------------------------
 
 void AKMajDB::loadBoFModel(const std::string& filename) {
-	bofModel->load(filename);
+	m_bofModel->load(filename);
 	m_nnIndex = vlr::createIndexByType(
-			cvflann::Matrix<uchar>((uchar*) bofModel->getCentroids().data,
-					bofModel->getCentroids().rows,
-					bofModel->getCentroids().cols),
+			cvflann::Matrix<uchar>((uchar*) m_bofModel->getCentroids().data,
+					m_bofModel->getCentroids().rows,
+					m_bofModel->getCentroids().cols),
 			vlr::indexType::HIERARCHICAL);
 }
 
 // --------------------------------------------------------------------------
 
 size_t AKMajDB::getNumOfWords() const {
-	return bofModel->size();
+	return m_bofModel->size();
 }
 
 // --------------------------------------------------------------------------
