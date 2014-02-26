@@ -24,15 +24,10 @@ double mytime;
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 8) {
-		printf("\nUsage:\n\tVocabBuildDB <in.db.descriptors.list> "
-				"<in.vocab> <in.vocab.type> <out.inverted.index>"
-				" [in.weighting:TFIDF] [in.norm:L1] [out.nn.index]\n\n"
-				"Vocabulary type:\n"
-				"\tHKM: Hierarchical K-Means\n"
-				"\tHKMAJ: Hierarchical K-Majority\n"
-				"\tAKMAJ: Approximate K-Majority\n"
-				"\tAKM: Approximate K-Means (Not yet supported)\n\n"
+	if (argc < 4 || argc > 7) {
+		printf("\nUsage:\n\tVocabBuildDB <in.db.images.list> "
+				"<in.vocab> <out.inverted.index>"
+				" [in.weighting:TFIDF] [in.norm:L2] [out.nn.index]\n\n"
 				"Weighting:\n"
 				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
 				"\tTF: Term Frequency\n"
@@ -45,22 +40,21 @@ int main(int argc, char **argv) {
 
 	std::string in_list = argv[1];
 	std::string in_vocab = argv[2];
-	std::string in_vocab_type = argv[3];
-	std::string out_inv_index = argv[4];
+	std::string out_inv_index = argv[3];
 	std::string in_weighting = "TFIDF";
 	std::string in_norm = "L1";
-	std::string out_nn_index;
+	std::string out_nn_index = "nn_index.bin";
+
+	if (argc >= 5) {
+		in_weighting = argv[4];
+	}
 
 	if (argc >= 6) {
-		in_weighting = argv[5];
+		in_norm = argv[5];
 	}
 
 	if (argc >= 7) {
-		in_norm = argv[6];
-	}
-
-	if (argc >= 8) {
-		out_nn_index = argv[7];
+		out_nn_index = argv[6];
 	}
 
 	boost::regex expression("^(.+)(\\.)(yaml|xml)(\\.)(gz)$");
@@ -87,15 +81,20 @@ int main(int argc, char **argv) {
 
 	cv::Ptr<vlr::VocabDB> db;
 
+	std::string in_vocab_type = vlr::VocabBase::loadVocabType(in_vocab);
+
 	if (in_vocab_type.compare("HKM") == 0) {
 		// HKM
 		db = new vlr::HKMDB(false);
 	} else if (in_vocab_type.compare("HKMAJ") == 0) {
 		// HKMaj
 		db = new vlr::HKMDB(true);
-	} else {
+	} else if (in_vocab_type.compare("AKMAJ") == 0) {
 		// AKMaj
 		db = new vlr::AKMajDB();
+	} else {
+		fprintf(stderr, "Vocabulary type [%s] is not valid\n", in_vocab_type);
+		return EXIT_FAILURE;
 	}
 
 	printf("-- Reading vocabulary from [%s]\n", in_vocab.c_str());
@@ -195,10 +194,10 @@ int main(int argc, char **argv) {
 	printf("-- Applying words weights to the database BoF vectors counts\n");
 	db->createDatabase();
 
-	vlr::NormType norm = vlr::NORM_L1;
+	vlr::NormType norm = vlr::NORM_L2;
 
-	if (in_norm.compare("L2") == 0) {
-		norm = vlr::NORM_L2;
+	if (in_norm.compare("L1") == 0) {
+		norm = vlr::NORM_L1;
 	}
 
 	printf("-- Normalizing database BoF vectors using [%s-norm]\n",

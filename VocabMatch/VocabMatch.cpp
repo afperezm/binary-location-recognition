@@ -39,17 +39,12 @@ int filterFeaturesByRegion(FileUtils::Query& query, cv::Mat& descriptors);
 
 int main(int argc, char **argv) {
 
-	if (argc < 8 || argc > 12) {
+	if (argc < 6 || argc > 12) {
 		printf(
 				"\nUsage:\n\t"
-						"VocabMatch <in.vocab> <in.vocab.type> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
-						" <out.ranked.files.folder> <in.num.neighbors> [in.norm:L2] [in.scoring:COS] [out.results:results.html]"
+						"VocabMatch <in.vocab> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
+						" <out.ranked.files.folder> [in.num.neighbors:ALL] [in.norm:L2] [in.scoring:COS] [out.results:results.html]"
 						" [in.use.regions:0] [in.nn.index]\n\n"
-						"Vocabulary type:\n\n"
-						"\tHKM: Hierarchical K-Means\n"
-						"\tAKM: Approximate K-Means (Not yet supported)\n"
-						"\tHKMAJ: Hierarchical K-Majority\n"
-						"\tAKMAJ: Approximate K-Majority\n\n"
 						"Norm:\n"
 						"\tL1: L1-norm\n"
 						"\tL2: L2-norm\n\n"
@@ -61,36 +56,39 @@ int main(int argc, char **argv) {
 	}
 
 	std::string in_vocab = argv[1];
-	std::string in_type = argv[2];
-	std::string in_inverted_index = argv[3];
-	std::string in_db_desc_list = argv[4];
-	std::string in_queries_desc_list = argv[5];
-	std::string out_ranked_files_folder = argv[6];
-	int in_num_nbrs = atoi(argv[7]);
+	std::string in_inverted_index = argv[2];
+	std::string in_db_desc_list = argv[3];
+	std::string in_queries_desc_list = argv[4];
+	std::string out_ranked_files_folder = argv[5];
+	int in_num_nbrs = -1;
 	std::string in_norm = "L2";
 	std::string in_scoring = "COS";
 	std::string out_html = "results.html";
 	bool in_use_regions = false;
-	std::string in_nn_index;
+	std::string in_nn_index = "nn_index.bin";
+
+	if (argc >= 7) {
+		in_num_nbrs = atoi(argv[6]);
+	}
+
+	if (argc >= 8) {
+		in_norm = argv[7];
+	}
 
 	if (argc >= 9) {
-		in_norm = argv[8];
+		in_scoring = argv[8];
 	}
 
 	if (argc >= 10) {
-		in_scoring = argv[9];
+		out_html = argv[9];
 	}
 
 	if (argc >= 11) {
-		out_html = argv[10];
+		in_use_regions = atoi(argv[10]);
 	}
 
 	if (argc >= 12) {
-		in_use_regions = atoi(argv[11]);
-	}
-
-	if (argc >= 13) {
-		in_nn_index = argv[12];
+		in_nn_index = argv[11];
 	}
 
 	// Checking that database filename refers to a compressed YAML or XML file
@@ -102,6 +100,8 @@ int main(int argc, char **argv) {
 
 	// Step 1/4: load vocabulary + inverted index
 	cv::Ptr<vlr::VocabDB> db;
+
+	std::string in_type = vlr::VocabBase::loadVocabType(in_vocab);
 
 	if (in_type.compare("HKM") == 0) {
 		// Instantiate a DB supported by a HKM vocabulary
@@ -174,8 +174,8 @@ int main(int argc, char **argv) {
 	}
 
 	printf(
-			"-- Scoring [%lu] query images against [%lu] database images using [%s-norm] and [%s distance]\n",
-			query_filenames.size(), db_desc_list.size(),
+			"-- Scoring [%lu] query images against [%d] database images using [%s-norm] and [%s distance]\n",
+			query_filenames.size(), db->getInvertedIndex()->m_numDbImages,
 			norm == vlr::NORM_L1 ? "L1" :
 			norm == vlr::NORM_L2 ? "L2" : "Unknown",
 			distance == vlr::L1 ? "L1" : distance == vlr::L2 ? "L2" :
@@ -184,11 +184,10 @@ int main(int argc, char **argv) {
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
 
-//	db->getInvertedIndex()->m_numDbImages;
 	// Compute the number of candidates
 	int top =
-			in_num_nbrs >= 0 && (size_t) in_num_nbrs > db_desc_list.size() ?
-					db_desc_list.size() : in_num_nbrs;
+			in_num_nbrs != -1 ?
+					in_num_nbrs : db->getInvertedIndex()->m_numDbImages;
 
 	HtmlResultsWriter::getInstance().open(out_html, top);
 
@@ -207,18 +206,6 @@ int main(int argc, char **argv) {
 
 			printf("   Filtered out [%d] features\n", numFilteredFeatures);
 
-//		cv::Mat queryImg = cv::imread("oxbuild_images/" + queryBase + ".jpg",
-//				CV_LOAD_IMAGE_GRAYSCALE);
-//
-//		cv::Mat imgOut = cv::Mat();
-//		cv::drawKeypoints(queryImg, imgKeypoints, imgOut,
-//				cv::Scalar(255, 255, 0), cv::DrawMatchesFlags::DEFAULT);
-//		cv::namedWindow("oxbuild_images/" + queryBase + ".jpg",
-//				cv::WINDOW_NORMAL);
-//		cv::resizeWindow("oxbuild_images/" + queryBase + ".jpg", 500, 500);
-//		cv::imshow("oxbuild_images/" + queryBase + ".jpg", imgOut);
-//		cv::waitKey(0);
-
 		}
 
 		if (imgDescriptors.empty() == true) {
@@ -226,14 +213,14 @@ int main(int argc, char **argv) {
 		}
 
 		// Check type of descriptors
-		// TODO Automatically identify if database uses a BoF model for binary or non-binary data
-//		if ((imgDescriptors.type() == CV_8U) != is_binary) {
-//			fprintf(stderr,
-//					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
-//					is_binary == true ? "binary" : "non-binary",
-//					imgDescriptors.type() == CV_8U ? "binary" : "real");
-//			return EXIT_FAILURE;
-//		}
+		bool is_binary = in_type.compare("HKM") != 0;
+		if ((imgDescriptors.type() == CV_8U) != is_binary) {
+			fprintf(stderr,
+					"Descriptor type doesn't coincide, it is said to be [%s] while it is [%s]\n",
+					is_binary == true ? "binary" : "non-binary",
+					imgDescriptors.type() == CV_8U ? "binary" : "real");
+			return EXIT_FAILURE;
+		}
 
 		// Score query BoF vector against database images BoF vectors
 		mytime = cv::getTickCount();
@@ -266,8 +253,9 @@ int main(int argc, char **argv) {
 		ranked_list_fname << out_ranked_files_folder << "/query_" << i
 				<< "_ranked.txt";
 
-		FILE *f_ranked_list = fopen(ranked_list_fname.str().c_str(), "w");
-		if (f_ranked_list == NULL) {
+		std::ofstream f_ranked_list(ranked_list_fname.str().c_str(),
+				std::fstream::out);
+		if (f_ranked_list.good() == false) {
 			fprintf(stderr, "Error opening file [%s] for writing\n",
 					ranked_list_fname.str().c_str());
 			return EXIT_FAILURE;
@@ -276,9 +264,9 @@ int main(int argc, char **argv) {
 			// Get base filename: remove extension and folder path
 			std::string d_base = FunctionUtils::basify(
 					db_desc_list[perm.at<int>(0, j)]);
-			fprintf(f_ranked_list, "%s\n", d_base.c_str());
+			f_ranked_list << d_base + "\n";
 		}
-		fclose(f_ranked_list);
+		f_ranked_list.close();
 
 		// Print to a file the ranked list of candidates ordered by score in HTML format
 		HtmlResultsWriter::getInstance().writeRow(query_filenames[i].name,
