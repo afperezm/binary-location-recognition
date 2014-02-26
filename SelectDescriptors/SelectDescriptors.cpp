@@ -27,8 +27,7 @@ int main(int argc, char **argv) {
 	if (argc != 4) {
 		printf(
 				"\nUsage:\n"
-						"\tSelectDescriptors <in.descriptors.folder> <in.percentage> <out.sampled.descriptors.folder>\n\n",
-				argv[0]);
+						"\tSelectDescriptors <in.descriptors.folder> <in.percentage> <out.sampled.descriptors.folder>\n\n");
 		return EXIT_FAILURE;
 	}
 

@@ -1,14 +1,16 @@
 # Top-level Makefile
 
-all: default
+all: libs programs
 
-default:
+libs:
 # Make libraries
 	cd OpenCVExtensions; $(MAKE)
 	cd Common; $(MAKE)
 	cd KMajorityLib; $(MAKE)
 	cd VocabLib; $(MAKE)
-# Make program
+	
+programs:
+# Make programs
 	cd FeatureExtract; $(MAKE)
 	cd FeatureSelect; $(MAKE)
 	cd SelectDescriptors; $(MAKE)
@@ -18,12 +20,16 @@ default:
 	cd GeomVerify; $(MAKE)
 	cd ComputeMAP; $(MAKE)
 
-clean:
+clean: clean-libs clean-programs
+
+clean-libs:
 # Clean libraries
 	cd OpenCVExtensions; $(MAKE) clean
 	cd Common; $(MAKE) clean
 	cd KMajorityLib; $(MAKE) clean
 	cd VocabLib; $(MAKE) clean
+
+clean-programs:
 # Clean program
 	cd FeatureExtract; $(MAKE) clean
 	cd FeatureSelect; $(MAKE) clean

@@ -65,9 +65,9 @@ TEST(HierarchicalKMeans, TestDatabase) {
 
 	db->createDatabase();
 
-	db->normalizeDatabase(cv::NORM_L1);
+	db->normalizeDatabase(vlr::NORM_L1);
 
-	// Asserting DB BoW vectors values are in the range [0,1]
+	// Asserting DB BoF vectors values are in the range [0,1]
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
 		db->getDatabaseBoFVector(imgIdx, dbBoFVector);
 		ASSERT_TRUE(dbBoFVector.rows == 1);
@@ -99,7 +99,7 @@ TEST(HierarchicalKMeans, TestDatabase) {
 
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
-		dbLoad->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+		dbLoad->scoreQuery(imgDescriptors, scores, vlr::NORM_L1, vlr::L1);
 
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
@@ -182,9 +182,9 @@ TEST(HierarchicalKMajority, TestDatabase) {
 
 	db->createDatabase();
 
-	db->normalizeDatabase(cv::NORM_L1);
+	db->normalizeDatabase(vlr::NORM_L1);
 
-	// Asserting DB BoW vectors values are in the range [0,1]
+	// Asserting DB BoF vectors values are in the range [0,1]
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
 		db->getDatabaseBoFVector(imgIdx, dbBoFVector);
 		ASSERT_TRUE(dbBoFVector.rows == 1);
@@ -216,7 +216,7 @@ TEST(HierarchicalKMajority, TestDatabase) {
 
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
-		dbLoad->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+		dbLoad->scoreQuery(imgDescriptors, scores, vlr::NORM_L1, vlr::L1);
 
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());
@@ -252,7 +252,8 @@ TEST(ApproximateKMajority, TestDatabase) {
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(1000, 10, data, vlr::HIERARCHICAL);
+	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(1000, 10, data,
+			vlr::HIERARCHICAL);
 
 	tree->build();
 
@@ -298,9 +299,9 @@ TEST(ApproximateKMajority, TestDatabase) {
 
 	db->createDatabase();
 
-	db->normalizeDatabase(cv::NORM_L1);
+	db->normalizeDatabase(vlr::NORM_L1);
 
-	// Asserting DB BoW vectors values are in the range [0,1]
+	// Asserting DB BoF vectors values are in the range [0,1]
 	for (size_t imgIdx = 0; imgIdx < keysFilenames.size(); ++imgIdx) {
 		db->getDatabaseBoFVector(imgIdx, dbBoFVector);
 		ASSERT_TRUE(dbBoFVector.rows == 1);
@@ -335,7 +336,7 @@ TEST(ApproximateKMajority, TestDatabase) {
 
 		imgDescriptors = cv::Mat();
 		FileUtils::loadDescriptors(keyFileName, imgDescriptors);
-		dbLoad->scoreQuery(imgDescriptors, scores, cv::NORM_L1);
+		dbLoad->scoreQuery(imgDescriptors, scores, vlr::NORM_L1, vlr::L1);
 
 		// Check that scores has the right type
 		EXPECT_TRUE(cv::DataType<float>::type == scores.type());

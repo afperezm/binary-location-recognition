@@ -14,6 +14,18 @@
 
 namespace vlr {
 
+enum WeightingType {
+	TF_IDF, TF, BINARY
+};
+
+enum NormType {
+	NORM_L1, NORM_L2
+};
+
+enum DistanceType {
+	L1, L2, COS
+};
+
 class VocabDB {
 
 protected:
@@ -102,9 +114,9 @@ public:
 	 * Normalizes the DB BoF vectors by dividing the weighted counts
 	 * stored in the inverted files.
 	 *
-	 * @param normType
+	 * @param norm - Method used to normalize BoF vectors
 	 */
-	void normalizeDatabase(int normType = cv::NORM_L1);
+	void normalizeDatabase(vlr::NormType norm);
 
 	/**
 	 * Clears the inverted files from the leaf nodes
@@ -118,22 +130,23 @@ public:
 	 *
 	 * @param queryImgFeatures - Matrix containing the features of the query image
 	 * @param scores - Row matrix of size [1 x n] where n is the number DB images
-	 * @param normType - normalization method used for scoring BoF vectors
+	 * @param norm - Method used to normalize BoF vectors
+	 * @param distance - Distance used to compare BoF vectors
 	 *
 	 * @note DB BoF vectors must be normalized beforehand
 	 */
 	void scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-			const int normType = cv::NORM_L2) const;
+			vlr::NormType norm, vlr::DistanceType distance) const;
 
 	/**
 	 * Transforms a set of data (representing a single image) into a BoF vector.
 	 *
 	 * @param featuresVector - Matrix of data to quantize
 	 * @param bofVector - BoF vector of weighted words
-	 * @param normType - Norm used to normalize the output query BoF vector
+	 * @param norm - Method used to normalize BoF vectors
 	 */
 	void transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
-			const int normType) const;
+			vlr::NormType norm) const;
 
 	/**
 	 * Retrieves a DB BoF vector given its index.

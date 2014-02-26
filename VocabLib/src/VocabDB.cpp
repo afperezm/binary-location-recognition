@@ -7,6 +7,8 @@
 
 #include <VocabDB.hpp>
 
+#include <opencv2/imgproc/imgproc.hpp>
+
 namespace vlr {
 
 void VocabDB::saveInvertedIndex(const std::string& filename) const {
@@ -80,6 +82,12 @@ void VocabDB::computeWordsWeights(vlr::WeightingType weighting) {
 				word.m_weight = 0.0;
 			}
 		}
+	} else if (weighting == vlr::BINARY) {
+		// Setting constant weight equal to -1 as a hint
+		// to tell other methods binary weighting is being used
+		for (vlr::Word& word : *m_invertedIndex) {
+			word.m_weight = -1.0;
+		}
 	} else {
 		throw std::runtime_error(
 				"[VocabDB::computeWordsWeights] Unknown weighting type");
@@ -99,7 +107,13 @@ void VocabDB::createDatabase() {
 	for (vlr::Word& word : *m_invertedIndex) {
 		// Apply word weight to the image count
 		for (vlr::ImageCount& image : word.m_imageList) {
-			image.m_count *= word.m_weight;
+			if (word.m_weight == -1) {
+				// Note: since the count is in the inverted index
+				// then it is never zero
+				image.m_count = float(1.0);
+			} else {
+				image.m_count *= word.m_weight;
+			}
 		}
 	}
 
@@ -107,7 +121,7 @@ void VocabDB::createDatabase() {
 
 // --------------------------------------------------------------------------
 
-void VocabDB::normalizeDatabase(int normType) {
+void VocabDB::normalizeDatabase(vlr::NormType normType) {
 
 	if (m_invertedIndex->empty() == true) {
 		throw std::runtime_error("[VocabDB::normalizeDatabase] Error while"
@@ -128,9 +142,9 @@ void VocabDB::normalizeDatabase(int normType) {
 
 			CV_Assert(index < mags.size());
 
-			if (normType == cv::NORM_L1) {
+			if (normType == vlr::NORM_L1) {
 				mags[index] += fabs(dim);
-			} else if (normType == cv::NORM_L2) {
+			} else if (normType == vlr::NORM_L2) {
 				mags[index] += pow(dim, 2);
 			} else {
 				throw std::runtime_error(
@@ -140,7 +154,7 @@ void VocabDB::normalizeDatabase(int normType) {
 	}
 
 	// Applying power over sum result
-	if (normType == cv::NORM_L2) {
+	if (normType == vlr::NORM_L2) {
 		for (size_t i = 0; i < mags.size(); ++i) {
 			mags[i] = sqrt(mags[i]);
 		}
@@ -171,7 +185,7 @@ void VocabDB::clearDatabase() {
 // --------------------------------------------------------------------------
 
 void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
-		const int normType) const {
+		vlr::NormType norm, vlr::DistanceType distance) const {
 
 	int m_veclen = getFeaturesLength();
 
@@ -195,7 +209,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 				" Error while scoring query, vocabulary is empty");
 	}
 
-	if (normType != cv::NORM_L1 && normType != cv::NORM_L2) {
+	if (distance != vlr::L1 && distance != vlr::L2 && distance != vlr::COS) {
 		throw std::runtime_error(
 				"[VocabDB::scoreQuery] Unknown scoring method");
 	}
@@ -204,7 +218,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 			cv::DataType<float>::type);
 
 	cv::Mat queryBoFVector;
-	transform(queryImgFeatures, queryBoFVector, normType);
+	transform(queryImgFeatures, queryBoFVector, norm);
 
 	//	Efficient scoring query BoF vector against all DB BoF vectors
 
@@ -247,11 +261,11 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 				CV_Assert(di >= 0.0);
 			}
 
-			if (normType == cv::NORM_L1) {
+			if (distance == vlr::L1) {
 				scores.at<float>(0,
 						m_invertedIndex->at(wordId).m_imageList[imageId].m_index) +=
 						(float) (fabs(qi - di) - fabs(qi) - fabs(di));
-			} else if (normType == cv::NORM_L2) {
+			} else if (distance == vlr::L2 || distance == vlr::COS) {
 				scores.at<float>(0,
 						m_invertedIndex->at(wordId).m_imageList[imageId].m_index) +=
 						(float) qi * di;
@@ -261,13 +275,20 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 
 	// Completing efficient score implementation
 	for (int i = 0; i < scores.cols; ++i) {
-		if (normType == cv::NORM_L1) {
+		if (distance == vlr::L1) {
 			scores.at<float>(0, i) = (float) (-scores.at<float>(0, i) / 2.0);
-		} else if (normType == cv::NORM_L2) {
-			scores.at<float>(0, i) =
-					(float) (2.0 - 2.0 * scores.at<float>(0, i));
+		} else if (distance == vlr::L2) {
+			if (scores.at<float>(0, i) >= 1) {
+				// To avoid rounding errors
+				scores.at<float>(0, i) = 1.0;
+			} else {
+				// To make it be in the range [0,1]
+				scores.at<float>(0, i) = 1.0
+						- sqrt(1.0 - scores.at<float>(0, i));
+			}
+		} else if (distance == vlr::COS) {
+			// Do nothing since qi and di are already in the range [0,1]
 		}
-		// else, not possible since normType was validated before
 	}
 
 }
@@ -275,7 +296,7 @@ void VocabDB::scoreQuery(const cv::Mat& queryImgFeatures, cv::Mat& scores,
 // --------------------------------------------------------------------------
 
 void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
-		const int normType) const {
+		vlr::NormType norm) const {
 
 	// Initialize query BoF vector
 	bofVector = cv::Mat::zeros(1, m_invertedIndex->size(),
@@ -285,6 +306,8 @@ void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
 	double wordWeight;
 
 	int numInvertedFiles = m_invertedIndex->size();
+
+	bool binaryze = false;
 
 	// Quantize each query image feature vector
 	for (int i = 0; i < featuresVector.rows; ++i) {
@@ -296,11 +319,18 @@ void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
 					"[VocabDB::transform] Feature quantized into a non-existent word");
 		}
 
+		binaryze = binaryze | wordWeight == -1.0;
+
 		bofVector.at<float>(0, wordIdx) += (float) wordWeight;
 	}
 
-	//	Normalizing query BoW vector
-	cv::normalize(bofVector, bofVector, 1, 0, normType);
+	if (binaryze) {
+		cv::threshold(bofVector, bofVector, 0, 1.0, cv::THRESH_BINARY);
+	}
+
+	//	Normalizing query BoF vector
+	cv::normalize(bofVector, bofVector, 1, 0,
+			norm == vlr::NORM_L1 ? cv::NORM_L1 : cv::NORM_L2);
 
 }
 

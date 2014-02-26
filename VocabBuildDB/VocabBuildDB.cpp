@@ -36,10 +36,10 @@ int main(int argc, char **argv) {
 				"Weighting:\n"
 				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
 				"\tTF: Term Frequency\n"
-				"\tBIN: Binary (Not yet supported)\n\n"
+				"\tBIN: Binary\n\n"
 				"Norm:\n"
-				"\tL1: L1 or Manhattan distance\n"
-				"\tL2: L2 or Euclidean distance\t\n\n");
+				"\tL1: L1-norm\n"
+				"\tL2: L2-norm\t\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -178,36 +178,33 @@ int main(int argc, char **argv) {
 
 	// Step 3/4: Compute words weights and normalize DB
 
-	vlr::WeightingType weightingScheme = vlr::TF_IDF;
+	vlr::WeightingType weighting = vlr::TF_IDF;
 
 	if (in_weighting.compare("TF") == 0) {
-		weightingScheme = vlr::TF;
+		weighting = vlr::TF;
+	} else if (in_weighting.compare("BIN") == 0) {
+		weighting = vlr::BINARY;
 	}
 
-//	else if (in_weighting.compare("BIN") == 0) {
-//		weightingScheme = vlr::BINARY;
-//	}
-
 	printf("-- Computing words weights using a [%s] weighting scheme\n",
-			weightingScheme == vlr::TF_IDF ? "TF-IDF" :
-			weightingScheme == vlr::TF ? "TF" :
-			weightingScheme == vlr::BINARY ? "BINARY" : "UNKNOWN");
+			weighting == vlr::TF_IDF ? "TF-IDF" : weighting == vlr::TF ? "TF" :
+			weighting == vlr::BINARY ? "BINARY" : "UNKNOWN");
 
-	db->computeWordsWeights(weightingScheme);
+	db->computeWordsWeights(weighting);
 
 	printf("-- Applying words weights to the database BoF vectors counts\n");
 	db->createDatabase();
 
-	int normType = cv::NORM_L1;
+	vlr::NormType norm = vlr::NORM_L1;
 
 	if (in_norm.compare("L2") == 0) {
-		normType = cv::NORM_L2;
+		norm = vlr::NORM_L2;
 	}
 
-	printf("-- Normalizing database BoF vectors using [%s]\n",
-			normType == cv::NORM_L1 ? "L1-norm" :
-			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
-	db->normalizeDatabase(normType);
+	printf("-- Normalizing database BoF vectors using [%s-norm]\n",
+			norm == vlr::NORM_L1 ? "L1" :
+			norm == vlr::NORM_L2 ? "L2" : "Unknown");
+	db->normalizeDatabase(norm);
 
 	printf("-- Saving inverted index to [%s]\n", out_inv_index.c_str());
 

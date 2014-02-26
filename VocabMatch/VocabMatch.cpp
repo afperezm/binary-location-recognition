@@ -43,16 +43,20 @@ int main(int argc, char **argv) {
 		printf(
 				"\nUsage:\n\t"
 						"VocabMatch <in.vocab> <in.vocab.type> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
-						" <out.ranked.files.folder> <in.num.neighbors> [in.scoring:L1] [out.results:results.html]"
+						" <out.ranked.files.folder> <in.num.neighbors> [in.norm:L2] [in.scoring:COS] [out.results:results.html]"
 						" [in.use.regions:0] [in.nn.index]\n\n"
 						"Vocabulary type:\n\n"
 						"\tHKM: Hierarchical K-Means\n"
+						"\tAKM: Approximate K-Means (Not yet supported)\n"
 						"\tHKMAJ: Hierarchical K-Majority\n"
-						"\tAKMAJ: Approximate K-Majority\n"
-						"\tAKM: Approximate K-Means (Not yet supported)\n\n"
-						"Scoring:\n"
-						"\tL1: L1 or Manhattan distance\t\n"
-						"\tL2: L2 or Euclidean distance\t\n\n");
+						"\tAKMAJ: Approximate K-Majority\n\n"
+						"Norm:\n"
+						"\tL1: L1-norm\n"
+						"\tL2: L2-norm\n\n"
+						"Distance:\n"
+						"\tL1: Manhattan distance or Sum of absolute differences\n"
+						"\tL2: Euclidean distance or Sum of squared differences\n"
+						"\tCOS: Cosine distance or Euclidean dot product\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -63,7 +67,8 @@ int main(int argc, char **argv) {
 	std::string in_queries_desc_list = argv[5];
 	std::string out_ranked_files_folder = argv[6];
 	int in_num_nbrs = atoi(argv[7]);
-	std::string in_norm = "L1";
+	std::string in_norm = "L2";
+	std::string in_scoring = "COS";
 	std::string out_html = "results.html";
 	bool in_use_regions = false;
 	std::string in_nn_index;
@@ -73,15 +78,19 @@ int main(int argc, char **argv) {
 	}
 
 	if (argc >= 10) {
-		out_html = argv[9];
+		in_scoring = argv[9];
 	}
 
 	if (argc >= 11) {
-		in_use_regions = atoi(argv[10]);
+		out_html = argv[10];
 	}
 
 	if (argc >= 12) {
-		in_nn_index = argv[11];
+		in_use_regions = atoi(argv[11]);
+	}
+
+	if (argc >= 13) {
+		in_nn_index = argv[12];
 	}
 
 	// Checking that database filename refers to a compressed YAML or XML file
@@ -150,17 +159,27 @@ int main(int argc, char **argv) {
 	printf("   Loaded, got [%lu] entries\n", query_filenames.size());
 
 	// Step 4/4: score each query
-	int normType = cv::NORM_L1;
+	vlr::NormType norm = vlr::NORM_L1;
 
 	if (in_norm.compare("L2") == 0) {
-		normType = cv::NORM_L2;
+		norm = vlr::NORM_L2;
+	}
+
+	vlr::DistanceType distance = vlr::COS;
+
+	if (in_scoring.compare("L1") == 0) {
+		distance = vlr::L1;
+	} else if (in_scoring.compare("L2") == 0) {
+		distance = vlr::L2;
 	}
 
 	printf(
-			"-- Scoring [%lu] query images against [%lu] database images using [%s]\n",
+			"-- Scoring [%lu] query images against [%lu] database images using [%s-norm] and [%s distance]\n",
 			query_filenames.size(), db_desc_list.size(),
-			normType == cv::NORM_L1 ? "L1-norm" :
-			normType == cv::NORM_L2 ? "L2-norm" : "UNKNOWN-norm");
+			norm == vlr::NORM_L1 ? "L1" :
+			norm == vlr::NORM_L2 ? "L2" : "Unknown",
+			distance == vlr::L1 ? "L1" : distance == vlr::L2 ? "L2" :
+			distance == vlr::COS ? "Cosine" : "Unknown");
 
 	cv::Mat imgDescriptors;
 	cv::Mat scores;
@@ -215,10 +234,10 @@ int main(int argc, char **argv) {
 //			return EXIT_FAILURE;
 //		}
 
-		// Score query bow vector against database images bow vectors
+		// Score query BoF vector against database images BoF vectors
 		mytime = cv::getTickCount();
 		try {
-			db->scoreQuery(imgDescriptors, scores, normType);
+			db->scoreQuery(imgDescriptors, scores, norm, distance);
 		} catch (const std::runtime_error& error) {
 			fprintf(stderr, "%s\n", error.what());
 			return EXIT_FAILURE;
@@ -228,7 +247,7 @@ int main(int argc, char **argv) {
 		imgDescriptors.release();
 
 		// Print to standard output the matching scores between
-		// the query bow vector and the database images bow vectors
+		// the query BoF vector and the database images BoF vectors
 		for (size_t j = 0; (int) j < scores.cols; ++j) {
 			printf(
 					"   Match score between [%lu] query image and [%lu] database image: %f\n",

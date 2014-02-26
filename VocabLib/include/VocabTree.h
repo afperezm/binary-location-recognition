@@ -57,12 +57,6 @@
 
 namespace vlr {
 
-enum WeightingType {
-	TF_IDF, TF, BINARY
-};
-
-// --------------------------------------------------------------------------
-
 struct VocabTreeParams: public cvflann::IndexParams {
 	VocabTreeParams(int branching = 10, int depth = 7, int iterations = 10,
 			cvflann::flann_centers_init_t centers_init =
