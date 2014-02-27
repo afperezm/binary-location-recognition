@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 		// AKMaj
 		db = new vlr::AKMajDB();
 	} else {
-		fprintf(stderr, "Vocabulary type [%s] is not valid\n", in_vocab_type);
+		fprintf(stderr, "Vocabulary type [%s] is not valid\n", in_vocab_type.c_str());
 		return EXIT_FAILURE;
 	}
 

@@ -8,6 +8,8 @@
 #ifndef VOCABBASE_HPP_
 #define VOCABBASE_HPP_
 
+#include <fstream>
+
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 
