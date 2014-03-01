@@ -27,7 +27,19 @@ enum indexType {
 
 cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
-		vlr::indexType type);
+		vlr::indexType type, const cvflann::IndexParams& params);
+
+struct KMajorityParams: public cvflann::IndexParams {
+	KMajorityParams(int numClusters = 1000000, int maxIterations = 10,
+			vlr::indexType nnMethod = vlr::HIERARCHICAL,
+			cvflann::flann_centers_init_t centersInitMethod =
+					cvflann::FLANN_CENTERS_RANDOM) {
+		(*this)["num.clusters"] = numClusters;
+		(*this)["max.iterations"] = maxIterations;
+		(*this)["centers.init.method"] = centersInitMethod;
+		(*this)["nn.method"] = nnMethod;
+	}
+};
 
 class KMajority: public VocabBase {
 
@@ -53,28 +65,26 @@ protected:
 	std::vector<int> m_clusterCounts;
 	// Matrix of clusters centers
 	cv::Mat m_centroids;
+	// Nearest neighbor index type
 	vlr::indexType m_nnMethod;
 	// Index for addressing nearest neighbors search
 	cvflann::NNIndex<Distance>* m_nnIndex = NULL;
+	// Nearest neighbors index parameters
+	cvflann::IndexParams m_nnIndexParams;
 
 public:
 
 	/**
 	 * Class constructor.
 	 *
-	 * @param numClusters
-	 * @param maxIterations
-	 * @param data
-	 * @param indices - The set of indices indicating the data points to cluster
-	 * @param indicesLength
-	 * @param belongsTo
-	 * @param centersInit
+	 * @param inputData - Reference to the matrix with the data to be clustered
+	 * @param params - Parameters to the k-majority algorithm
+	 * @param nnIndexParams - Parameters to the nearest neighbors index
 	 */
-	KMajority(int numClusters = 0, int maxIterations = 0, vlr::Mat& data =
-			vlr::DEFAULT_INPUTDATA, vlr::indexType nnMethod =
-			vlr::indexType::HIERARCHICAL,
-			cvflann::flann_centers_init_t centersInitMethod =
-					cvflann::FLANN_CENTERS_RANDOM);
+	KMajority(vlr::Mat& inputData = vlr::DEFAULT_INPUTDATA,
+			const cvflann::IndexParams& params = KMajorityParams(),
+			const cvflann::IndexParams& nnIndexParams =
+					cvflann::HierarchicalClusteringIndexParams());
 
 	/**
 	 * Class destroyer.

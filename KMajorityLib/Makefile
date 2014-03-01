@@ -37,6 +37,8 @@ BINLIB = ../lib
 
 LIBRARY = libkmajority
 
+#SEEDRANDOM = -DSEEDRANDOM
+
 all: $(LIBRARY).so
 
 $(LIBRARY).so: $(OBJECTS)
@@ -44,7 +46,7 @@ $(LIBRARY).so: $(OBJECTS)
 	$(CXX) -shared $(OBJECTS) -o $(BINLIB)/$@ $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+	$(CXX) $(SEEDRANDOM) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BINLIB)/$(LIBRARY).so *~

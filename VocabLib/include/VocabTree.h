@@ -58,19 +58,13 @@
 namespace vlr {
 
 struct VocabTreeParams: public cvflann::IndexParams {
-	VocabTreeParams(int branching = 10, int depth = 7, int iterations = 10,
-			cvflann::flann_centers_init_t centers_init =
-					cvflann::FLANN_CENTERS_RANDOM, int levels_up = 2) {
-		// branching factor
-		(*this)["branching"] = branching;
-		// max iterations to perform in one k-means clustering
-		(*this)["iterations"] = iterations;
-		// tree depth
+	VocabTreeParams(int branching = 10, int depth = 6, int maxIterations = 10,
+			cvflann::flann_centers_init_t centersInitMethod =
+					cvflann::FLANN_CENTERS_RANDOM) {
 		(*this)["depth"] = depth;
-		// algorithm used for picking the initial cluster centers for k-means tree
-		(*this)["centers_init"] = centers_init;
-		// Levels to go up the tree to select nodes to store in the direct index
-		(*this)["levels_up"] = levels_up;
+		(*this)["branch.factor"] = branching;
+		(*this)["max.iterations"] = maxIterations;
+		(*this)["centers.init.method"] = centersInitMethod;
 	}
 };
 
@@ -96,7 +90,7 @@ public:
 
 	virtual size_t size() const = 0;
 
-	virtual size_t getWordsCount() const = 0;
+	virtual size_t getNumWords() const = 0;
 
 	virtual int getDepth() const = 0;
 
@@ -124,21 +118,6 @@ struct VocabTreeNode {
 	VocabTreeNode() :
 			node_id(-1), center(NULL), children(NULL), word_id(-1) {
 	}
-//		VocabTreeNode& operator=(const VocabTreeNode& node) {
-//			node_id = node.node_id;
-//			if (node.center != NULL) {
-//				// Deep copy
-//				center = new TDescriptor[m_veclen];
-//				for (size_t k = 0; k < m_veclen; ++k) {
-//					center[k] = node.center[k];
-//				}
-//			} else {
-//				center = NULL;
-//			}
-//			children = node.children;
-//			word_id = node.word_id;
-//			return *this;
-//		}
 };
 
 // --------------------------------------------------------------------------
@@ -185,11 +164,11 @@ public:
 	/**
 	 * Class constructor.
 	 *
-	 * @inputData - Reference to the matrix with the data to be clustered
+	 * @param inputData - Reference to the matrix with the data to be clustered
 	 * @param params - Parameters to the hierarchical k-means algorithm
 	 */
 	VocabTree(vlr::Mat& inputData = vlr::DEFAULT_INPUTDATA,
-			const VocabTreeParams& params = VocabTreeParams());
+			const cvflann::IndexParams& params = VocabTreeParams());
 
 	/**
 	 * Class destroyer, releases the memory used by the tree.
@@ -224,14 +203,15 @@ public:
 	 */
 	void load(const std::string& filename);
 
-	/**
-	 * Returns the tree size.
-	 *
-	 * @return number of nodes in the tree
-	 */
-	size_t size() const;
+	size_t size() const {
+		return getNumWords();
+	}
 
-	size_t getWordsCount() const {
+	size_t getNumNodes() const {
+		return m_size;
+	}
+
+	size_t getNumWords() const {
 		return m_words.size();
 	}
 
@@ -325,17 +305,17 @@ typedef VocabTree<uchar, cv::Hamming> VocabTreeBin;
 
 template<class TDescriptor, class Distance>
 VocabTree<TDescriptor, Distance>::VocabTree(vlr::Mat& inputData,
-		const VocabTreeParams& params) :
+		const cvflann::IndexParams& params) :
 		m_dataset(inputData), m_veclen(0), m_size(0), m_root(NULL), m_distance(
 				Distance()) {
 
 	// Attributes initialization
 	m_veclen = m_dataset.cols;
-	m_branching = cvflann::get_param(params, "branching", 10);
-	m_iterations = cvflann::get_param(params, "iterations", 10);
-	m_depth = cvflann::get_param(params, "depth", 7);
-	m_centers_init = cvflann::get_param(params, "centers_init",
-			cvflann::FLANN_CENTERS_RANDOM);
+	m_branching = cvflann::get_param<int>(params, "branch.factor");
+	m_iterations = cvflann::get_param<int>(params, "max.iterations");
+	m_depth = cvflann::get_param<int>(params, "depth");
+	m_centers_init = cvflann::get_param<cvflann::flann_centers_init_t>(params,
+			"centers.init.method");
 
 	if (m_iterations < 0) {
 		m_iterations = std::numeric_limits<int>::max();
@@ -369,13 +349,6 @@ void VocabTree<TDescriptor, Distance>::free_centers(VocabTreeNodePtr node) {
 // --------------------------------------------------------------------------
 
 template<class TDescriptor, class Distance>
-size_t VocabTree<TDescriptor, Distance>::size() const {
-	return m_size;
-}
-
-// --------------------------------------------------------------------------
-
-template<class TDescriptor, class Distance>
 void VocabTree<TDescriptor, Distance>::build() {
 
 	if (m_branching < 2) {
@@ -383,9 +356,9 @@ void VocabTree<TDescriptor, Distance>::build() {
 				" must be at least 2");
 	}
 
-	if (m_depth < 2) {
+	if (m_depth < 1) {
 		throw std::runtime_error("[VocabTree::build] Error, depth"
-				" must be at least 2");
+				" must be at least 1");
 	}
 
 	if (m_dataset.empty() == true) {
@@ -410,7 +383,7 @@ void VocabTree<TDescriptor, Distance>::build() {
 	printf("[VocabTree::build] Started clustering\n");
 #endif
 
-	computeClustering(m_root, indices, size, 0, false);
+	computeClustering(m_root, indices, size, 1, false);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Finished clustering\n");
@@ -698,7 +671,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	// Recursion base case: done when the last level is reached
 	// or when there is less data than clusters
-	if (level == m_depth - 1 || indices_length < m_branching) {
+	if (level == m_depth || indices_length < m_branching) {
 		node->children = NULL;
 		node->word_id = m_words.size();
 		m_words.push_back(node);

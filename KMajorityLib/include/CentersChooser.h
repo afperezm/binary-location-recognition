@@ -27,7 +27,7 @@ public:
 			std::vector<int>& centers, int& centers_length, vlr::Mat& dataset,
 			Distance distance = Distance()) = 0;
 	static cv::Ptr<CentersChooser<TDescriptor, Distance> > create(
-			const cvflann::flann_centers_init_t& type, bool seedRandom = true);
+			const cvflann::flann_centers_init_t& type);
 
 };
 
@@ -468,15 +468,14 @@ void KmeansppCenters<TDescriptor, Distance>::chooseCenters(int k, int* indices,
 
 template<typename TDescriptor, typename Distance>
 cv::Ptr<CentersChooser<TDescriptor, Distance> > CentersChooser<TDescriptor,
-		Distance>::create(const cvflann::flann_centers_init_t& type,
-		bool seedRandom) {
+		Distance>::create(const cvflann::flann_centers_init_t& type) {
 
 	cv::Ptr<CentersChooser<TDescriptor, Distance> > cc;
 
-	if (seedRandom) {
-		// Seeding random number generator
-		cvflann::seed_random(unsigned(std::time(0)));
-	}
+#if SEEDRANDOM
+	// Seeding random number generator
+	cvflann::seed_random(unsigned(std::time(0)));
+#endif
 
 	if (type == cvflann::FLANN_CENTERS_RANDOM) {
 		cc = new RandomCenters<TDescriptor, Distance>();

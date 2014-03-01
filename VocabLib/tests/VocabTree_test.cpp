@@ -59,7 +59,7 @@ TEST(VocabTreeReal, LoadSave) {
 	ASSERT_TRUE(*tree.obj == *treeLoad.obj);
 
 	// Check vocabulary size is the same
-	ASSERT_TRUE(tree->size() == treeLoad->size());
+	ASSERT_TRUE(tree->getNumNodes() == treeLoad->getNumNodes());
 
 }
 
@@ -89,6 +89,6 @@ TEST(VocabTreeBinary, LoadSave) {
 	ASSERT_TRUE(*tree.obj == *treeLoad.obj);
 
 	// Check vocabulary size is the same
-	ASSERT_TRUE(tree->size() == treeLoad->size());
+	ASSERT_TRUE(tree->getNumNodes() == treeLoad->getNumNodes());
 
 }

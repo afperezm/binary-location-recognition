@@ -395,7 +395,7 @@ void HKMDB::loadBoFModel(const std::string& filename) {
 // --------------------------------------------------------------------------
 
 size_t HKMDB::getNumOfWords() const {
-	return m_bofModel->getWordsCount();
+	return m_bofModel->getNumWords();
 }
 
 // --------------------------------------------------------------------------
@@ -451,8 +451,8 @@ void AKMajDB::loadBoFModel(const std::string& filename) {
 	m_nnIndex = vlr::createIndexByType(
 			cvflann::Matrix<uchar>((uchar*) m_bofModel->getCentroids().data,
 					m_bofModel->getCentroids().rows,
-					m_bofModel->getCentroids().cols),
-			vlr::indexType::HIERARCHICAL);
+					m_bofModel->getCentroids().cols), vlr::HIERARCHICAL,
+			cvflann::IndexParams());
 }
 
 // --------------------------------------------------------------------------

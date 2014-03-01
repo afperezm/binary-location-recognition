@@ -23,18 +23,22 @@
 
 namespace vlr {
 
-KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
-		vlr::indexType nnMethod,
-		cvflann::flann_centers_init_t centersInitMethod) :
-		m_numClusters(numClusters), m_maxIterations(maxIterations), m_centersInitMethod(
-				centersInitMethod), m_dataset(data), m_dim(data.cols), m_nnMethod(
-				nnMethod), m_nnIndex(NULL) {
+KMajority::KMajority(vlr::Mat& data, const cvflann::IndexParams& params,
+		const cvflann::IndexParams& nnIndexParams) :
+		m_dataset(data), m_dim(data.cols), m_nnIndex(NULL), m_nnIndexParams(
+				nnIndexParams) {
 
+	// Attributes initialization
+	m_numClusters = cvflann::get_param<int>(params, "num.clusters");
+	m_maxIterations = cvflann::get_param<int>(params, "max.iterations");
+	m_centersInitMethod = cvflann::get_param<cvflann::flann_centers_init_t>(
+			params, "centers.init.method");
+	m_nnMethod = cvflann::get_param<vlr::indexType>(params, "nn.method");
 	m_numDatapoints = m_dataset.rows;
 
 	// Initially all transactions belong to any cluster
 	m_belongsTo.clear();
-	m_belongsTo.resize(m_dataset.rows, numClusters);
+	m_belongsTo.resize(m_dataset.rows, m_numClusters);
 
 	// Initially all transactions are at the farthest possible distance
 	// i.e. m_dim*8 the max Hamming distance
@@ -43,7 +47,7 @@ KMajority::KMajority(int numClusters, int maxIterations, vlr::Mat& data,
 
 	// Initially no transaction is assigned to any cluster
 	m_clusterCounts.clear();
-	m_clusterCounts.resize(numClusters, 0);
+	m_clusterCounts.resize(m_numClusters, 0);
 
 }
 
@@ -467,7 +471,7 @@ void KMajority::updateIndex() {
 	m_nnIndex = vlr::createIndexByType(
 			cvflann::Matrix<Distance::ElementType>(
 					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
-					m_centroids.cols), m_nnMethod);
+					m_centroids.cols), m_nnMethod, m_nnIndexParams);
 
 	m_nnIndex->buildIndex();
 
@@ -495,7 +499,7 @@ const std::vector<int>& KMajority::getClusterAssignments() const {
 
 cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
-		vlr::indexType type) {
+		vlr::indexType type, const cvflann::IndexParams& userDefParams) {
 
 	cvflann::IndexParams params;
 	cvflann::NNIndex<Distance>* nnIndex;
@@ -506,12 +510,14 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	case vlr::indexType::LINEAR:
 		printf("-- Creating [Linear] index\n");
 		params = cvflann::LinearIndexParams();
+		// Do not copy any parameters, linear index doesn't need any
 		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params,
 				Distance());
 		break;
 	case vlr::indexType::HIERARCHICAL:
 		printf("-- Creating [HierarchicalClustering] index\n");
 		params = cvflann::HierarchicalClusteringIndexParams();
+		params.insert(userDefParams.begin(), userDefParams.end());
 		nnIndex = new cvflann::HierarchicalClusteringIndex<Distance>(dataset,
 				params, Distance());
 		break;
