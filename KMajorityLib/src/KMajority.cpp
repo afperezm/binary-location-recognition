@@ -33,7 +33,7 @@ KMajority::KMajority(vlr::Mat& data, const cvflann::IndexParams& params,
 	m_maxIterations = cvflann::get_param<int>(params, "max.iterations");
 	m_centersInitMethod = cvflann::get_param<cvflann::flann_centers_init_t>(
 			params, "centers.init.method");
-	m_nnMethod = cvflann::get_param<vlr::indexType>(params, "nn.method");
+	m_nnType = cvflann::get_param<vlr::indexType>(params, "nn.type");
 	m_numDatapoints = m_dataset.rows;
 
 	// Initially all transactions belong to any cluster
@@ -471,7 +471,7 @@ void KMajority::updateIndex() {
 	m_nnIndex = vlr::createIndexByType(
 			cvflann::Matrix<Distance::ElementType>(
 					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
-					m_centroids.cols), m_nnMethod, m_nnIndexParams);
+					m_centroids.cols), m_nnType, m_nnIndexParams);
 
 	m_nnIndex->buildIndex();
 
@@ -507,14 +507,14 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	double mytime = cv::getTickCount();
 
 	switch (type) {
-	case vlr::indexType::LINEAR:
+	case vlr::LINEAR:
 		printf("-- Creating [Linear] index\n");
 		params = cvflann::LinearIndexParams();
 		// Do not copy any parameters, linear index doesn't need any
 		nnIndex = new cvflann::LinearIndex<Distance>(dataset, params,
 				Distance());
 		break;
-	case vlr::indexType::HIERARCHICAL:
+	case vlr::HIERARCHICAL:
 		printf("-- Creating [HierarchicalClustering] index\n");
 		params = cvflann::HierarchicalClusteringIndexParams();
 		params.insert(userDefParams.begin(), userDefParams.end());

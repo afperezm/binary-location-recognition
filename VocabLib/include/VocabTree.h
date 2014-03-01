@@ -383,7 +383,7 @@ void VocabTree<TDescriptor, Distance>::build() {
 	printf("[VocabTree::build] Started clustering\n");
 #endif
 
-	computeClustering(m_root, indices, size, 1, false);
+	computeClustering(m_root, indices, size, 0, false);
 
 #if VTREEVERBOSE
 	printf("[VocabTree::build] Finished clustering\n");
@@ -665,7 +665,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	// Sort descriptors, caching leverages this fact
 	// Note: it doesn't affect the clustering process since all descriptors referenced by indices belong to the same cluster
-	if (level > 0) {
+	if (level > 1) {
 		std::sort(indices, indices + indices_length);
 	}
 
@@ -676,9 +676,15 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		node->word_id = m_words.size();
 		m_words.push_back(node);
 #if VTREEVERBOSE
-		printf(
-				"[VocabTree::computeClustering] (level %d): last level was reached or there was less data than clusters (%d features)\n",
-				level, indices_length);
+		if (level == m_depth) {
+			printf(
+					"[VocabTree::computeClustering] (level %d): last level was reached (%d features)\n",
+					level, indices_length);
+		} else {
+			printf(
+					"[VocabTree::computeClustering] (level %d): there was less data than clusters (%d features)\n",
+					level, indices_length);
+		}
 #endif
 		return;
 	}

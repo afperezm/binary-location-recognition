@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
 						"\tmax.iterations=10\tcenters.init.method=RANDOM\n\n"
 						"AKMAJ options:\n"
 						"\tnum.clusters=1000000\t\tmax.iterations=10\n"
-						"\tcenters.init.method=RANDOM\tnn.method=HIERARCHICAL\n"
+						"\tcenters.init.method=RANDOM\tnn.type=HIERARCHICAL\n"
 						"\ttrees.number=4\t\t\ttrees.branch.factor=32\n"
-						"\ttrees.max.leaf.size=100\t\ttrees.number.checks=4\n\n"
+						"\ttrees.max.leaf.size=100\t\ttrees.number.checks=32\n\n"
 						"Centers initialization algorithms:\n"
 						"\tRANDOM: in a random manner\n"
 						"\tKMEANSPP: using k-means++ by Arthur and Vassilvitskii\n"
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 					centersInitMethod = cvflann::FLANN_CENTERS_GONZALES;
 				}
 				vocabParams[key] = centersInitMethod;
-			} else if (key.compare("nn.method") == 0) {
+			} else if (key.compare("nn.type") == 0) {
 				vlr::indexType nnMethod = vlr::HIERARCHICAL;
 				if (value.compare("LINEAR") == 0) {
 					nnMethod = vlr::LINEAR;
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
 							"KMEANSPP" :
 					centersInitMethod == cvflann::FLANN_CENTERS_GONZALES ?
 							"GONZALEZ" : "UNKNOWN");
-		} else if (it->first.compare("nn.method") == 0) {
+		} else if (it->first.compare("nn.type") == 0) {
 			vlr::indexType nnMethod = it->second.cast<vlr::indexType>();
 			printf(", %s=%s", it->first.c_str(),
 					nnMethod == vlr::LINEAR ? "LINEAR" :

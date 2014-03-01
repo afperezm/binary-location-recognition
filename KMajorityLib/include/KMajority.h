@@ -31,13 +31,13 @@ cvflann::NNIndex<Distance>* createIndexByType(
 
 struct KMajorityParams: public cvflann::IndexParams {
 	KMajorityParams(int numClusters = 1000000, int maxIterations = 10,
-			vlr::indexType nnMethod = vlr::HIERARCHICAL,
+			vlr::indexType nnType = vlr::HIERARCHICAL,
 			cvflann::flann_centers_init_t centersInitMethod =
 					cvflann::FLANN_CENTERS_RANDOM) {
 		(*this)["num.clusters"] = numClusters;
 		(*this)["max.iterations"] = maxIterations;
 		(*this)["centers.init.method"] = centersInitMethod;
-		(*this)["nn.method"] = nnMethod;
+		(*this)["nn.type"] = nnType;
 	}
 };
 
@@ -66,7 +66,7 @@ protected:
 	// Matrix of clusters centers
 	cv::Mat m_centroids;
 	// Nearest neighbor index type
-	vlr::indexType m_nnMethod;
+	vlr::indexType m_nnType;
 	// Index for addressing nearest neighbors search
 	cvflann::NNIndex<Distance>* m_nnIndex = NULL;
 	// Nearest neighbors index parameters
