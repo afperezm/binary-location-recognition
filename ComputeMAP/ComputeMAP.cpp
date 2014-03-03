@@ -123,6 +123,10 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 #if CMAPVERBOSE
 			printf("%03lu - %s) negative\n", i, ranked_list[i].c_str());
 #endif
+			precisionValues << old_precision
+					<< (((i + 1) < ranked_list.size()) ? "," : "");
+			recallValues << old_recall
+					<< (((i + 1) < ranked_list.size()) ? "," : "");
 			// skip for the not relevant since they don't contribute
 			// i.e. no area under the curve
 			continue;
@@ -162,8 +166,7 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 		++j;
 	}
 
-	f_ranked_list << precisionValues.str()
-			<< precisionValues.str() + "\n" + recallValues.str() + "\n";
+	f_ranked_list << precisionValues.str() + "\n" + recallValues.str() + "\n";
 
 	f_ranked_list.close();
 

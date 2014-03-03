@@ -319,7 +319,9 @@ void VocabDB::transform(const cv::Mat& featuresVector, cv::Mat& bofVector,
 					"[VocabDB::transform] Feature quantized into a non-existent word");
 		}
 
-		binaryze = binaryze | wordWeight == -1.0;
+		if (wordWeight == -1.0) {
+			binaryze = true;
+		}
 
 		bofVector.at<float>(0, wordIdx) += (float) wordWeight;
 	}

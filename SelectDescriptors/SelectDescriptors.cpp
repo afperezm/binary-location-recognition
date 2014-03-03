@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 	cvflann::UniqueRandom randGen(mergedDescriptors.rows);
 
 	std::vector<int> indices(int(mergedDescriptors.rows * in_percentage));
-	for (int i = 0; i < indices.size(); ++i) {
+	for (unsigned int i = 0; i < indices.size(); ++i) {
 		indices[i] = randGen.next();
 	}
 
