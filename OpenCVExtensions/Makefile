@@ -1,8 +1,6 @@
 # Makefile for opencv2_extensions
 
-CXX = g++
-
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++11 -fpic -I./include/
+CXXFLAGS = -O2 $(DEBUGFLAGS) -fmessage-length=0 -std=c++11 -fpic -I./include/
 LDFLAGS =
 
 # DBrief

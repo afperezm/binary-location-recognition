@@ -1,8 +1,6 @@
 # Makefile for SelectDescriptors
 
-CXX = g++
-
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x
+CXXFLAGS = -O2 $(DEBUGFLAGS) -fmessage-length=0 -std=c++0x
 LDFLAGS = -L../lib/
 
 # Common
@@ -24,7 +22,7 @@ $(BIN): $(OBJECTS)
 	$(CXX) $(OBJECTS) -o $(BIN) $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) $(DEBUG) -c $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BIN) *~

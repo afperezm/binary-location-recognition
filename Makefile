@@ -1,5 +1,8 @@
 # Top-level Makefile
 
+DEBUGFLAGS = -g -Wall
+#export DEBUGFLAGS
+
 all: libs programs
 
 libs:

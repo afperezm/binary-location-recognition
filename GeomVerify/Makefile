@@ -1,8 +1,6 @@
 # Makefile for Test
 
-CXX = g++
-
-CXXFLAGS = -O2 -g -Wall -fmessage-length=0 -std=c++0x -I./
+CXXFLAGS = -O2 $(DEBUGFLAGS) -fmessage-length=0 -std=c++0x -I./
 LDFLAGS = -L../lib/
 
 # Common
