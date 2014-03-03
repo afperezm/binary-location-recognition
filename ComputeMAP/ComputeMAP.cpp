@@ -106,10 +106,10 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 	float ap = 0.0;
 
 	prefix.append(".csv");
-	FILE *f_ranked_list = fopen(prefix.c_str(), "w");
+	ofstream f_ranked_list(prefix.c_str(), fstream::out);
 	std::stringstream precisionValues, recallValues;
 
-	if (f_ranked_list == NULL) {
+	if (f_ranked_list.good() == false) {
 		fprintf(stderr, "Error opening file [%s] for writing\n",
 				prefix.c_str());
 		return EXIT_FAILURE;
@@ -162,9 +162,10 @@ float compute_ap(const set<string>& pos, const set<string>& absent,
 		++j;
 	}
 
-	fprintf(f_ranked_list, "%s\n%s\n", precisionValues.str().c_str(),
-			recallValues.str().c_str());
-	fclose(f_ranked_list);
+	f_ranked_list << precisionValues.str()
+			<< precisionValues.str() + "\n" + recallValues.str() + "\n";
+
+	f_ranked_list.close();
 
 	return ap;
 }
