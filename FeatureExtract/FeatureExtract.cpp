@@ -69,11 +69,11 @@ std::vector<std::string>::iterator findLastWrittenFile(
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 6) {
+	if (argc < 5 || argc > 7) {
 		printf(
 				"\nUsage:\n"
 						"\tFeatureExtract -detect <in.detector.type> <in.imgs.folder> <out.keypoints.folder>\n"
-						"\tFeatureExtract -extract <in.descriptor.type> <in.imgs.folder> <in.keypoints.folder> <out.descriptors.folder>\n\n");
+						"\tFeatureExtract -extract <in.descriptor.type> <in.imgs.folder> <in.keypoints.folder> <out.descriptors.folder> <out.keypoints.folder>\n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -166,8 +166,9 @@ int main(int argc, char **argv) {
 	} else if (option.compare("-extract") == 0) {
 		std::string descriptorType = argv[2];
 		std::string imgsFolder = argv[3];
-		std::string keypointsFolder = argv[4];
+		std::string in_keypointsFolder = argv[4];
 		std::string descriptorsFolder = argv[5];
+		std::string out_keypointsFolder = argv[6];
 
 		bool isDescriptorValid = isValidAlgorithm(descriptorType);
 
@@ -196,7 +197,7 @@ int main(int argc, char **argv) {
 		/* Finding last written descriptors file */
 		printf(
 				"-- Searching for previous written key files in [%s] to resume feature extraction\n",
-				keypointsFolder.c_str());
+				in_keypointsFolder.c_str());
 
 		// By default set to the first file
 		std::vector<std::string>::iterator startImg = findLastWrittenFile(
@@ -218,7 +219,7 @@ int main(int argc, char **argv) {
 			if ((*image).find(".jpg") != std::string::npos) {
 				printf("-- Processing image [%s]\n", (*image).c_str());
 
-				std::string keypointsFileName = keypointsFolder + "/"
+				std::string keypointsFileName = in_keypointsFolder + "/"
 						+ (*image).substr(0, (*image).size() - 4) + ".yaml.gz";
 
 				printf(
@@ -248,12 +249,25 @@ int main(int argc, char **argv) {
 				std::string descriptorFileName = descriptorsFolder + "/"
 						+ (*image).substr(0, (*image).size() - 4) + ".bin";
 
-				printf(
-						"   Saving feature descriptors to [%s] using OpenCV FileStorage\n",
+				printf("   Saving feature descriptors to [%s] using C++ STL\n",
 						descriptorFileName.c_str());
 
 				try {
 					FileUtils::saveDescriptors(descriptorFileName, descriptors);
+				} catch (const std::runtime_error& error) {
+					fprintf(stderr, "%s\n", error.what());
+					return EXIT_FAILURE;
+				}
+
+				keypointsFileName = out_keypointsFolder + "/"
+						+ (*image).substr(0, (*image).size() - 4) + ".yaml.gz";
+
+				printf(
+						"-- Saving feature key-points to [%s] using OpenCV FileStorage\n",
+						keypointsFileName.c_str());
+
+				try {
+					FileUtils::saveKeypoints(keypointsFileName, keypoints);
 				} catch (const std::runtime_error& error) {
 					fprintf(stderr, "%s\n", error.what());
 					return EXIT_FAILURE;

@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 	if (argc < 4 || argc > 7) {
 		printf("\nUsage:\n\tVocabBuildDB <in.db.images.list> "
 				"<in.vocab> <out.inverted.index>"
-				" [in.weighting:TFIDF] [in.norm:L2] [out.nn.index]\n\n"
+				" [in.weighting:TFIDF] [in.norm:L2] [out.nn.index:nn_index.bin]\n\n"
 				"Weighting:\n"
 				"\tTFIDF: Term Frequency - Inverse Document Frequency\n"
 				"\tTF: Term Frequency\n"

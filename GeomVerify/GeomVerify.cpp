@@ -6,8 +6,8 @@
  */
 
 #include <iostream>
+#include <stdexcept>
 
-#include <boost/regex.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/flann/logger.h>
 #include <opencv2/highgui/highgui.hpp>
@@ -31,10 +31,6 @@ double mytime;
 //		 - Obtain number of inliers
 //	 - Re-order list of candidates by its number of inliers
 
-template<typename T>
-void sortAndKeepIdx(std::vector<T>& values, std::vector<size_t>& indices,
-		int flags);
-
 int main(int argc, char **argv) {
 
 	if (argc < 9 || argc > 13) {
@@ -44,7 +40,7 @@ int main(int argc, char **argv) {
 						"<in.ranked.files.folder> <in.ranked.files.prefix> "
 						"<in.db.descriptors.list> <in.db.keypoints.folder> <in.queries.descriptors.list> <in.queries.keypoints.folder> "
 						"<out.re-ranked.files.folder> <in.top.candidates> "
-						"[in.topKeypoints:500] [in.ratio.thr:0.8] [im.min.matches:8] [in.ransac.thr:10]"
+						"[in.topKeypoints:500] [in.ratio.thr:0.8|in.distance.thr:90] [im.min.matches:8] [in.ransac.thr:10]"
 						"\n\n");
 		return EXIT_FAILURE;
 	}
@@ -59,7 +55,8 @@ int main(int argc, char **argv) {
 
 	int topCandidates = atoi(argv[8]);
 	int topKeypoints = argc >= 10 ? atoi(argv[9]) : 500;
-	double ratioThreshold = argc >= 11 ? atof(argv[10]) : 0.8;
+	double ratioThreshold = argc >= 11 ? atof(argv[10]) : 0.8; // Ratio test threshold
+	double distanceThreshold = argc >= 11 ? atof(argv[10]) : 90; // Distance threshold for nearest neighbor test (for binary descriptors)
 	int ransacMinMatches = argc >= 12 ? atoi(argv[11]) : 8;
 	double ransacThreshold = argc >= 13 ? atof(argv[12]) : 10.0;
 
@@ -67,9 +64,9 @@ int main(int argc, char **argv) {
 
 	printf(
 			"-- Running spatial verification using topCandidates=[%d] topKeypoints=[%d] "
-					"ratioThr=[%2.1f] ransacMinMatches=[%d] ransacThr=[%2.1f]\n",
-			topCandidates, topKeypoints, ratioThreshold, ransacMinMatches,
-			ransacThreshold);
+					"ratioThr=[%2.1f] distanceThre=[%f] ransacMinMatches=[%d] ransacThr=[%2.1f]\n",
+			topCandidates, topKeypoints, ratioThreshold, distanceThreshold,
+			ransacMinMatches, ransacThreshold);
 
 	// Step 2a: load list of queries descriptors
 	printf("-- Loading list of queries descriptors\n");
@@ -119,12 +116,11 @@ int main(int argc, char **argv) {
 				queries_desc_list[i].name.c_str());
 
 		queryBase = queries_desc_list[i].name.substr(8,
-				queries_desc_list[i].name.length() - 16);
+				queries_desc_list[i].name.length() - 12);
 
 		// Step 4a: load and pre-process query features
-		printf("   Load and pre-process query features\n");
 		FileUtils::loadKeypoints(
-				in_queries_keys_folder + "/" + queryBase + "_kpt.yaml.gz",
+				in_queries_keys_folder + "/" + queryBase + ".yaml.gz",
 				queryKeypoints);
 		FileUtils::loadDescriptors(queries_desc_list[i].name, queryDescriptors);
 		filterFeatures(queryKeypoints, queryDescriptors, topKeypoints);
@@ -165,7 +161,7 @@ int main(int argc, char **argv) {
 			printf("   Load and pre-process candidate features\n");
 			FileUtils::loadKeypoints(
 					in_db_keys_folder + "/" + ranked_candidates_list[j]
-							+ "_kpt.yaml.gz", candidateKeypoints);
+							+ ".yaml.gz", candidateKeypoints);
 			FileUtils::loadDescriptors(
 					"db/" + ranked_candidates_list[j] + ".bin",
 					candidateDescriptors);
@@ -205,9 +201,8 @@ int main(int argc, char **argv) {
 
 			// TODO Use the direct index to pre-filter query and candidate key-points
 
-			matchKeypoints(candidateKeypoints, candidateDescriptors,
-					queryKeypoints, queryDescriptors, matchesCandidateToQuery,
-					topKeypoints, ratioThreshold);
+			matchKeypoints(candidateDescriptors, queryDescriptors,
+					matchesCandidateToQuery, ratioThreshold, distanceThreshold);
 
 			matchedCandidatePoints.clear();
 			matchedQueryPoints.clear();
@@ -368,27 +363,5 @@ int main(int argc, char **argv) {
 	}
 
 //	HtmlResultsWriter::getInstance().close();
-
-}
-
-template<typename T>
-void sortAndKeepIdx(std::vector<T>& values, std::vector<size_t>& indices,
-		int flags) {
-
-	indices.clear();
-	indices.resize(values.size());
-
-	for (size_t i = 0; i < indices.size(); ++i) {
-		indices[i] = i;
-	}
-
-	if (flags == CV_SORT_ASCENDING) {
-		std::stable_sort(indices.begin(), indices.end(),
-				[&](size_t a, size_t b) {return values[a] < values[b];});
-	} else {
-		// Sort descending by default
-		std::stable_sort(indices.begin(), indices.end(),
-				[&](size_t a, size_t b) {return values[a] > values[b];});
-	}
 
 }

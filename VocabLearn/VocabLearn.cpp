@@ -121,7 +121,6 @@ int main(int argc, char **argv) {
 				}
 				nnIndexParams[nnIndexParam] = atoi(value.c_str());
 			} else {
-				printf("%s --> %d\n", key.c_str(), atoi(value.c_str()));
 				vocabParams[key] = atoi(value.c_str());
 			}
 		}

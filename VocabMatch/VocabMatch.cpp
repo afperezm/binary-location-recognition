@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 				"\nUsage:\n\t"
 						"VocabMatch <in.vocab> <in.inverted.index> <in.db.desc.list> <in.queries.list>"
 						" <out.ranked.files.folder> [in.num.neighbors:ALL] [in.norm:L2] [in.scoring:COS] [out.results:results.html]"
-						" [in.use.regions:0] [in.nn.index]\n\n"
+						" [in.use.regions:0] [in.nn.index:nn_index.bin]\n\n"
 						"Norm:\n"
 						"\tL1: L1-norm\n"
 						"\tL2: L2-norm\n\n"
