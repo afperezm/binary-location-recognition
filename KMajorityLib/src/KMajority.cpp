@@ -112,6 +112,7 @@ void KMajority::build() {
 
 #if KMAJVERBOSE
 		printf("-- Iteration=[%d]\n", iteration);
+		fflush(stdout);
 #endif
 
 		// Compute the new clusters centers

@@ -23,10 +23,6 @@ LDFLAGS += -L../../agast_lib/lib -lagast
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
 
-#LDFLAGS += -Wl,-rpath=../../agast_lib/lib
-#LDFLAGS += -Wl,-rpath=../../dbrief_lib/lib
-#LDFLAGS += -Wl,-rpath=../lib/
-
 SOURCES = $(wildcard src/*.cpp)
 
 OBJECTS = $(SOURCES:.cpp=.o)
@@ -36,6 +32,7 @@ BINLIB = ../lib
 LIBRARY = libkmajority
 
 #SEEDRANDOM = -DSEEDRANDOM
+KMAJVERBOSE = -DKMAJVERBOSE
 
 all: $(LIBRARY).so
 
@@ -44,7 +41,7 @@ $(LIBRARY).so: $(OBJECTS)
 	$(CXX) -shared $(OBJECTS) -o $(BINLIB)/$@ $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) $(SEEDRANDOM) -c $(CXXFLAGS) $< -o $@
+	$(CXX) $(SEEDRANDOM) $(KMAJVERBOSE) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BINLIB)/$(LIBRARY).so *~
