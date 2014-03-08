@@ -192,9 +192,6 @@ cv::Mat Mat::row(int descriptorIdx) {
 		printf("   NOT loaded in cache.\n");
 #endif
 
-		// Initialize descriptor
-		// cv::Mat descriptor = cv::Mat();
-
 		// Load corresponding descriptors matrix if it isn't loaded
 		if (m_cachedMatStartIdx == -1 || descriptorIdx < m_cachedMatStartIdx
 				|| descriptorIdx >= m_cachedMatStartIdx + m_cachedMat.rows) {
@@ -251,8 +248,6 @@ cv::Mat Mat::row(int descriptorIdx) {
 		CV_Assert(it != m_cacheIndex->end());
 		// Load descriptor
 		m_cachedMat.row(relIdx).copyTo(m_cache->row(*it));
-//		cv::Mat row = m_cache->row(*it);
-//		FileUtils::loadDescriptorsRow(m_descriptorsFilenames[m_imagesIndex[descriptorIdx]], row, relIdx);
 		// Push its index to the stack
 		m_cachingOrder->push(descriptorIdx);
 	} else {
