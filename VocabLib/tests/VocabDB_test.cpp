@@ -252,8 +252,11 @@ TEST(ApproximateKMajority, TestDatabase) {
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
 
-	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(1000, 10, data,
-			vlr::HIERARCHICAL);
+	vlr::KMajorityParams params;
+	params["num.clusters"] = 1000;
+	params["max.iterations"] = 10;
+
+	cv::Ptr<vlr::KMajority> tree = new vlr::KMajority(data);
 
 	tree->build();
 

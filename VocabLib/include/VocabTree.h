@@ -773,7 +773,11 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 
 	std::vector<int> belongs_to(indices_length);
+//	std::vector<DistanceType> distance_to(indices_length);
 	for (int i = 0; i < indices_length; ++i) {
+//		distance_to[i] = m_distance(
+//				(TDescriptor*) m_dataset.row(indices[i]).data,
+//				(TDescriptor*) dcenters.row(0).data, m_veclen);
 		DistanceType sq_dist = m_distance(
 				(TDescriptor*) m_dataset.row(indices[i]).data,
 				(TDescriptor*) dcenters.row(0).data, m_veclen);
@@ -786,6 +790,10 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				belongs_to[i] = j;
 				sq_dist = new_sq_dist;
 			}
+//			if (distance_to[i] > new_sq_dist) {
+//				belongs_to[i] = j;
+//				distance_to[i] = new_sq_dist;
+//			}
 		}
 		++count[belongs_to[i]];
 	}
@@ -881,6 +889,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 				--count[belongs_to[i]];
 				++count[new_centroid];
 				belongs_to[i] = new_centroid;
+//				distance_to[i] = sq_dist;
 
 				converged = false;
 			}
@@ -898,7 +907,42 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 #endif
 
-		// TODO Handle empty clusters
+/*
+		// If some cluster appears to be empty then:
+		// 1. Find the biggest cluster.
+		// 2. Find farthest point in the biggest cluster
+		// 3. Exclude the farthest point from the biggest cluster and form a new 1-point cluster.
+
+		for (int k = 0; k < m_branching; ++k) {
+			if (count[k] != 0) {
+				continue;
+			}
+
+			// 1. Find the biggest cluster
+			int max_k = 0;
+			for (int k1 = 1; k1 < m_branching; ++k1) {
+				if (count[max_k] < count[k1])
+					max_k = k1;
+			}
+
+			// 2. Find farthest point in the biggest cluster
+			DistanceType maxDist(-1);
+			int idxFarthestPt = -1;
+			for (int i = 0; i < indices_length; ++i) {
+				if (belongs_to[i] == max_k) {
+					if (maxDist < distance_to[i]) {
+						maxDist = distance_to[i];
+						idxFarthestPt = i;
+					}
+				}
+			}
+
+			// 3. Exclude the farthest point from the biggest cluster and form a new 1-point cluster
+			--count[max_k];
+			++count[k];
+			belongs_to[idxFarthestPt] = k;
+		}
+*/
 
 #if DEBUG
 #if VTREEVERBOSE

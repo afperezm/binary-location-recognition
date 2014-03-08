@@ -21,7 +21,7 @@ TEST(KMajority, InstantiateOnHeap) {
 
 	vlr::Mat emptyMat = vlr::Mat();
 
-	obj = new vlr::KMajority(0, 0, emptyMat);
+	obj = new vlr::KMajority(emptyMat);
 
 	EXPECT_TRUE(obj != NULL);
 }
@@ -30,7 +30,7 @@ TEST(KMajority, InstantiateOnStack) {
 
 	vlr::Mat emptyMat = vlr::Mat();
 
-	vlr::KMajority obj(0, 0, emptyMat);
+	vlr::KMajority obj(emptyMat);
 
 	EXPECT_TRUE(obj.getCentroids().empty());
 
@@ -51,7 +51,11 @@ TEST(KMajority, Clustering) {
 
 	vlr::Mat descriptors(filenames);
 
-	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::HIERARCHICAL);
+	vlr::KMajorityParams params;
+	params["num.clusters"] = 10;
+	params["max.iterations"] = 10;
+
+	vlr::KMajority bofModel(descriptors, params);
 
 	bofModel.build();
 
@@ -80,7 +84,12 @@ TEST(KMajority, SaveLoad) {
 	filenames.push_back("brief_0.bin");
 	vlr::Mat descriptors(filenames);
 
-	vlr::KMajority bofModel(10, 10, descriptors, vlr::indexType::LINEAR);
+	vlr::KMajorityParams params;
+	params["num.clusters"] = 10;
+	params["max.iterations"] = 10;
+	params["nn.type"] = vlr::indexType::LINEAR;
+
+	vlr::KMajority bofModel(descriptors);
 	bofModel.build();
 	bofModel.save("test_vocab.yaml.gz");
 

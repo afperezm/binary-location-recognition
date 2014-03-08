@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 		}
 
 		std::string keypointsFileName = (out_keypointsFolder + "/"
-				+ file.substr(0, file.length() - 16) + "_kpt.yaml.gz");
+				+ file.substr(0, file.length() - 16) + ".yaml.gz");
 
 		printf("-- Saving feature key-points to [%s]\n",
 				keypointsFileName.c_str());

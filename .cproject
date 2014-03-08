@@ -24,8 +24,8 @@
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.91665139" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2102994116" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
 								<option id="gnu.cpp.compiler.option.include.paths.512675721" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/opt/ros/groovy/include"/>
-									<listOptionValue builtIn="false" value="/opt/ros/groovy/include/opencv"/>
+									<listOptionValue builtIn="false" value="/opt/ros/hydro/include/opencv"/>
+									<listOptionValue builtIn="false" value="/opt/ros/hydro/include"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/KMajorityLib/include}&quot;"/>
@@ -34,17 +34,17 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1015627344" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
 								<option id="gnu.c.compiler.option.include.paths.671375506" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/opt/ros/groovy/include"/>
-									<listOptionValue builtIn="false" value="/opt/ros/groovy/include/opencv"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
+									<listOptionValue builtIn="false" value="/opt/ros/hydro/include"/>
+									<listOptionValue builtIn="false" value="/opt/ros/hydro/include/opencv"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.168371236" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.1578088997" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.435631160" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
 								<option id="gnu.cpp.link.option.paths.1349304952" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="/opt/ros/groovy/lib"/>
+									<listOptionValue builtIn="false" value="/opt/ros/hydro/lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib/lib"/>
 									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib/lib"/>
 								</option>
