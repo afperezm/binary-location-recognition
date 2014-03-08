@@ -114,16 +114,19 @@ TEST(STLIOBin, LoadSave) {
 
 }
 
-TEST(STLIOReal, LoadSaveRow) {
+TEST(STLIOReal, LoadRow) {
 
 	cv::Mat original, row;
 
 	FileUtils::loadDescriptors("sift_0.bin", original);
-	FileUtils::saveDescriptors("sift_0_tmp.bin", original);
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRow("sift_0_tmp.bin", row, rowIdx);
+		row.release();
+		row = cv::Mat();
+		row.create(1, original.cols, original.type());
+
+		FileUtils::loadDescriptorsRow("sift_0.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);
@@ -140,16 +143,19 @@ TEST(STLIOReal, LoadSaveRow) {
 
 }
 
-TEST(STLIOBin, LoadSaveRow) {
+TEST(STLIOBin, LoadRow) {
 
 	cv::Mat original, row;
 
 	FileUtils::loadDescriptors("brief_0.bin", original);
-	FileUtils::saveDescriptors("brief_0_tmp.bin", original);
 
 	for (int rowIdx = 0; rowIdx < original.rows; ++rowIdx) {
 
-		FileUtils::loadDescriptorsRow("brief_0_tmp.bin", row, rowIdx);
+		row.release();
+		row = cv::Mat();
+		row.create(1, original.cols, original.type());
+
+		FileUtils::loadDescriptorsRow("brief_0.bin", row, rowIdx);
 
 		// Check number of rows, columns and type are equal
 		CV_Assert(original.cols == row.cols);
