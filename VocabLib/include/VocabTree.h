@@ -833,29 +833,31 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 			// Zeroing matrix of cumulative bits
 			bitwiseCount = cv::Scalar::all(0);
 			// Bitwise summing the data into each centroid
-			for (size_t i = 0; (int) i < indices_length; ++i) {
-				uint j = belongs_to[i];
+			for (int i = 0; i < indices_length; ++i) {
+				int j = belongs_to[i];
 				cv::Mat b = bitwiseCount.row(j);
 				KMajority::cumBitSum(m_dataset.row(indices[i]), b);
 			}
 			// Bitwise majority voting
-			for (size_t j = 0; (int) j < m_branching; ++j) {
+			for (int j = 0; j < m_branching; ++j) {
 				cv::Mat centroid = dcenters.row(j);
 				KMajority::majorityVoting(bitwiseCount.row(j), centroid,
 						count[j]);
 			}
 		} else {
 			// Accumulate data into its corresponding cluster accumulator
-			for (size_t i = 0; (int) i < indices_length; ++i) {
-				for (size_t k = 0; k < m_veclen; ++k) {
+			for (int i = 0; i < indices_length; ++i) {
+				for (unsigned int k = 0; k < m_veclen; ++k) {
 					dcenters.at<TDescriptor>(belongs_to[i], k) += m_dataset.row(
 							indices[i]).at<TDescriptor>(0, k);
 				}
 			}
 			// Divide accumulated data by the number transaction assigned to the cluster
-			for (size_t i = 0; (int) i < m_branching; ++i) {
-				for (size_t k = 0; k < m_veclen; ++k) {
-					dcenters.at<TDescriptor>(i, k) /= count[i];
+			for (int i = 0; i < m_branching; ++i) {
+				if (count[i] != 0) {
+					for (unsigned int k = 0; k < m_veclen; ++k) {
+						dcenters.at<TDescriptor>(i, k) /= count[i];
+					}
 				}
 			}
 		}
