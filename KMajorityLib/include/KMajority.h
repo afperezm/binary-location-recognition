@@ -83,8 +83,7 @@ public:
 	 */
 	KMajority(vlr::Mat& inputData = vlr::DEFAULT_INPUTDATA,
 			const cvflann::IndexParams& params = KMajorityParams(),
-			const cvflann::IndexParams& nnIndexParams =
-					cvflann::HierarchicalClusteringIndexParams());
+			const cvflann::IndexParams& nnIndexParams = cvflann::IndexParams());
 
 	/**
 	 * Class destroyer.

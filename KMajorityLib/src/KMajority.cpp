@@ -502,6 +502,8 @@ cvflann::NNIndex<Distance>* createIndexByType(
 		const cvflann::Matrix<typename Distance::ElementType>& dataset,
 		vlr::indexType type, const cvflann::IndexParams& userDefParams) {
 
+	cvflann::IndexParams::const_iterator it;
+
 	cvflann::IndexParams params;
 	cvflann::NNIndex<Distance>* nnIndex;
 
@@ -518,7 +520,10 @@ cvflann::NNIndex<Distance>* createIndexByType(
 	case vlr::HIERARCHICAL:
 		printf("-- Creating [HierarchicalClustering] index\n");
 		params = cvflann::HierarchicalClusteringIndexParams();
-		params.insert(userDefParams.begin(), userDefParams.end());
+		for (it = userDefParams.begin(); it != userDefParams.end(); ++it) {
+			int value = it->second.cast<int>();
+			params[it->first] = value;
+		}
 		nnIndex = new cvflann::HierarchicalClusteringIndex<Distance>(dataset,
 				params, Distance());
 		break;
