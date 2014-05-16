@@ -134,13 +134,22 @@ public:
 	/** Getters **/
 
 	/**
-	 * Returns a reference to the index descriptors holding the
-	 * index of image it belongs to and the starting index of the
-	 * virtual big descriptors matrix.
+	 * Returns a reference to the index mapping descriptor index
+	 * to image index.
 	 *
 	 * @return index of descriptors
 	 */
 	const std::vector<int>& getDescriptorsIndex() const {
+		return m_descriptorsIndex;
+	}
+
+	/**
+	 * Returns a reference to the index mapping image index to
+	 * the starting index in the virtual big descriptors matrix.
+	 *
+	 * @return index of descriptors
+	 */
+	const std::vector<int>& getImagesIndex() const {
 		return m_imagesIndex;
 	}
 

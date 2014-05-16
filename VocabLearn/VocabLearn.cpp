@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 		vocabParams = vlr::VocabTreeParams();
 	} else if (in_vocab_type.compare("AKMAJ") == 0) {
 		vocabParams = vlr::KMajorityParams();
-		nnIndexParams = cvflann::HierarchicalClusteringIndexParams();
+		nnIndexParams = cvflann::IndexParams();
 	} else {
 		fprintf(stderr,
 				"Invalid vocabulary type, choose among HKM, HKMAJ or AKMAJ\n");

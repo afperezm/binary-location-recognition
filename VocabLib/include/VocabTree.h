@@ -697,7 +697,7 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 
 	std::vector<int> centers_idx(m_branching);
-	int centers_length;
+	int centers_length = 0;
 
 #if DEBUG
 #if VTREEVERBOSE
@@ -717,7 +717,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
-#ifdef SUPPDUPLICATES
 	if (centers_length < m_branching) {
 		node->children = NULL;
 		node->word_id = m_words.size();
@@ -729,9 +728,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 #endif
 		return;
 	}
-#else
-	CV_Assert(centers_length == m_branching);
-#endif
 
 #if DEBUG
 #if VTREEVERBOSE

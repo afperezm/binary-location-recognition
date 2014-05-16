@@ -407,7 +407,6 @@ void HCTree::computeClustering(HCTreeNodePtr node, int* indices,
 
 	// Recursion base case: done as well if by case got
 	// less cluster indices than clusters
-#ifdef SUPPDUPLICATES
 	if (centers_length < m_branching) {
 		node->children = NULL;
 #if HCTREEVERBOSE
@@ -416,9 +415,6 @@ void HCTree::computeClustering(HCTreeNodePtr node, int* indices,
 #endif
 		return;
 	}
-#else
-	CV_Assert(centers_length == m_branching);
-#endif
 
 #if DEBUG
 #if HCTREEVERBOSE

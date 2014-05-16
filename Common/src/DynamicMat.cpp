@@ -31,18 +31,20 @@ Mat::Mat(const Mat& other) {
 #endif
 
 	m_capacity = other.getCapacity();
-	m_imagesIndex = other.getDescriptorsIndex();
+	m_descriptorType = other.type();
+	m_elemSize = other.elemSize();
+	m_imagesIndex = other.getImagesIndex();
+	m_descriptorsIndex = other.getDescriptorsIndex();
 	m_descriptorsFilenames = other.getDescriptorsFilenames();
+	m_memoryCount = other.m_memoryCount;
 	m_cachedMat = cv::Mat();
 	m_cachedMatStartIdx = -1;
 	m_cachingOrder = new std::stack<int>();
-	m_cacheIndex = new std::vector<int>();
-	m_cache = new cv::Mat(0, cols, m_descriptorType);
-	m_memoryCount = other.m_memoryCount;
-	m_elemSize = other.elemSize();
-	m_descriptorType = other.type();
+	m_cacheIndex = new std::vector<int>(other.rows, -1);
+	m_cache = new cv::Mat(0, other.cols, other.type());
 	rows = other.rows;
 	cols = other.cols;
+
 }
 
 // --------------------------------------------------------------------------
@@ -150,15 +152,17 @@ Mat& Mat::operator=(const Mat& other) {
 #endif
 
 	m_capacity = other.getCapacity();
-	m_imagesIndex = other.getDescriptorsIndex();
-	m_descriptorsFilenames = other.getDescriptorsFilenames();
-	m_cachedMat = cv::Mat();
-	m_cachingOrder = new std::stack<int>();
-	m_cacheIndex = new std::vector<int>();
-	m_cache = new cv::Mat(0, cols, m_descriptorType);
-	m_memoryCount = other.m_memoryCount;
-	m_elemSize = other.elemSize();
 	m_descriptorType = other.type();
+	m_elemSize = other.elemSize();
+	m_imagesIndex = other.getImagesIndex();
+	m_descriptorsIndex = other.getDescriptorsIndex();
+	m_descriptorsFilenames = other.getDescriptorsFilenames();
+	m_memoryCount = other.m_memoryCount;
+	m_cachedMat = cv::Mat();
+	m_cachedMatStartIdx = -1;
+	m_cachingOrder = new std::stack<int>();
+	m_cacheIndex = new std::vector<int>(other.rows, -1);
+	m_cache = new cv::Mat(0, other.cols, other.type());
 	rows = other.rows;
 	cols = other.cols;
 
@@ -279,12 +283,12 @@ bool Mat::empty() const {
 
 void Mat::clearCache() {
 	m_memoryCount = 0;
+	m_cachedMat = cv::Mat();
+	m_cachedMatStartIdx = -1;
 	while (m_cachingOrder->empty() == false) {
 		m_cachingOrder->pop();
 	}
-//	while (m_cache->empty() == false) {
-//		m_cache->pop_back();
-//	}
+	m_cacheIndex = new std::vector<int>(rows, -1);
 	m_cache->release();
 }
 
