@@ -35,9 +35,9 @@ int main(int argc, char **argv) {
 	double in_percentage = atof(argv[2]);
 	std::string out_folder = argv[3];
 
-	if (in_percentage <= 0.0 || in_percentage >= 100.0) {
+	if (in_percentage <= 0.0 || in_percentage > 100.0) {
 		fprintf(stderr,
-				"<in.percentage> must be a number between 0 and 100 excluding limits\n");
+				"<in.percentage> must be a number in the range (0, 100]\n");
 		return EXIT_FAILURE;
 	} else {
 		in_percentage = in_percentage / 100.0;
