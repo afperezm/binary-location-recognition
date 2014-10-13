@@ -11,7 +11,7 @@ libs:
 	cd Common; $(MAKE)
 	cd KMajorityLib; $(MAKE)
 	cd VocabLib; $(MAKE)
-	
+
 programs:
 # Make programs
 	cd FeatureExtract; $(MAKE)
@@ -22,6 +22,7 @@ programs:
 	cd VocabMatch; $(MAKE)
 	cd GeomVerify; $(MAKE)
 	cd ComputeMAP; $(MAKE)
+	cd ListBuild; $(MAKE)
 
 clean: clean-libs clean-programs
 
@@ -42,6 +43,7 @@ clean-programs:
 	cd VocabMatch; $(MAKE) clean
 	cd GeomVerify; $(MAKE) clean
 	cd ComputeMAP; $(MAKE) clean
+	cd ListBuild; $(MAKE) clean
 
 tests:
 #	cd Common; $(MAKE)
