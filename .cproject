@@ -26,19 +26,14 @@
 								<option id="gnu.cpp.compiler.option.include.paths.512675721" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/ros/hydro/include/opencv"/>
 									<listOptionValue builtIn="false" value="/opt/ros/hydro/include"/>
-									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
-									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/agast_lib}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/dbrief_lib}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/KMajorityLib/include}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1749597468" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1015627344" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
-								<option id="gnu.c.compiler.option.include.paths.671375506" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/agast_lib"/>
-									<listOptionValue builtIn="false" value="/home/andresf/workspace-cpp/dbrief_lib"/>
-									<listOptionValue builtIn="false" value="/opt/ros/hydro/include"/>
-									<listOptionValue builtIn="false" value="/opt/ros/hydro/include/opencv"/>
-								</option>
+								<option id="gnu.c.compiler.option.include.paths.671375506" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.168371236" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.1578088997" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>
