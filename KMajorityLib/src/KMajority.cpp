@@ -474,7 +474,11 @@ void KMajority::updateIndex() {
 					(Distance::ElementType*) m_centroids.data, m_centroids.rows,
 					m_centroids.cols), m_nnType, m_nnIndexParams);
 
-	m_nnIndex->buildIndex();
+	double mytime = cv::getTickCount();
+        m_nnIndex->buildIndex();
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency() * 1000;
+
+	printf("   Index built in [%lf] ms\n", mytime);
 
 }
 
