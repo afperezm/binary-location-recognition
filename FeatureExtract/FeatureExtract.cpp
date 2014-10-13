@@ -56,20 +56,21 @@ void describeFeatures(const std::string& imgPath, const std::string& imgName,
 		const std::string descriptorType);
 
 /**
- * In a given folder finds the last written .bin file that is also a valid image file.
+ * In a given folder finds the last written file of the given extension that is also a valid image file.
  *
  * @param folderPath - Path to the folder where to search
  * @param imgFolderFiles - Vector of images names
+ * @param extension
  *
  * @return an iterator to the image where the last written file is positioned
  */
 std::vector<std::string>::iterator findLastWrittenFile(
-		const std::string& folderPath,
-		std::vector<std::string>& imgFolderFiles);
+		const std::string& folderPath, std::vector<std::string>& imgFolderFiles,
+		const std::string& extension);
 
 int main(int argc, char **argv) {
 
-	if (argc < 5 || argc > 7) {
+	if (argc != 5 && argc != 7) {
 		printf(
 				"\nUsage:\n"
 						"\tFeatureExtract -detect <in.detector.type> <in.imgs.folder> <out.keypoints.folder>\n"
@@ -116,12 +117,12 @@ int main(int argc, char **argv) {
 
 		/* Finding last written key-points file */
 		printf(
-				"-- Searching for previous written key files in [%s] to resume feature extraction\n",
+				"-- Searching for previous written key files in [%s] to resume feature detection\n",
 				keypointsFolder.c_str());
 
 		// By default set to the first file
 		std::vector<std::string>::iterator startImg = findLastWrittenFile(
-				keypointsFolder, imgFolderFiles);
+				keypointsFolder, imgFolderFiles, ".yaml.gz");
 
 		if (startImg == imgFolderFiles.begin()) {
 			printf("   Starting feature extraction from first image\n");
@@ -147,7 +148,7 @@ int main(int argc, char **argv) {
 				}
 
 				std::string keypointsFileName = keypointsFolder + "/"
-						+ (*image).substr(0, (*image).size() - 4) + ".bin";
+						+ (*image).substr(0, (*image).size() - 4) + ".yaml.gz";
 
 				printf(
 						"-- Saving feature key-points to [%s] using OpenCV FileStorage\n",
@@ -167,7 +168,7 @@ int main(int argc, char **argv) {
 		std::string descriptorType = argv[2];
 		std::string imgsFolder = argv[3];
 		std::string in_keypointsFolder = argv[4];
-		std::string descriptorsFolder = argv[5];
+		std::string out_descriptorsFolder = argv[5];
 		std::string out_keypointsFolder = argv[6];
 
 		bool isDescriptorValid = isValidAlgorithm(descriptorType);
@@ -196,12 +197,12 @@ int main(int argc, char **argv) {
 
 		/* Finding last written descriptors file */
 		printf(
-				"-- Searching for previous written key files in [%s] to resume feature extraction\n",
-				in_keypointsFolder.c_str());
+				"-- Searching for previous written descriptors files in [%s] to resume feature extraction\n",
+				out_descriptorsFolder.c_str());
 
 		// By default set to the first file
 		std::vector<std::string>::iterator startImg = findLastWrittenFile(
-				descriptorsFolder, imgFolderFiles);
+				out_descriptorsFolder, imgFolderFiles, ".bin");
 
 		if (startImg == imgFolderFiles.begin()) {
 			printf("   Starting feature extraction from first image\n");
@@ -246,7 +247,7 @@ int main(int argc, char **argv) {
 					return EXIT_FAILURE;
 				}
 
-				std::string descriptorFileName = descriptorsFolder + "/"
+				std::string descriptorFileName = out_descriptorsFolder + "/"
 						+ (*image).substr(0, (*image).size() - 4) + ".bin";
 
 				printf("   Saving feature descriptors to [%s] using C++ STL\n",
@@ -292,6 +293,7 @@ bool isValidAlgorithm(std::string& candidateAlgorithm) {
 	bool isValid = false;
 
 	for (std::string& algorithm : algorithms) {
+//		printf("%s\n", algorithm.c_str());
 		isValid |=
 				algorithm.substr(
 						algorithm.size() < candidateAlgorithm.size() ?
@@ -317,6 +319,8 @@ void detectFeatures(const std::string& imgPath, const std::string& imgName,
 	// Create smart pointer for feature detector
 	cv::Ptr<cv::FeatureDetector> detector = cv::FeatureDetector::create(
 			detectorType);
+
+//	detector->set("thres", 10);
 
 	// Clear key-points
 	std::vector<cv::KeyPoint>().swap(keyPoints);
@@ -378,8 +382,8 @@ void describeFeatures(const std::string& imgPath, const std::string& imgName,
 }
 
 std::vector<std::string>::iterator findLastWrittenFile(
-		const std::string& folderPath,
-		std::vector<std::string>& imgFolderFiles) {
+		const std::string& folderPath, std::vector<std::string>& imgFolderFiles,
+		const std::string& extension) {
 
 	// By default set to the first file
 	std::vector<std::string>::iterator lastWrittenFile = imgFolderFiles.begin();
@@ -396,12 +400,13 @@ std::vector<std::string>::iterator findLastWrittenFile(
 	std::sort(folderFiles.begin(), folderFiles.end(),
 			std::greater<std::string>());
 
-	// Search for a file with yaml.gz extension
+	// Search for a file with the given extension
 	for (std::string& folderFile : folderFiles) {
-		if (folderFile.find("yaml.gz") != std::string::npos) {
+		if (folderFile.find(extension) != std::string::npos) {
 			std::vector<std::string>::iterator result = std::find(
 					imgFolderFiles.begin(), imgFolderFiles.end(),
-					folderFile.substr(0, folderFile.size() - 8) + ".jpg");
+					folderFile.substr(0, folderFile.size() - extension.length())
+							+ ".jpg");
 			if (result != imgFolderFiles.end()) {
 				// Found element
 				lastWrittenFile = result;
