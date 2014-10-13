@@ -35,7 +35,7 @@ void DBrief(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors,
 		bitset<CVLAB::DESC_LEN> desc = descs[i];
 		//printf("String formatted: %s\n", desc.to_string<char, char_traits<char>, allocator<char> >().c_str());
 
-		// Doing a reverse loop because the most significant on a bitset is the last element
+		// Doing a reverse loop because the most significant bit on a bitset is the last element
 		// e.g. 1100 is stored as 0011
 		for (int j = (int) desc.size() - 1; j >= 0; j--) {
 			// Incrementally composing descriptor by
