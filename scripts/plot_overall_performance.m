@@ -7,9 +7,15 @@
 %	ranked_files_folder: path to the folder of ranked files
 %	num_queries: number of queries over which to take the average
 %	color: color of the plotted line
+%	lineStyle: style of the plotted line
+%	marker: marker of the plotted line
+%
+% Output:
+%	avg_recall_rates: average recall rates
+%	avg_precision_rates: average precision rates
 %
 
-function plot_overall_performance(ranked_files_folder, num_queries, color)
+function [avg_recall_rates, avg_precision_rates] = plot_overall_performance(ranked_files_folder, num_queries, color, lineStyle, marker)
 
 	if nargin < 2
 		help plot_overall_performance;
@@ -17,6 +23,17 @@ function plot_overall_performance(ranked_files_folder, num_queries, color)
 
 	if nargin < 3
 	    color = 'r';
+	end
+
+	if nargin < 4
+	    lineStyle = '-';
+	end
+
+	if nargin < 5
+	    marker = 'o';
+		markersize = 0;
+	else
+		markersize = 3;
 	end
 
 	avg_recall_rates = 0;
@@ -34,6 +51,7 @@ function plot_overall_performance(ranked_files_folder, num_queries, color)
 	avg_recall_rates/=num_queries;
 	avg_precision_rates/=num_queries;
 
-	plot(avg_recall_rates, avg_precision_rates, 'Color', color, 'LineStyle','-'), grid on, ylabel('Precision'), xlabel('Recall');
+	plot(avg_recall_rates, avg_precision_rates, 'Color', color, 'LineStyle', lineStyle, 'LineWidth', 4, 'Marker', marker, 'MarkerSize', markersize), grid on, ylabel('Precision', 'FontSize', 12), xlabel('Recall', 'FontSize', 12);
 
 end
+
