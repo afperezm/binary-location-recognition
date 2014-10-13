@@ -286,10 +286,10 @@ int filterFeaturesByRegion(FileUtils::Query& q, cv::Mat& descriptors) {
 	std::vector<cv::KeyPoint> keypoints, filteredKeypoints;
 	std::string queries_keys_folder = "queries", queryBase;
 
-	queryBase = q.name.substr(8, q.name.length() - 16);
+	queryBase = q.name.substr(8, q.name.length() - 12);
 
-	FileUtils::loadKeypoints(
-			queries_keys_folder + "/" + queryBase + "_kpt.yaml.gz", keypoints);
+	FileUtils::loadKeypoints(queries_keys_folder + "/" + queryBase + ".yaml.gz",
+			keypoints);
 
 	for (int i = 0; i < descriptors.rows; ++i) {
 		if (keypoints[i].pt.x > q.x1 && keypoints[i].pt.x < q.x2
