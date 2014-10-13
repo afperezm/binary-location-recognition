@@ -37,9 +37,13 @@ int NumberOfSetBits(int i);
 
 int BinToDec(const cv::Mat& binRow);
 
+std::vector<std::string> split(const std::string &ss, char delim);
+
 void split(const std::string &s, char delim, std::vector<std::string> &tokens);
 
 std::string basify(const std::string& s);
+
+std::string parseLandmarkName(std::vector<std::string>::const_iterator fileName);
 
 } // namespace FunctionUtils
 

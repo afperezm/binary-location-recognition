@@ -114,6 +114,12 @@ int FunctionUtils::BinToDec(const cv::Mat& binRow) {
 
 // --------------------------------------------------------------------------
 
+std::vector<std::string> FunctionUtils::split(const std::string &ss, char delim) {
+	std::vector<std::string> elems;
+	FunctionUtils::split(ss, delim, elems);
+	return elems;
+}
+
 void FunctionUtils::split(const std::string &s, char delim,
 		std::vector<std::string> &tokens) {
 
@@ -126,6 +132,8 @@ void FunctionUtils::split(const std::string &s, char delim,
 	}
 
 }
+
+// --------------------------------------------------------------------------
 
 std::string FunctionUtils::basify(const std::string& s) {
 	char folderDelim = '/';
@@ -153,3 +161,25 @@ std::string FunctionUtils::basify(const std::string& s) {
 
 	return *tokens.begin();
 }
+
+std::string FunctionUtils::parseLandmarkName(std::vector<std::string>::const_iterator fileName) {
+	std::string landmarkName("");
+	std::vector<std::string> fileNameSplitted = split((*fileName), '_');
+	landmarkName = std::string(fileNameSplitted[0]);
+	for (int var = 1; var < (int) fileNameSplitted.size() - 2; ++var) {
+		landmarkName = landmarkName + "_" + fileNameSplitted[var];
+	}
+	return landmarkName;
+}
+
+///**
+// * Transforms a key filename to an image filename
+// *
+// * @param keyFilename String holding the path to a keyfile since the data set root folder.
+// * @return Parsed image name
+// */
+//string parseImgFilename(const string keyFilename, string prefix) {
+//	string imgFilename = split(keyFilename.c_str(), '/').back();
+//	imgFilename.resize(imgFilename.size() - 4);
+//	return imgFilename + (!prefix.empty() ? prefix : "") + IMAGE_FILE_EXTENSION;
+//}
