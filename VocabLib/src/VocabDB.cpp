@@ -374,6 +374,8 @@ int HKMDB::getFeaturesLength() const {
 void HKMDB::quantize(const cv::Mat& feature, int& wordId,
 		double& wordWeight) const {
 
+	double mytime = cv::getTickCount();
+
 	wordId = -1;
 	int nodeAtL = -1;
 
@@ -384,6 +386,10 @@ void HKMDB::quantize(const cv::Mat& feature, int& wordId,
 	// CV_Assert(nodeAtL != -1);
 
 	wordWeight = m_invertedIndex->at(wordId).m_weight;
+
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("   Descriptor quantized in [%lf] ms\n", mytime);
 
 }
 
@@ -468,6 +474,8 @@ size_t AKMajDB::getNumOfWords() const {
 void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 		double& wordWeight) const {
 
+	double mytime = cv::getTickCount();
+
 	int knn = 1;
 
 	cvflann::Matrix<int> indices(new int[1 * knn], 1, knn);
@@ -487,6 +495,10 @@ void AKMajDB::quantize(const cv::Mat& feature, int& wordId,
 
 	delete[] indices.data;
 	delete[] distances.data;
+
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency()
+			* 1000;
+	printf("   Descriptor quantized in [%lf] ms\n", mytime);
 
 }
 
