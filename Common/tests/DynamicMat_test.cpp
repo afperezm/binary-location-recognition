@@ -21,8 +21,6 @@ TEST(DynamicMat, EmptyInstantiation) {
 	vlr::Mat data;
 
 	EXPECT_TRUE(data.empty());
-	EXPECT_TRUE(data.getDescriptorsIndex().size() == 0);
-	EXPECT_TRUE(data.getDescriptorsFilenames().size() == 0);
 
 }
 
@@ -44,7 +42,6 @@ TEST(DynamicMat, Instantiation) {
 	EXPECT_TRUE(data.rows == imgDescriptors.rows * 2);
 	EXPECT_TRUE(data.cols == imgDescriptors.cols);
 	EXPECT_TRUE(data.type() == imgDescriptors.type());
-	EXPECT_TRUE(data.getDescriptorsFilenames().size() == keysFilenames.size());
 
 }
 
@@ -64,12 +61,6 @@ TEST(DynamicMat, InitByCopy) {
 	EXPECT_TRUE(data.rows == dataCopy.rows);
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
-	EXPECT_TRUE(
-			data.getDescriptorsIndex().size()
-					== dataCopy.getDescriptorsIndex().size());
-	EXPECT_TRUE(
-			data.getDescriptorsFilenames().size()
-					== dataCopy.getDescriptorsFilenames().size());
 
 }
 
@@ -89,12 +80,6 @@ TEST(DynamicMat, InitByAssignment) {
 	EXPECT_TRUE(data.rows == dataCopy.rows);
 	EXPECT_TRUE(data.cols == dataCopy.cols);
 	EXPECT_TRUE(data.type() == dataCopy.type());
-	EXPECT_TRUE(
-			data.getDescriptorsIndex().size()
-					== dataCopy.getDescriptorsIndex().size());
-	EXPECT_TRUE(
-			data.getDescriptorsFilenames().size()
-					== dataCopy.getDescriptorsFilenames().size());
 
 }
 
@@ -107,7 +92,7 @@ TEST(DynamicMat, RowExtraction) {
 
 	FileUtils::loadDescriptors("sift_0.bin", imgDescriptors);
 
-	std::vector<std::string> keysFilenames(10, "sift_0.bin");
+	std::vector<std::string> keysFilenames(1, "sift_0.bin");
 
 	vlr::Mat data(keysFilenames);
 	/////////////////////////////////////////////////////////////////////
@@ -123,7 +108,7 @@ TEST(DynamicMat, RowExtraction) {
 
 		extractedRow = data.row(i);
 
-		// Check that rowA is continuous thought it was extracted using Mat::row
+		// Check that rowA is continuous though it was extracted using Mat::row
 		EXPECT_TRUE(extractedRow.isContinuous());
 
 		mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
@@ -141,23 +126,28 @@ TEST(DynamicMat, RowExtraction) {
 
 		// Check row elements are equal
 		for (int j = 0; j < extractedRow.cols; j++) {
-			EXPECT_TRUE(
-					extractedRow.at<float>(0, j)
-							== originalRow.at<float>(0, j));
+			float a = originalRow.at<float>(0, j);
+			float b = extractedRow.at<float>(0, j);
+			EXPECT_TRUE(a == b);
 		}
+
 	}
 
 }
 
-TEST(DynamicMat, Stress) {
-
-	std::vector<std::string> descriptorsList;
-	FileUtils::loadList("list.txt", descriptorsList);
-	vlr::Mat data(descriptorsList);
-
-	for (int i = 0; i < data.rows; ++i) {
-		data.row(i);
-		ASSERT_TRUE(data.getMemoryCount() <= data.MAX_MEM);
-	}
-
-}
+//TEST(DynamicMat, WorkingPrinciple) {
+//	cv::RNG rng(0xFFFFFFFF);
+//	cv::Mat mat = cv::Mat::zeros(1, 5, CV_32F);
+//	for (int i = 0; i < mat.rows; ++i) {
+//		for (int j = 0; j < mat.cols; ++j) {
+//			mat.at<float>(i, j) = (float) rng.uniform(0, 256);
+//		}
+//	}
+//	std::cout << mat.at<float>(0, 0) << std::endl;
+//	std::cout << mat.at<float>(0, 1) << std::endl;
+//	uchar* p_mat = mat.data;
+//	std::vector<char> value(p_mat, p_mat + mat.step * mat.rows);
+//	float* p_vector = reinterpret_cast<float*>(value.data());
+//	std::cout << *p_vector << std::endl;
+//	std::cout << *(p_vector + 1) << std::endl;
+//}
