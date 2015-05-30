@@ -25,6 +25,7 @@ OxDataReader/OxDataReader
 VocabLearn/VocabLearn
 VocabBuildDB/VocabBuildDB
 VocabMatch/VocabMatch
+ListBuild/ListBuild
 
 # Executables output files
 *.xml.gz
