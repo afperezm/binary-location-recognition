@@ -752,16 +752,6 @@ void VocabTree<TDescriptor, Distance>::computeClustering(VocabTreeNodePtr node,
 		count[i] = 0;
 	}
 
-	// Prepare cache for clustering, clear it if descriptors
-	// didn't fit in memory at previous level but they do at this one
-	if (fitted == false && indices_length <= m_dataset.getCapacity()) {
-		m_dataset.clearCache();
-		fitted = true;
-#if VTREEVERBOSE
-		printf("Clearing cache at level=[%d]\n", level);
-#endif
-	}
-
 #if DEBUG
 #if VTREEVERBOSE
 	printf("quantize - Start\n");

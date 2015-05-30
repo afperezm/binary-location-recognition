@@ -173,8 +173,6 @@ void KMajority::initCentroids() {
 				m_centroids(cv::Range(i, i + 1), cv::Range(0, m_dim)));
 	}
 
-	m_dataset.clearCache();
-
 }
 
 // --------------------------------------------------------------------------
