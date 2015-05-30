@@ -16,13 +16,12 @@
 #include <string>
 #include <vector>
 
+#include <libmemcached/memcached.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-#define MAX_CACHE_SIZE 524288000 // ~500 MB
-
-static std::vector<int> DEFAULT_INDICES;
-static std::vector<std::string> DEFAULT_FILENAMES;
+#define HOST 127.0.0.1
+#define PORT 21201
 
 namespace vlr {
 
@@ -30,27 +29,13 @@ class Mat {
 
 public:
 
-	static const size_t MAX_MEM = MAX_CACHE_SIZE;
-
 private:
 
-	double m_capacity = 0.0;
 	int m_descriptorType = -1;
 	size_t m_elemSize = 0;
-	// key=descIdx value=imgIdx
-	std::vector<int> m_imagesIndex;
-	// key=imgIdx value=startDescIdx
-	std::vector<int> m_descriptorsIndex;
-	std::vector<std::string> m_descriptorsFilenames;
 
 	/** Attributes of the cache **/
-	size_t m_memoryCount = 0;
-	cv::Mat m_cachedMat;
-	int m_cachedMatStartIdx;
-	std::stack<int>* m_cachingOrder;
-	// key=descIdx value=cacheIdx
-	std::vector<int>* m_cacheIndex;
-	cv::Mat* m_cache;
+	memcache::Memcache client = NULL;
 
 public:
 
@@ -115,73 +100,6 @@ public:
 	 * @return true if rows counter is zero, false otherwise
 	 */
 	bool empty() const;
-
-	/**
-	 * Swaps the cache content by an empty vector of the same size.
-	 */
-	void clearCache();
-
-	/**
-	 * Returns the maximum number of descriptors that can be stored
-	 * given the maximum size of the cache
-	 *
-	 * @return cache capacity in number of descriptors
-	 */
-	double getCapacity() const {
-		return m_capacity;
-	}
-
-	/** Getters **/
-
-	/**
-	 * Returns a reference to the index mapping descriptor index
-	 * to image index.
-	 *
-	 * @return index of descriptors
-	 */
-	const std::vector<int>& getDescriptorsIndex() const {
-		return m_descriptorsIndex;
-	}
-
-	/**
-	 * Returns a reference to the index mapping image index to
-	 * the starting index in the virtual big descriptors matrix.
-	 *
-	 * @return index of descriptors
-	 */
-	const std::vector<int>& getImagesIndex() const {
-		return m_imagesIndex;
-	}
-
-	/**
-	 * Returns a reference to the vector of descriptors filenames.
-	 *
-	 * @return descriptors filenames
-	 */
-	const std::vector<std::string>& getDescriptorsFilenames() const {
-		return m_descriptorsFilenames;
-	}
-
-	/**
-	 * Returns the count of memory used by the matrices loaded in cache.
-	 *
-	 * @return memory count in Bytes
-	 */
-	size_t getMemoryCount() const {
-		return m_memoryCount;
-	}
-
-private:
-
-	/**
-	 * Computes used memory by the given descriptors matrix
-	 *
-	 * @param descriptors - a reference to a matrix containing descriptors
-	 * @return number of bytes used
-	 */
-	size_t rowMemorySize() {
-		return cols * m_elemSize;
-	}
 
 };
 

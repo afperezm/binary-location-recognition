@@ -5,21 +5,24 @@
  *      Author: andresf
  */
 
-#include <stdexcept>
-
 #include <DynamicMat.hpp>
 #include <FileUtils.hpp>
+#include <FunctionUtils.hpp>
+#include <libmemcached-1.0/memcached.hpp>
+#include <opencv2/core/mat.hpp>
+#include <cstring>
+#include <stdexcept>
+#include <unistd.h>
 
 namespace vlr {
 
 Mat::Mat() :
-		m_capacity(0.0), m_descriptorType(-1), m_elemSize(0), m_imagesIndex(
-				DEFAULT_INDICES), m_descriptorsFilenames(DEFAULT_FILENAMES), m_memoryCount(
-				0), m_cachedMat(cv::Mat()), m_cachedMatStartIdx(-1), m_cachingOrder(
-				NULL), m_cacheIndex(NULL), m_cache(NULL), rows(0), cols(0) {
+		m_descriptorType(-1), m_elemSize(0), client("--SERVER=127.0.0.1:21201"), rows(
+				0), cols(0) {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing empty\n");
 #endif
+
 }
 
 // --------------------------------------------------------------------------
@@ -30,18 +33,9 @@ Mat::Mat(const Mat& other) {
 	printf("[DynamicMat] Initializing by copy\n");
 #endif
 
-	m_capacity = other.getCapacity();
 	m_descriptorType = other.type();
 	m_elemSize = other.elemSize();
-	m_imagesIndex = other.getImagesIndex();
-	m_descriptorsIndex = other.getDescriptorsIndex();
-	m_descriptorsFilenames = other.getDescriptorsFilenames();
-	m_memoryCount = other.m_memoryCount;
-	m_cachedMat = cv::Mat();
-	m_cachedMatStartIdx = -1;
-	m_cachingOrder = new std::stack<int>();
-	m_cacheIndex = new std::vector<int>(other.rows, -1);
-	m_cache = new cv::Mat(0, other.cols, other.type());
+	client = other.client;
 	rows = other.rows;
 	cols = other.cols;
 
@@ -50,17 +44,13 @@ Mat::Mat(const Mat& other) {
 // --------------------------------------------------------------------------
 
 Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
-		m_descriptorsFilenames(descriptorsFilenames), m_cachedMatStartIdx(-1) {
+		client("--SERVER=127.0.0.1:21201") {
 
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initializing using filenames\n");
 #endif
 
-	FileUtils::MatStats descriptorsStats;
-
-	m_imagesIndex.clear();
-	m_descriptorsIndex.clear();
-	m_descriptorsIndex.resize(descriptorsFilenames.size(), 0);
+	cv::Mat descriptors;
 
 	int descCount = 0, descLen = 0, descType = -1, imgIdx = 0;
 	size_t descElemSize = 0;
@@ -74,62 +64,70 @@ Mat::Mat(std::vector<std::string>& descriptorsFilenames) :
 				imgIdx + 1, descriptorsFilenames.size());
 
 		// Load descriptors
-		FileUtils::loadDescriptorsStats(descriptorsFilename, descriptorsStats);
+		FileUtils::loadDescriptors(descriptorsFilename, descriptors);
 
 		// Increase counter if descriptors matrix is not empty
-		if (descriptorsStats.empty() == false) {
-			m_imagesIndex.insert(m_imagesIndex.end(), descriptorsStats.rows,
-					imgIdx);
-			m_descriptorsIndex[imgIdx] = descCount;
-			// Increase descriptors counter
-			descCount += descriptorsStats.rows;
-
+		if (descriptors.empty() == false) {
 			// If initialized check descriptors length
 			if (descLen != 0) {
 				// Recall that all descriptors must be of the same length
-				CV_Assert(descLen == descriptorsStats.cols);
+				CV_Assert(descLen == descriptors.cols);
 			} else {
-				descLen = descriptorsStats.cols;
+				descLen = descriptors.cols;
 			}
 			// If initialized check descriptors type
 			if (descType != -1) {
 				// Recall that all descriptors must be of the same type
-				CV_Assert(descType == descriptorsStats.type());
+				CV_Assert(descType == descriptors.type());
 			} else {
-				descType = descriptorsStats.type();
+				descType = descriptors.type();
 			}
 			// If initialized check descriptors element size
 			if (descElemSize != 0) {
 				// Recall that all descriptors must have the same element size
-				CV_Assert(descElemSize == descriptorsStats.elemSize());
+				CV_Assert(descElemSize == descriptors.elemSize());
 			} else {
-				descElemSize = descriptorsStats.elemSize();
+				descElemSize = descriptors.elemSize();
 			}
+			// Adding descriptors to the persistent cache
+			for (int i = 0; i < descriptors.rows; ++i) {
+				cv::Mat row = descriptors.row(i);
+				uchar* p_row = row.data;
+				std::vector<char> value(p_row, p_row + row.step * row.rows);
+				std::stringstream ss;
+				ss << descCount + i;
+				std::string key = ss.str();
+#if DYNMATVERBOSE
+				printf("[DynamicMat] Adding descriptor [%s]\n", key.c_str());
+#endif
+				bool valueAdded = client.set(key, value, 0, 0);
+				if (valueAdded == false) {
+					throw std::runtime_error("Unable to add descriptor to cache");
+				}
+			}
+			// Increase descriptors counter
+			descCount += descriptors.rows;
 		}
 
 		// Increase images counter
 		++imgIdx;
 	}
 
-	mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency()
-			* 1000;
+	mytime = (double(cv::getTickCount()) - mytime) / cv::getTickFrequency() * 1000;
+
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Initialized descriptors index in [%lf] ms\n", mytime);
 #endif
 
 	rows = descCount;
 	cols = descLen;
-	m_memoryCount = 0;
 	m_descriptorType = descType;
 	m_elemSize = descElemSize;
 
 	CV_Assert(cols > 0 && descElemSize > 0);
 
-	m_capacity = floor(double(MAX_MEM / (cols * descElemSize)));
+	client.flush(0);
 
-	m_cachingOrder = new std::stack<int>();
-	m_cacheIndex = new std::vector<int>(rows, -1);
-	m_cache = new cv::Mat(0, cols, m_descriptorType);
 }
 
 // --------------------------------------------------------------------------
@@ -138,9 +136,6 @@ Mat::~Mat() {
 #if DYNMATVERBOSE
 	printf("[DynamicMat] Destroying\n");
 #endif
-	delete m_cachingOrder;
-	delete m_cacheIndex;
-	delete m_cache;
 }
 
 // --------------------------------------------------------------------------
@@ -151,18 +146,9 @@ Mat& Mat::operator=(const Mat& other) {
 	printf("[DynamicMat] Initializing by assignment\n");
 #endif
 
-	m_capacity = other.getCapacity();
 	m_descriptorType = other.type();
 	m_elemSize = other.elemSize();
-	m_imagesIndex = other.getImagesIndex();
-	m_descriptorsIndex = other.getDescriptorsIndex();
-	m_descriptorsFilenames = other.getDescriptorsFilenames();
-	m_memoryCount = other.m_memoryCount;
-	m_cachedMat = cv::Mat();
-	m_cachedMatStartIdx = -1;
-	m_cachingOrder = new std::stack<int>();
-	m_cacheIndex = new std::vector<int>(other.rows, -1);
-	m_cache = new cv::Mat(0, other.cols, other.type());
+	client = other.client;
 	rows = other.rows;
 	cols = other.cols;
 
@@ -185,82 +171,15 @@ cv::Mat Mat::row(int descriptorIdx) {
 		throw std::out_of_range(ss.str());
 	}
 
-	std::vector<int>::iterator it = m_cacheIndex->begin() + descriptorIdx;
+	std::stringstream ss;
+	ss << descriptorIdx;
+	std::vector<char> value;
+	client.get(ss.str(), value);
 
-	// Iterator is invalid if cache index doesn't contain descriptor index
-	CV_Assert(it != m_cacheIndex->end());
+	cv::Mat descriptor(1, cols, m_descriptorType);
+	memcpy(reinterpret_cast<char*>(descriptor.data), reinterpret_cast<char*>(value.data()), value.size());
 
-	if (*it == -1) {
-
-#if DYNMATVERBOSE
-		printf("   NOT loaded in cache.\n");
-#endif
-
-		// Load corresponding descriptors matrix if it isn't loaded
-		if (m_cachedMatStartIdx == -1 || descriptorIdx < m_cachedMatStartIdx
-				|| descriptorIdx >= m_cachedMatStartIdx + m_cachedMat.rows) {
-			m_cachedMat.release();
-			FileUtils::loadDescriptors(
-					m_descriptorsFilenames[m_imagesIndex[descriptorIdx]],
-					m_cachedMat);
-			m_cachedMatStartIdx =
-					m_descriptorsIndex[m_imagesIndex[descriptorIdx]];
-		}
-
-		// Compute descriptor index relative to the descriptors matrix it belongs to
-		int relIdx = descriptorIdx
-				- m_descriptorsIndex[m_imagesIndex[descriptorIdx]];
-
-		// Check relative descriptor index to be in range
-		CV_Assert(relIdx >= 0 || relIdx < m_cachedMat.rows);
-
-		// Obtain a reference to the descriptor
-		// descriptor = m_cachedMat.row(relIdx);
-
-		// Check whether cache is full
-		if (m_memoryCount != 0 && m_memoryCount + rowMemorySize() > MAX_MEM) {
-
-#if DYNMATVERBOSE
-			printf("   Cache full, executing eviction policy.\n");
-#endif
-
-			/* Remove last added descriptor from the cache */
-			// Obtain an iterator to it
-			it = m_cacheIndex->begin() + m_cachingOrder->top();
-			// Check the iterator is valid
-			CV_Assert(it != m_cacheIndex->end());
-			// Decrease memory counter
-			m_memoryCount -= rowMemorySize();
-			// Remove element from cache
-			m_cacheIndex->at(*it) = -1;
-			m_cache->pop_back();
-			// Pop its index from the stack
-			m_cachingOrder->pop();
-		}
-
-		/* Add descriptor to the cache */
-#if DYNMATVERBOSE
-		printf("   Caching descriptor.\n");
-#endif
-		// Increase memory counter
-		m_memoryCount += rowMemorySize();
-		// Insert a new element
-		m_cacheIndex->at(descriptorIdx) = m_cache->rows;
-		m_cache->push_back(cv::Mat(1, cols, type()));
-		it = m_cacheIndex->begin() + descriptorIdx;
-		// Check the iterator is valid
-		CV_Assert(it != m_cacheIndex->end());
-		// Load descriptor
-		m_cachedMat.row(relIdx).copyTo(m_cache->row(*it));
-		// Push its index to the stack
-		m_cachingOrder->push(descriptorIdx);
-	} else {
-#if DYNMATVERBOSE
-		printf("   Loaded in cache.\n");
-#endif
-	}
-
-	return m_cache->row(*it);
+	return descriptor;
 }
 
 // --------------------------------------------------------------------------
@@ -279,17 +198,6 @@ size_t Mat::elemSize() const {
 
 bool Mat::empty() const {
 	return rows == 0;
-}
-
-void Mat::clearCache() {
-	m_memoryCount = 0;
-	m_cachedMat = cv::Mat();
-	m_cachedMatStartIdx = -1;
-	while (m_cachingOrder->empty() == false) {
-		m_cachingOrder->pop();
-	}
-	m_cacheIndex = new std::vector<int>(rows, -1);
-	m_cache->release();
 }
 
 } /* namespace vlr */
