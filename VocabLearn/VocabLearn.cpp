@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
 						"\tHKMAJ: Hierarchical K-Majority\n"
 						"\tAKM: Approximate K-Means (Not yet supported)\n"
 						"\tAKMAJ: Approximate K-Majority\n\n"
+						"\tIKM: Incremental K-Means\n\n"
 						"HKM and HKMAJ options:\n"
 						"\tdepth=6\t\t\tbranch.factor=10\n"
 						"\tmax.iterations=10\tcenters.init.method=RANDOM\n\n"
@@ -79,9 +80,10 @@ int main(int argc, char **argv) {
 	} else if (in_vocab_type.compare("AKMAJ") == 0) {
 		vocabParams = vlr::KMajorityParams();
 		nnIndexParams = cvflann::IndexParams();
+	} else if (in_vocab_type.compare("IKM") == 0) {
+		vocabParams = vlr::IncrementalKMeansParams();
 	} else {
-		fprintf(stderr,
-				"Invalid vocabulary type, choose among HKM, HKMAJ or AKMAJ\n");
+		fprintf(stderr, "Invalid vocabulary type, choose among HKM, HKMAJ or AKMAJ\n");
 		return EXIT_FAILURE;
 	}
 
@@ -152,6 +154,8 @@ int main(int argc, char **argv) {
 		vocab = new vlr::VocabTreeBin(dataset, vocabParams);
 	} else if (in_vocab_type.compare("AKMAJ") == 0) {
 		vocab = new vlr::KMajority(dataset, vocabParams, nnIndexParams);
+	} else if (in_vocab_type.compare("IKM") == 0) {
+		vocab = new vlr::IncrementalKMeans(dataset, vocabParams);
 	}
 
 	printf("-- Building [%s] vocabulary from [%d] feature vectors",
