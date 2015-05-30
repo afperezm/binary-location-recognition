@@ -13,7 +13,7 @@ LDFLAGS += `pkg-config opencv --libs`
 
 # GoogleTest
 CXXFLAGS += -Wextra -pthread
-LDFLAGS += -L/home/andresf/workspace-cpp/gtest-1.7.0/make
+LDFLAGS += -L/home/andresf/workspace-cdt/gtest-1.7.0/make
 LDFLAGS += -lgtest_main -lpthread
 
 SOURCES = $(wildcard *.cpp)
