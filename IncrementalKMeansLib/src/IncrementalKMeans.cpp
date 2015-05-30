@@ -5,7 +5,7 @@
  *      Author: andresf
  */
 
-#include <IncrementalKMeans.h>
+#include <IncrementalKMeans.hpp>
 #include <opencv2/core/core.hpp>
 
 namespace vlr {
