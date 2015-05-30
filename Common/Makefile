@@ -1,7 +1,7 @@
 # Makefile for Common
 
 CXXFLAGS = -O2 $(DEBUGFLAGS) -fmessage-length=0 -std=c++11 -fpic -I./include/
-LDFLAGS = -lboost_iostreams
+LDFLAGS = -lboost_iostreams -lmemcached
 
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`
