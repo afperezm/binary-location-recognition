@@ -1,4 +1,4 @@
-# Makefile for K-majority library
+# Makefile for Incremental K-means library
 
 CXXFLAGS = -O2 $(DEBUGFLAGS) -fmessage-length=0 -std=c++11 -fpic -I./include/
 LDFLAGS = -L../lib/ -lboost_iostreams
@@ -6,6 +6,10 @@ LDFLAGS = -L../lib/ -lboost_iostreams
 # Common
 CXXFLAGS += -I../Common/include/
 LDFLAGS += -lcommon
+
+# KMajority
+CXXFLAGS += -I../KMajorityLib/include
+LDFLAGS += -lkmajority
 
 # OpenCV Extensions
 CXXFLAGS += -I../OpenCVExtensions/include
@@ -29,10 +33,7 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 BINLIB = ../lib
 
-LIBRARY = libkmajority
-
-#SEEDRANDOM = -DSEEDRANDOM
-KMAJVERBOSE = -DKMAJVERBOSE
+LIBRARY = libincrementalkmeans
 
 all: $(LIBRARY).so
 
@@ -41,7 +42,7 @@ $(LIBRARY).so: $(OBJECTS)
 	$(CXX) -shared $(OBJECTS) -o $(BINLIB)/$@ $(LDFLAGS)
 
 .cpp.o:
-	$(CXX) $(SEEDRANDOM) $(KMAJVERBOSE) -c $(CXXFLAGS) $< -o $@
+	$(CXX) $(SEEDRANDOM) -c $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf $(OBJECTS) $(BINLIB)/$(LIBRARY).so *~
