@@ -71,7 +71,7 @@ public:
 	void load(const std::string& filename);
 
 	size_t size() const {
-		return 0;
+		return m_centroids.rows;
 	}
 
 	const cv::Mat& getCentroids() const {
