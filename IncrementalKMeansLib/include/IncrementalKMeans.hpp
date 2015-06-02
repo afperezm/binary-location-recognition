@@ -19,11 +19,7 @@ namespace vlr {
 
 struct IncrementalKMeansParams: public cvflann::IndexParams {
 	IncrementalKMeansParams(int numClusters = 1000000) {
-//		int maxIterations = 10, vlr::indexType nnType = vlr::HIERARCHICAL, cvflann::flann_centers_init_t centersInitMethod = cvflann::FLANN_CENTERS_RANDOM
 		(*this)["num.clusters"] = numClusters;
-//		(*this)["max.iterations"] = maxIterations;
-//		(*this)["centers.init.method"] = centersInitMethod;
-//		(*this)["nn.type"] = nnType;
 	}
 };
 
@@ -78,15 +74,64 @@ public:
 		return 0;
 	}
 
+	const cv::Mat& getCentroids() const {
+		return m_centroids;
+	}
+
+	const cv::Mat& getClustersCounts() const {
+		return m_clustersCounts;
+	}
+
+	const cv::Mat& getClustersSums() const {
+		return m_clustersSums;
+	}
+
+	const cv::Mat& getClustersVariances() const {
+		return m_clustersVariances;
+	}
+
+	const cv::Mat& getClustersWeights() const {
+		return m_clustersWeights;
+	}
+
+	const cv::Mat& getDataset() const {
+		return m_dataset;
+	}
+
+	int getDim() const {
+		return m_dim;
+	}
+
+	const cv::Mat& getMiu() const {
+		return m_miu;
+	}
+
+	int getNumClusters() const {
+		return m_numClusters;
+	}
+
+	int getNumDatapoints() const {
+		return m_numDatapoints;
+	}
+
+	const std::vector<std::pair<int, double> >& getOutliers() const {
+		return m_outliers;
+	}
+
+	const cv::Mat& getSigma() const {
+		return m_sigma;
+	}
+
 private:
 
 	/**
 	 * Finds the closest cluster center to the given transaction.
 	 *
-	 * @param transaction
-	 * @return
+	 * @param transaction - A transaction
+	 * @param clusterIndex - Index to the closest cluster center
+	 * @param distanceToCluster - Distance to the closest cluster center
 	 */
-	int findNearestNeighbor(cv::Mat transaction);
+	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
 
 };
 

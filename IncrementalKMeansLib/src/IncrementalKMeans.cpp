@@ -10,29 +10,46 @@
 
 namespace vlr {
 
-IncrementalKMeans::IncrementalKMeans(cv::Mat data,
-		const cvflann::IndexParams& params) :
+IncrementalKMeans::IncrementalKMeans(cv::Mat data, const cvflann::IndexParams& params) :
 		m_dataset(data), m_dim(data.cols), m_numDatapoints(data.rows) {
 
 	// Attributes initialization
 	m_numClusters = cvflann::get_param<int>(params, "num.clusters");
 
 	// Compute the global data set mean
-	m_miu = cv::Mat::zeros(1, m_dim, CV_32F);
+	m_miu = cv::Mat::zeros(1, m_dim * 8, cv::DataType<double>::type);
 	for (int i = 0; i < m_numDatapoints; ++i) {
-		m_miu += m_dataset.row(i);
+		cv::Mat row = m_dataset.row(i);
+		uchar byte = 0;
+		for (int l = 0; l < m_miu.cols; l++) {
+			if ((l % 8) == 0) {
+				byte = *(row.col((int) l / 8).data);
+			}
+			m_miu.at<double>(0, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
+		}
 	}
 	m_miu /= m_numDatapoints;
 
 	// Compute the global data set standard deviations
-	m_sigma = cv::Mat::zeros(1, m_dim, CV_32F);
+	m_sigma = cv::Mat::zeros(1, m_dim * 8, cv::DataType<double>::type);
 	for (int i = 0; i < m_numDatapoints; ++i) {
-		cv::Mat temp(1, m_dim, CV_32F);
-		cv::pow(m_dataset.row(i) - m_miu, 2, temp);
-		m_sigma += temp;
+		cv::Mat row = m_dataset.row(i);
+		uchar byte = 0;
+		for (int l = 0; l < m_sigma.cols; l++) {
+			if ((l % 8) == 0) {
+				byte = *(row.col((int) l / 8).data);
+			}
+			m_sigma.at<double>(0, l) += pow(((int) ((byte >> (7 - (l % 8))) % 2)) - m_miu.at<double>(0, l), 2);
+		}
 	}
 	m_sigma /= m_numDatapoints;
 	cv::sqrt(m_sigma, m_sigma);
+
+	m_centroids.create(m_numClusters, m_dim * 8, cv::DataType<double>::type);
+	m_clustersVariances.create(m_numClusters, m_dim * 8, cv::DataType<double>::type);
+	m_clustersWeights.create(1, m_numClusters, cv::DataType<double>::type);
+	m_clustersSums.create(m_numClusters, m_dim * 8, cv::DataType<int>::type);
+	m_clustersCounts.create(1, m_numClusters, cv::DataType<int>::type);
 
 }
 
@@ -45,86 +62,100 @@ IncrementalKMeans::~IncrementalKMeans() {
 
 void IncrementalKMeans::build() {
 
-	m_centroids.create(m_numClusters, m_dim, CV_32F);
-	m_clustersVariances.create(m_numClusters, m_dim, CV_32F);
-
 	// Mean-based initialization
 	srand(time(NULL));
 	for (int j = 0; j < m_numClusters; ++j) {
 		// Cj <- miu +/-sigma*r/d
 		double r = (double) rand() / RAND_MAX;
 		if (rand() % 2 == 0) {
-			m_centroids.row(j) = (m_miu + m_sigma * r / m_dim);
+			m_centroids.row(j) = (m_miu + m_sigma * r / (m_dim * 8));
 		} else {
-			m_centroids.row(j) = (m_miu - m_sigma * r / m_dim);
+			m_centroids.row(j) = (m_miu - m_sigma * r / (m_dim * 8));
 		}
 	}
 	// Nj <- 0
-	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, CV_32F);
+	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, cv::DataType<int>::type);
 	// Mj <- 0
-	m_clustersSums = cv::Mat::zeros(m_numClusters, m_dim, CV_32F);
+	m_clustersSums = cv::Mat::zeros(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	// Wj <- 1/k
-	m_clustersWeights = cv::Mat::ones(1, m_numClusters, CV_32F) / m_numClusters;
+	m_clustersWeights = cv::Mat::ones(1, m_numClusters, cv::DataType<double>::type) / m_numClusters;
 
 	double L = sqrt(m_numDatapoints);
+	int clusterIndex;
+	double distanceToCluster;
 
 	for (int i = 0; i < m_numDatapoints; ++i) {
+		cv::Mat transaction = m_dataset.row(i);
 		// Cluster assignment
 		// j = NN(ti)
-		int J = findNearestNeighbor(m_dataset.row(i));
-		double distance = cv::norm(m_dataset.row(i), m_centroids.row(J));
+		findNearestNeighbor(transaction, clusterIndex, distanceToCluster);
 		// Mj <- Mj + ti
-		m_clustersSums.row(J) += m_dataset.row(i);
+		uchar byte = 0;
+		for (int l = 0; l < m_clustersSums.cols; l++) {
+			if ((l % 8) == 0) {
+				byte = *(transaction.col((int) l / 8).data);
+			}
+			m_clustersSums.at<int>(clusterIndex, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
+		}
 		// Nj <- Nj + 1
-		m_clustersCounts.col(J) += 1;
-		std::pair<int, double> item(J, distance);
+		m_clustersCounts.col(clusterIndex) += 1;
 		// Insert outliers in an ordered manner
-		m_outliers.insert(
-				std::upper_bound(m_outliers.begin(), m_outliers.end(), item,
-						[](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs)
-						{	return lhs.second <= rhs.second;}), item);
+		std::pair<int, double> item(i, distanceToCluster);
+		m_outliers.insert(std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second < rhs.second;}), item);
 
+		// Update clusters centers every L times
 		if (i % ((int) (m_numDatapoints / L)) == 0) {
 			// Re-compute clusters centers
 			for (int j = 0; j < m_numClusters; ++j) {
 				// Cj <- Mj/Nj
-				m_centroids.row(J) = m_clustersSums.row(j)
-						/ m_clustersCounts.col(j);
+				m_centroids.row(clusterIndex) = m_clustersSums.row(clusterIndex) / m_clustersCounts.col(clusterIndex);
 				// Rj <- Cj - diag(Cj*Cj')
-				cv::Mat clusterVariance(m_dim, m_dim, CV_32F);
-				cv::mulTransposed(m_centroids.row(j), clusterVariance, true);
-				m_clustersVariances.row(j) = m_centroids.row(j)
-						- clusterVariance.diag(0);
+				cv::Mat clusterVariance(m_dim * 8, m_dim * 8, CV_32F);
+				cv::mulTransposed(m_centroids.row(clusterIndex), clusterVariance, true);
+				m_clustersVariances.row(clusterIndex) = m_centroids.row(clusterIndex) - clusterVariance.diag(0);
 				// Wj <- Nj/i
-				m_clustersWeights.col(j) = m_clustersCounts.col(j) / i;
+				m_clustersWeights.col(clusterIndex) = m_clustersCounts.col(clusterIndex) / i;
 			}
 			// Re-seeding
 			for (int j = 0; j < m_numClusters; ++j) {
+				if (m_outliers.empty()) {
+					break;
+				}
 				// Cj <- t0
+				int outlierTransactionIndex = m_outliers.back().first;
+				transaction = m_dataset.row(outlierTransactionIndex);
+				// Mj <- Mj <- ti
+				for (int l = 0; l < m_clustersSums.cols; l++) {
+					if ((l % 8) == 0) {
+						byte = *(transaction.col((int) l / 8).data);
+					}
+					m_clustersSums.at<int>(outlierTransactionIndex, l) -= ((int) ((byte >> (7 - (l % 8))) % 2));
+				}
+				// Nj <- Nj - 1
+				m_clustersCounts.col(outlierTransactionIndex) -= 1;
+				m_outliers.pop_back();
 			}
 		}
 	}
+
 }
 
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::save(const std::string& filename) const {
+	// TODO Implement this method
 }
 
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::load(const std::string& filename) {
+	// TODO Implement this method
 }
 
-int IncrementalKMeans::findNearestNeighbor(cv::Mat transaction) {
-	int J = -1;
-	return J;
-}
-
-template<typename T>
-typename std::vector<T>::iterator insertSorted(std::vector<T> & vec,
-		T const& item) {
-	return vec.insert(std::upper_bound(vec.begin(), vec.end(), item), item);
+void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) {
+	// TODO Implement this method
+	clusterIndex = 0;
+	distanceToCluster = cv::norm(transaction, m_centroids.row(clusterIndex));
 }
 
 } /* namespace vlr */
