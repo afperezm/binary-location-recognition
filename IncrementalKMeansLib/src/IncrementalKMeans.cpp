@@ -50,6 +50,8 @@ IncrementalKMeans::IncrementalKMeans(cv::Mat data, const cvflann::IndexParams& p
 	m_clustersWeights.create(1, m_numClusters, cv::DataType<double>::type);
 	m_clustersSums.create(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	m_clustersCounts.create(1, m_numClusters, cv::DataType<int>::type);
+	m_clusterDistances.create(1, m_numClusters, cv::DataType<double>::type);
+	m_clusterDistancesToNullTransaction.create(1, m_numClusters, cv::DataType<double>::type);
 
 }
 
@@ -73,6 +75,7 @@ void IncrementalKMeans::build() {
 			m_centroids.row(j) = (m_miu - m_sigma * r / (m_dim * 8));
 		}
 	}
+	preComputeDistances();
 	// Nj <- 0
 	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, cv::DataType<int>::type);
 	// Mj <- 0
@@ -116,6 +119,7 @@ void IncrementalKMeans::build() {
 				// Wj <- Nj/i
 				m_clustersWeights.col(clusterIndex) = m_clustersCounts.col(clusterIndex) / i;
 			}
+			preComputeDistances();
 			// Re-seeding
 			for (int j = 0; j < m_numClusters; ++j) {
 				if (m_outliers.empty()) {
@@ -152,10 +156,42 @@ void IncrementalKMeans::load(const std::string& filename) {
 	// TODO Implement this method
 }
 
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::preComputeDistances() {
+	cv::Mat nullTransaction = cv::Mat::zeros(1, m_numClusters, cv::DataType<double>::type);
+	for (int j = 0; j < m_numClusters; ++j) {
+		cv::mulTransposed(nullTransaction - m_centroids.row(j), m_clusterDistancesToNullTransaction.col(j), true);
+	}
+}
+
+// --------------------------------------------------------------------------
+
 void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) {
-	// TODO Implement this method
-	clusterIndex = 0;
-	distanceToCluster = cv::norm(transaction, m_centroids.row(clusterIndex));
+
+	clusterIndex = -1;
+	distanceToCluster = std::numeric_limits<double>::max();
+
+	double tempDistanceToCluster;
+	uchar byte = 0;
+	for (int j = 0; j < m_centroids; ++j) {
+		tempDistanceToCluster = m_clusterDistancesToNullTransaction.col(j);
+		for (int l = 0; l < m_centroids.cols; l++) {
+			if ((l % 8) == 0) {
+				byte = *(transaction.col((int) l / 8).data);
+			}
+			int bit = ((int) ((byte >> (7 - (l % 8))) % 2));
+			// Compute only differences for non-null dimensions
+			if (bit == 1) {
+				m_clusterDistances.col(j) += pow(bit - m_centroids.at<double>(j, l), 2) - pow(m_centroids.at<double>(j, l), 2);
+			}
+		}
+		if (tempDistanceToCluster < distanceToCluster) {
+			clusterIndex = j;
+			distanceToCluster = tempDistanceToCluster;
+		}
+	}
+
 }
 
 } /* namespace vlr */

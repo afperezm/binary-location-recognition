@@ -46,6 +46,10 @@ protected:
 	cv::Mat m_clustersSums;
 	// Number of data points assigned to each cluster (N)
 	cv::Mat m_clustersCounts;
+	//
+	cv::Mat m_clusterDistances;
+	// Distance from each cluster center to the null transaction (Delta)
+	cv::Mat m_clusterDistancesToNullTransaction;
 
 	cv::Mat m_miu;
 	cv::Mat m_sigma;
@@ -125,13 +129,19 @@ public:
 private:
 
 	/**
-	 * Finds the closest cluster center to the given transaction.
+	 * Determine cluster membership for the given transaction by means of
+	 * sparse distance computation.
 	 *
 	 * @param transaction - A transaction
 	 * @param clusterIndex - Index to the closest cluster center
 	 * @param distanceToCluster - Distance to the closest cluster center
 	 */
 	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
+
+	/**
+	 * Pre-compute distances between the null transaction and all the centers.
+	 */
+	void preComputeDistances();
 
 };
 
