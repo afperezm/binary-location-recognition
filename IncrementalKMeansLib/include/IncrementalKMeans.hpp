@@ -35,7 +35,7 @@ protected:
 	int m_numClusters;
 
 	// Reference to the matrix with data to cluster (D)
-	cv::Mat m_dataset;
+	vlr::Mat m_dataset;
 	// Matrix of clusters centers (C)
 	cv::Mat m_centroids;
 	// Clusters variance matrices (R)
@@ -61,7 +61,7 @@ public:
 	/**
 	 * Class constructor.
 	 */
-	IncrementalKMeans(cv::Mat data, const cvflann::IndexParams& params = IncrementalKMeansParams());
+	IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& params = IncrementalKMeansParams());
 
 	/**
 	 * Class destroyer.
@@ -98,7 +98,7 @@ public:
 		return m_clustersWeights;
 	}
 
-	const cv::Mat& getDataset() const {
+	const vlr::Mat& getDataset() const {
 		return m_dataset;
 	}
 

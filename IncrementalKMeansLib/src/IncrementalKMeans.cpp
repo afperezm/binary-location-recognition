@@ -10,7 +10,7 @@
 
 namespace vlr {
 
-IncrementalKMeans::IncrementalKMeans(cv::Mat data, const cvflann::IndexParams& params) :
+IncrementalKMeans::IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& params) :
 		m_dataset(data), m_dim(data.cols), m_numDatapoints(data.rows) {
 
 	// Attributes initialization
