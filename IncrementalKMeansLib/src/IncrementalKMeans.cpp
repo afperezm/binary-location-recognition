@@ -174,8 +174,8 @@ void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterInd
 
 	double tempDistanceToCluster;
 	uchar byte = 0;
-	for (int j = 0; j < m_centroids; ++j) {
-		tempDistanceToCluster = m_clusterDistancesToNullTransaction.col(j);
+	for (int j = 0; j < m_centroids.rows; ++j) {
+		tempDistanceToCluster = m_clusterDistancesToNullTransaction.at<double>(0, j);
 		for (int l = 0; l < m_centroids.cols; l++) {
 			if ((l % 8) == 0) {
 				byte = *(transaction.col((int) l / 8).data);
