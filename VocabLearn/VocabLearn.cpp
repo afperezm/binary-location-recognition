@@ -20,9 +20,10 @@
 
 #include <FileUtils.hpp>
 #include <FunctionUtils.hpp>
+#include <IncrementalKMeans.hpp>
+#include <KMajority.h>
 #include <VocabBase.hpp>
 #include <VocabTree.h>
-#include <KMajority.h>
 
 using std::vector;
 
