@@ -296,7 +296,7 @@ void KMajority::load(const std::string& filename) {
 
 	// Check file
 	if (inputZippedFileStream.good() == false) {
-		throw std::runtime_error("[VocabTree::load] "
+		throw std::runtime_error("[KMajority::load] "
 				"Unable to open file [" + filename + "] for reading");
 	}
 
@@ -349,7 +349,7 @@ void KMajority::load(const std::string& filename) {
 		}
 
 	} catch (const boost::iostreams::gzip_error& e) {
-		throw std::runtime_error("[VocabTree::load] "
+		throw std::runtime_error("[KMajority::load] "
 				"Got error while parsing file [" + std::string(e.what()) + "]");
 	}
 
