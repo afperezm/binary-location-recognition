@@ -32,6 +32,7 @@ clean-libs:
 	cd OpenCVExtensions; $(MAKE) clean
 	cd Common; $(MAKE) clean
 	cd KMajorityLib; $(MAKE) clean
+	cd IncrementalKMeansLib; clean
 	cd VocabLib; $(MAKE) clean
 
 clean-programs:
@@ -52,6 +53,7 @@ tests:
 #	cd VocabLib; $(MAKE)
 	cd Common/tests; $(MAKE)
 	cd KMajorityLib/tests; $(MAKE)
+	cd IncrementalKMeansLib/tests; $(MAKE)
 	cd VocabLib/tests; $(MAKE)
 
 tests-clean:
@@ -60,4 +62,5 @@ tests-clean:
 #	cd VocabLib; $(MAKE) clean
 	cd Common/tests; $(MAKE) clean
 	cd KMajorityLib/tests; $(MAKE) clean
+	cd IncrementalKMeansLib/tests; clean
 	cd VocabLib/tests; $(MAKE) clean
