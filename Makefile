@@ -10,6 +10,7 @@ libs:
 	cd OpenCVExtensions; $(MAKE)
 	cd Common; $(MAKE)
 	cd KMajorityLib; $(MAKE)
+	cd IncrementalKMeansLib; $(MAKE)
 	cd VocabLib; $(MAKE)
 
 programs:
