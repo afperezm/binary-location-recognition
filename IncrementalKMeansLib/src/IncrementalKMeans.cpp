@@ -65,16 +65,8 @@ IncrementalKMeans::~IncrementalKMeans() {
 void IncrementalKMeans::build() {
 
 	// Mean-based initialization
-	srand(time(NULL));
-	for (int j = 0; j < m_numClusters; ++j) {
-		// Cj <- miu +/-sigma*r/d
-		double r = (double) rand() / RAND_MAX;
-		if (rand() % 2 == 0) {
-			m_centroids.row(j) = (m_miu + m_sigma * r / (m_dim * 8));
-		} else {
-			m_centroids.row(j) = (m_miu - m_sigma * r / (m_dim * 8));
-		}
-	}
+	initCentroids();
+	// Compute distances between clusters centers and the null transaction
 	preComputeDistances();
 	// Nj <- 0
 	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, cv::DataType<int>::type);
@@ -93,52 +85,20 @@ void IncrementalKMeans::build() {
 		// j = NN(ti)
 		findNearestNeighbor(transaction, clusterIndex, distanceToCluster);
 		// Mj <- Mj + ti
-		uchar byte = 0;
-		for (int l = 0; l < m_clustersSums.cols; l++) {
-			if ((l % 8) == 0) {
-				byte = *(transaction.col((int) l / 8).data);
-			}
-			m_clustersSums.at<int>(clusterIndex, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
-		}
+		sparseSum(transaction, clusterIndex);
 		// Nj <- Nj + 1
 		m_clustersCounts.col(clusterIndex) += 1;
-		// Insert outliers in an ordered manner
-		std::pair<int, double> item(i, distanceToCluster);
-		m_outliers.insert(std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second < rhs.second;}), item);
+		// Insert transaction in the list of outliers
+		insertOutlier(i, distanceToCluster);
 
 		// Update clusters centers every L times
 		if (i % ((int) (m_numDatapoints / L)) == 0) {
 			// Re-compute clusters centers
-			for (int j = 0; j < m_numClusters; ++j) {
-				// Cj <- Mj/Nj
-				m_centroids.row(clusterIndex) = m_clustersSums.row(clusterIndex) / m_clustersCounts.col(clusterIndex);
-				// Rj <- Cj - diag(Cj*Cj')
-				cv::Mat clusterVariance(m_dim * 8, m_dim * 8, CV_32F);
-				cv::mulTransposed(m_centroids.row(clusterIndex), clusterVariance, true);
-				m_clustersVariances.row(clusterIndex) = m_centroids.row(clusterIndex) - clusterVariance.diag(0);
-				// Wj <- Nj/i
-				m_clustersWeights.col(clusterIndex) = m_clustersCounts.col(clusterIndex) / i;
-			}
+			computeCentroids(i);
+			// Compute distances between clusters centers and the null transaction
 			preComputeDistances();
 			// Re-seeding
-			for (int j = 0; j < m_numClusters; ++j) {
-				if (m_outliers.empty()) {
-					break;
-				}
-				// Cj <- t0
-				int outlierTransactionIndex = m_outliers.back().first;
-				transaction = m_dataset.row(outlierTransactionIndex);
-				// Mj <- Mj <- ti
-				for (int l = 0; l < m_clustersSums.cols; l++) {
-					if ((l % 8) == 0) {
-						byte = *(transaction.col((int) l / 8).data);
-					}
-					m_clustersSums.at<int>(outlierTransactionIndex, l) -= ((int) ((byte >> (7 - (l % 8))) % 2));
-				}
-				// Nj <- Nj - 1
-				m_clustersCounts.col(outlierTransactionIndex) -= 1;
-				m_outliers.pop_back();
-			}
+			handleEmptyClusters();
 		}
 	}
 
@@ -158,10 +118,66 @@ void IncrementalKMeans::load(const std::string& filename) {
 
 // --------------------------------------------------------------------------
 
+void IncrementalKMeans::initCentroids() {
+	srand(time(NULL));
+	for (int j = 0; j < m_numClusters; ++j) {
+		// Cj <- miu +/-sigma*r/d
+		double r = (double) rand() / RAND_MAX;
+		if (rand() % 2 == 0) {
+			m_centroids.row(j) = (m_miu + m_sigma * r / (m_dim * 8));
+		} else {
+			m_centroids.row(j) = (m_miu - m_sigma * r / (m_dim * 8));
+		}
+	}
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::computeCentroids(const int& i) {
+	for (int j = 0; j < m_numClusters; ++j) {
+		// Cj <- Mj/Nj
+		m_centroids.row(j) = m_clustersSums.row(j) / m_clustersCounts.col(j);
+		// Rj <- Cj - diag(Cj*Cj')
+		cv::Mat clusterVariance(m_dim * 8, m_dim * 8, CV_32F);
+		cv::mulTransposed(m_centroids.row(j), clusterVariance, true);
+		m_clustersVariances.row(j) = m_centroids.row(j) - clusterVariance.diag(0);
+		// Wj <- Nj/i
+		m_clustersWeights.col(j) = m_clustersCounts.col(j) / i;
+	}
+}
+
+// --------------------------------------------------------------------------
+
 void IncrementalKMeans::preComputeDistances() {
 	cv::Mat nullTransaction = cv::Mat::zeros(1, m_numClusters, cv::DataType<double>::type);
 	for (int j = 0; j < m_numClusters; ++j) {
 		cv::mulTransposed(nullTransaction - m_centroids.row(j), m_clusterDistancesToNullTransaction.col(j), true);
+	}
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::insertOutlier(const int& transactionIndex, const double& distanceToCluster) {
+	std::pair<int, double> item(transactionIndex, distanceToCluster);
+	std::vector<std::pair<int, double>>::iterator position = std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second < rhs.second;});
+	m_outliers.insert(position, item);
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::handleEmptyClusters() {
+	for (int j = 0; j < m_numClusters; ++j) {
+		if (m_outliers.empty()) {
+			break;
+		}
+		// Cj <- t0
+		int outlierTransactionIndex = m_outliers.back().first;
+		m_outliers.pop_back();
+		cv::Mat outlierTransaction = m_dataset.row(outlierTransactionIndex);
+		// Mj <- Mj <- ti
+		sparseSubtraction(outlierTransaction, outlierTransactionIndex);
+		// Nj <- Nj - 1
+		m_clustersCounts.col(outlierTransactionIndex) -= 1;
 	}
 }
 
@@ -192,6 +208,30 @@ void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterInd
 		}
 	}
 
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::sparseSum(cv::Mat transaction, const int& rowIndex) {
+	uchar byte = 0;
+	for (int l = 0; l < m_clustersSums.cols; l++) {
+		if ((l % 8) == 0) {
+			byte = *(transaction.col((int) l / 8).data);
+		}
+		m_clustersSums.at<int>(rowIndex, l) += ((int) ((byte >> (7 - (l % 8))) % 2));
+	}
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::sparseSubtraction(cv::Mat transaction, const int& rowIndex) {
+	uchar byte = 0;
+	for (int l = 0; l < m_clustersSums.cols; l++) {
+		if ((l % 8) == 0) {
+			byte = *(transaction.col((int) l / 8).data);
+		}
+		m_clustersSums.at<int>(rowIndex, l) -= ((int) ((byte >> (7 - (l % 8))) % 2));
+	}
 }
 
 } /* namespace vlr */

@@ -54,6 +54,7 @@ protected:
 	cv::Mat m_miu;
 	cv::Mat m_sigma;
 
+	// List of outliers
 	std::vector<std::pair<int, double>> m_outliers;
 
 public:
@@ -77,6 +78,10 @@ public:
 	size_t size() const {
 		return m_centroids.rows;
 	}
+
+	/**
+	 * Getters.
+	 */
 
 	const cv::Mat& getCentroids() const {
 		return m_centroids;
@@ -126,7 +131,12 @@ public:
 		return m_sigma;
 	}
 
-private:
+protected:
+
+	/**
+	 * Initializes cluster centers using a mean-based strategy.
+	 */
+	void initCentroids();
 
 	/**
 	 * Determine cluster membership for the given transaction by means of
@@ -139,9 +149,30 @@ private:
 	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
 
 	/**
+	 * Compute clusters centers using sufficient statistics as proposed by Ordonez2003.
+	 *
+	 * @param i - Number of processed transactions
+	 */
+	void computeCentroids(const int& i);
+
+	/**
 	 * Pre-compute distances between the null transaction and all the centers.
 	 */
 	void preComputeDistances();
+
+	/**
+	 * Insert outliers in an ascending manner.
+	 */
+	void insertOutlier(const int& transactionIndex, const double& distanceToCluster);
+
+	/**
+	 * Fills empty clusters by re-assigning in descending order the outlier transactions.
+	 */
+	void handleEmptyClusters();
+
+	void sparseSum(cv::Mat transaction, const int& clusterIndex);
+
+	void sparseSubtraction(cv::Mat transaction, const int& clusterIndex);
 
 };
 

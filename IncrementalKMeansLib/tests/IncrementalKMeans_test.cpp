@@ -15,11 +15,15 @@ namespace vlr {
 
 TEST(IncrementalKMeans, InitWithFakeData) {
 
-	cv::Mat data(3, 1, CV_8U);
+	cv::Mat descriptors(3, 1, CV_8U);
+	descriptors.at<uchar>(0, 0) = 4;
+	descriptors.at<uchar>(0, 1) = 10;
+	descriptors.at<uchar>(0, 2) = 5;
+	FileUtils::saveDescriptors("descriptors.bin", descriptors);
 
-	data.at<uchar>(0, 0) = 4;
-	data.at<uchar>(0, 1) = 10;
-	data.at<uchar>(0, 2) = 5;
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("descriptors.bin");
+	vlr::Mat data(descriptorsFilenames);
 
 	vlr::IncrementalKMeans obj(data);
 
@@ -75,9 +79,9 @@ TEST(IncrementalKMeans, InitWithFakeData) {
 
 TEST(IncrementalKMeans, InitWithRealData) {
 
-	cv::Mat data;
-	FileUtils::loadDescriptors("brief_0.bin", data);
-
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
 	vlr::IncrementalKMeans obj(data);
 
 	EXPECT_TRUE(obj.getDim() == data.cols);
@@ -114,10 +118,10 @@ TEST(IncrementalKMeans, InitWithRealData) {
 
 //TEST(IncrementalKMeans, Clustering) {
 //
-//	cv::Mat descriptors;
-//	FileUtils::loadDescriptors("brief_0.bin", descriptors);
-//
-//	vlr::IncrementalKMeans obj(descriptors);
+//	std::vector<std::string> descriptorsFilenames;
+//	descriptorsFilenames.push_back("brief.bin");
+//	vlr::Mat data(descriptorsFilenames);
+//	vlr::IncrementalKMeans obj(data);
 //
 //	obj.build();
 //
