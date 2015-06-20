@@ -162,6 +162,9 @@ protected:
 
 	/**
 	 * Insert outliers in an ascending manner.
+	 *
+	 * @param transactionIndex
+	 * @param distanceToCluster
 	 */
 	void insertOutlier(const int& transactionIndex, const double& distanceToCluster);
 
@@ -170,9 +173,21 @@ protected:
 	 */
 	void handleEmptyClusters();
 
-	void sparseSum(cv::Mat transaction, const int& clusterIndex);
+	/**
+	 * Sum the given transaction to the given row in the cluster sum matrix.
+	 *
+	 * @param transaction
+	 * @param rowIndex
+	 */
+	void sparseSum(cv::Mat transaction, const int& rowIndex);
 
-	void sparseSubtraction(cv::Mat transaction, const int& clusterIndex);
+	/**
+	 * Subtract the given transaction to the given row in the cluster sum matrix.
+	 *
+	 * @param transaction
+	 * @param rowIndex
+	 */
+	void sparseSubtraction(cv::Mat transaction, const int& rowIndex);
 
 };
 
