@@ -117,7 +117,6 @@ void IncrementalKMeans::load(const std::string& filename) {
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::initCentroids() {
-	srand(time(NULL));
 	for (int j = 0; j < m_numClusters; ++j) {
 		// Cj <- miu +/-sigma*r/d
 		double r = (double) rand() / RAND_MAX;
