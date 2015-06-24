@@ -25,55 +25,55 @@ TEST(IncrementalKMeans, InitWithFakeData) {
 	descriptorsFilenames.push_back("descriptors.bin");
 	vlr::Mat data(descriptorsFilenames);
 
-	vlr::IncrementalKMeans obj(data);
+	vlr::IncrementalKMeans vocabTrainer(data);
 
-	EXPECT_TRUE(obj.getDim() == data.cols);
+	EXPECT_TRUE(vocabTrainer.getDim() == data.cols);
 
-	EXPECT_TRUE(obj.getNumDatapoints() == data.rows);
+	EXPECT_TRUE(vocabTrainer.getNumDatapoints() == data.rows);
 
-	EXPECT_TRUE(obj.getDataset().rows == data.rows);
-	EXPECT_TRUE(obj.getDataset().cols == data.cols);
+	EXPECT_TRUE(vocabTrainer.getDataset().rows == data.rows);
+	EXPECT_TRUE(vocabTrainer.getDataset().cols == data.cols);
 
-	EXPECT_TRUE(obj.getCentroids().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getCentroids().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getCentroids().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getCentroids().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersVariances().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getClustersVariances().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getClustersVariances().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersVariances().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersWeights().rows == 1);
-	EXPECT_TRUE(obj.getClustersWeights().cols == obj.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersWeights().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getClustersWeights().cols == vocabTrainer.getNumClusters());
 
-	EXPECT_TRUE(obj.getClustersSums().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getClustersSums().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getClustersSums().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersSums().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersCounts().rows == 1);
-	EXPECT_TRUE(obj.getClustersCounts().cols == obj.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().cols == vocabTrainer.getNumClusters());
 
-	EXPECT_TRUE(obj.getMiu().rows == 1);
-	EXPECT_TRUE(obj.getMiu().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getMiu().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getMiu().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getSigma().rows == 1);
-	EXPECT_TRUE(obj.getSigma().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getSigma().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getSigma().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 0) == ((double) 0.0));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 1) == ((double) 0.0));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 2) == ((double) 0.0));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 3) == ((double) 0.0));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 4) == ((double) 1/3));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 5) == ((double) 2/3));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 6) == ((double) 1/3));
-	EXPECT_TRUE(obj.getMiu().at<double>(0, 7) == ((double) 1/3));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 0) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 1) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 2) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 3) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 4) == ((double) 1/3));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 5) == ((double) 2/3));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 6) == ((double) 1/3));
+	EXPECT_TRUE(vocabTrainer.getMiu().at<double>(0, 7) == ((double) 1/3));
 
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 0) == ((double) 0.0));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 1) == ((double) 0.0));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 2) == ((double) 0.0));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 3) == ((double) 0.0));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 4) == sqrt((double) 6/27));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 5) == sqrt((double) 6/27));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 6) == sqrt((double) 6/27));
-	EXPECT_TRUE(obj.getSigma().at<double>(0, 7) == sqrt((double) 6/27));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 0) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 1) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 2) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 3) == ((double) 0.0));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 4) == sqrt((double) 6/27));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 5) == sqrt((double) 6/27));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 6) == sqrt((double) 6/27));
+	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 7) == sqrt((double) 6/27));
 
-	EXPECT_TRUE(obj.getOutliers().empty());
+	EXPECT_TRUE(vocabTrainer.getOutliers().empty());
 
 }
 
@@ -82,43 +82,43 @@ TEST(IncrementalKMeans, InitWithRealData) {
 	std::vector<std::string> descriptorsFilenames;
 	descriptorsFilenames.push_back("brief.bin");
 	vlr::Mat data(descriptorsFilenames);
-	vlr::IncrementalKMeans obj(data);
+	vlr::IncrementalKMeans vocabTrainer(data);
 
-	EXPECT_TRUE(obj.getDim() == data.cols);
+	EXPECT_TRUE(vocabTrainer.getDim() == data.cols);
 
-	EXPECT_TRUE(obj.getNumDatapoints() == data.rows);
+	EXPECT_TRUE(vocabTrainer.getNumDatapoints() == data.rows);
 
-	EXPECT_TRUE(obj.getDataset().rows == data.rows);
-	EXPECT_TRUE(obj.getDataset().cols == data.cols);
+	EXPECT_TRUE(vocabTrainer.getDataset().rows == data.rows);
+	EXPECT_TRUE(vocabTrainer.getDataset().cols == data.cols);
 
-	EXPECT_TRUE(obj.getCentroids().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getCentroids().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getCentroids().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getCentroids().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersVariances().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getClustersVariances().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getClustersVariances().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersVariances().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersWeights().rows == 1);
-	EXPECT_TRUE(obj.getClustersWeights().cols == obj.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersWeights().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getClustersWeights().cols == vocabTrainer.getNumClusters());
 
-	EXPECT_TRUE(obj.getClustersSums().rows == obj.getNumClusters());
-	EXPECT_TRUE(obj.getClustersSums().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getClustersSums().rows == vocabTrainer.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersSums().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getClustersCounts().rows == 1);
-	EXPECT_TRUE(obj.getClustersCounts().cols == obj.getNumClusters());
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().cols == vocabTrainer.getNumClusters());
 
-	EXPECT_TRUE(obj.getMiu().rows == 1);
-	EXPECT_TRUE(obj.getMiu().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getMiu().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getMiu().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getSigma().rows == 1);
-	EXPECT_TRUE(obj.getSigma().cols == data.cols * 8);
+	EXPECT_TRUE(vocabTrainer.getSigma().rows == 1);
+	EXPECT_TRUE(vocabTrainer.getSigma().cols == data.cols * 8);
 
-	EXPECT_TRUE(obj.getOutliers().empty());
+	EXPECT_TRUE(vocabTrainer.getOutliers().empty());
 
 }
 
 //	inline class IncrementalKMeansPublic: public vlr::IncrementalKMeans {
 //	public:
-//		IncrementalKMeansPublic(vlr::IncrementalKMeans obj) {
+//		IncrementalKMeansPublic(vlr::IncrementalKMeans vocabTrainer) {
 //		}
 //	};
 
@@ -129,17 +129,17 @@ TEST(IncrementalKMeans, InitCentroids) {
 	vlr::Mat data(descriptorsFilenames);
 	vlr::IncrementalKMeansParams params;
 	params["num.clusters"] = 10;
-	vlr::IncrementalKMeans obj(data, params);
+	vlr::IncrementalKMeans vocabTrainer(data, params);
 
-	obj.initCentroids();
+	vocabTrainer.initCentroids();
 
-	cv::Mat min = (obj.getMiu() - obj.getSigma() / (obj.getDim() * 8));
-	cv::Mat max = (obj.getMiu() + obj.getSigma() / (obj.getDim() * 8));
+	cv::Mat min = (vocabTrainer.getMiu() - vocabTrainer.getSigma() / (vocabTrainer.getDim() * 8));
+	cv::Mat max = (vocabTrainer.getMiu() + vocabTrainer.getSigma() / (vocabTrainer.getDim() * 8));
 
-	for (int j = 0; j < obj.getNumClusters(); ++j) {
-		for (int l = 0; l < obj.getCentroids().cols; l++) {
-			EXPECT_TRUE(obj.getCentroids().at<double>(j, l) >= min.at<double>(0, l));
-			EXPECT_TRUE(obj.getCentroids().at<double>(j, l) <= max.at<double>(0, l));
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		for (int l = 0; l < vocabTrainer.getCentroids().cols; l++) {
+			EXPECT_TRUE(vocabTrainer.getCentroids().at<double>(j, l) >= min.at<double>(0, l));
+			EXPECT_TRUE(vocabTrainer.getCentroids().at<double>(j, l) <= max.at<double>(0, l));
 		}
 	}
 
@@ -152,15 +152,15 @@ TEST(IncrementalKMeans, PreComputeDistances) {
 	vlr::Mat data(descriptorsFilenames);
 	vlr::IncrementalKMeansParams params;
 	params["num.clusters"] = 10;
-	vlr::IncrementalKMeans obj(data, params);
+	vlr::IncrementalKMeans vocabTrainer(data, params);
 
-	obj.initCentroids();
-	obj.preComputeDistances();
+	vocabTrainer.initCentroids();
+	vocabTrainer.preComputeDistances();
 
 	cv::Mat temp;
-	for (int j = 0; j < obj.getNumClusters(); ++j) {
-		cv::pow(-obj.getCentroids().row(j), 2, temp);
-		EXPECT_TRUE(obj.getClusterDistancesToNullTransaction().at<double>(0, j) == cv::sum(temp).val[0]);
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		cv::pow(-vocabTrainer.getCentroids().row(j), 2, temp);
+		EXPECT_TRUE(vocabTrainer.getClusterDistancesToNullTransaction().at<double>(0, j) == cv::sum(temp).val[0]);
 	}
 
 }
@@ -214,9 +214,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.sparseSum();
+////	vocabTrainer.sparseSum();
 //
 //}
 //
@@ -225,9 +225,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.sparseSubtraction();
+////	vocabTrainer.sparseSubtraction();
 //
 //}
 //
@@ -236,9 +236,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.insertOutlier();
+////	vocabTrainer.insertOutlier();
 //
 //}
 //
@@ -247,9 +247,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.computeCentroids();
+////	vocabTrainer.computeCentroids();
 //
 //}
 //
@@ -258,9 +258,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.handleEmptyClusters();
+////	vocabTrainer.handleEmptyClusters();
 //
 //}
 //
@@ -269,9 +269,9 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 //	std::vector<std::string> descriptorsFilenames;
 //	descriptorsFilenames.push_back("brief.bin");
 //	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans obj(data);
+//	vlr::IncrementalKMeans vocabTrainer(data);
 //
-////	obj.build();
+////	vocabTrainer.build();
 //
 //}
 
