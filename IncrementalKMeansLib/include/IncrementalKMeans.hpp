@@ -133,7 +133,7 @@ public:
 		return m_sigma;
 	}
 
-protected:
+public:
 
 	/**
 	 * Initializes cluster centers using a mean-based strategy.
