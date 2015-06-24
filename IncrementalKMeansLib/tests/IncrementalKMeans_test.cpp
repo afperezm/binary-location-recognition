@@ -209,16 +209,35 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 
 }
 
-//TEST(IncrementalKMeans, SparseSum) {
-//
-//	std::vector<std::string> descriptorsFilenames;
-//	descriptorsFilenames.push_back("brief.bin");
-//	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeans vocabTrainer(data);
-//
-////	vocabTrainer.sparseSum();
-//
-//}
+TEST(IncrementalKMeans, SparseSum) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 10;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	cv::Mat transaction;
+	for (int i = 0; i < vocabTrainer.getNumDatapoints(); ++i) {
+		transaction = data.row(i);
+		vocabTrainer.initClustersCounters();
+		vocabTrainer.sparseSum(transaction, 0);
+		for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+			if (j == 0) {
+				EXPECT_FALSE(cv::countNonZero(vocabTrainer.getClustersSums().row(j)) == 0);
+			} else {
+				EXPECT_TRUE(cv::countNonZero(vocabTrainer.getClustersSums().row(j)) == 0);
+			}
+		}
+		int countNonZero = 0;
+		for (int l = 0; l < transaction.cols; ++l) {
+			countNonZero += FunctionUtils::NumberOfSetBits(transaction.at<uchar>(0, l));
+		}
+		EXPECT_TRUE(countNonZero == cv::countNonZero(vocabTrainer.getClustersSums().row(0)));
+	}
+
+}
 //
 //TEST(IncrementalKMeans, SparseSubtraction) {
 //
