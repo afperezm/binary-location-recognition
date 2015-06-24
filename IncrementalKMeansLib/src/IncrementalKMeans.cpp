@@ -147,9 +147,9 @@ void IncrementalKMeans::computeCentroids(const int& i) {
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::preComputeDistances() {
-	cv::Mat nullTransaction = cv::Mat::zeros(1, m_numClusters, cv::DataType<double>::type);
+	cv::Mat nullTransaction = cv::Mat::zeros(1, m_dim * 8, cv::DataType<double>::type);
 	for (int j = 0; j < m_numClusters; ++j) {
-		cv::mulTransposed(nullTransaction - m_centroids.row(j), m_clusterDistancesToNullTransaction.col(j), true);
+		cv::mulTransposed(nullTransaction - m_centroids.row(j), m_clusterDistancesToNullTransaction.col(j), false);
 	}
 }
 
