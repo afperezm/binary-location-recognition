@@ -161,6 +161,11 @@ protected:
 	void preComputeDistances();
 
 	/**
+	 *
+	 */
+	void initClustersCounters();
+
+	/**
 	 * Insert outliers in an ascending manner.
 	 *
 	 * @param transactionIndex

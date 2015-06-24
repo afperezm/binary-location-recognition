@@ -69,11 +69,9 @@ void IncrementalKMeans::build() {
 	// Compute distances between clusters centers and the null transaction
 	preComputeDistances();
 	// Nj <- 0
-	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, cv::DataType<int>::type);
 	// Mj <- 0
-	m_clustersSums = cv::Mat::zeros(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	// Wj <- 1/k
-	m_clustersWeights = cv::Mat::ones(1, m_numClusters, cv::DataType<double>::type) / m_numClusters;
+	initClustersCounters();
 
 	double L = sqrt(m_numDatapoints);
 	int clusterIndex;
@@ -153,6 +151,14 @@ void IncrementalKMeans::preComputeDistances() {
 	for (int j = 0; j < m_numClusters; ++j) {
 		cv::mulTransposed(nullTransaction - m_centroids.row(j), m_clusterDistancesToNullTransaction.col(j), true);
 	}
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementalKMeans::initClustersCounters() {
+	m_clustersCounts = cv::Mat::zeros(1, m_numClusters, cv::DataType<int>::type);
+	m_clustersSums = cv::Mat::zeros(m_numClusters, m_dim * 8, cv::DataType<int>::type);
+	m_clustersWeights = cv::Mat::ones(1, m_numClusters, cv::DataType<double>::type) / m_numClusters;
 }
 
 // --------------------------------------------------------------------------
