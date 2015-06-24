@@ -50,7 +50,6 @@ IncrementalKMeans::IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& 
 	m_clustersWeights.create(1, m_numClusters, cv::DataType<double>::type);
 	m_clustersSums.create(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	m_clustersCounts.create(1, m_numClusters, cv::DataType<int>::type);
-	m_clusterDistances.create(1, m_numClusters, cv::DataType<double>::type);
 	m_clusterDistancesToNullTransaction.create(1, m_numClusters, cv::DataType<double>::type);
 
 }
@@ -190,7 +189,7 @@ void IncrementalKMeans::handleEmptyClusters() {
 
 void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) {
 
-	clusterIndex = -1;
+	clusterIndex = 0;
 	distanceToCluster = std::numeric_limits<double>::max();
 
 	double tempDistanceToCluster;
@@ -204,7 +203,7 @@ void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterInd
 			int bit = ((int) ((byte >> (7 - (l % 8))) % 2));
 			// Compute only differences for non-null dimensions
 			if (bit == 1) {
-				m_clusterDistances.col(j) += pow(bit - m_centroids.at<double>(j, l), 2) - pow(m_centroids.at<double>(j, l), 2);
+				tempDistanceToCluster += pow(bit - m_centroids.at<double>(j, l), 2) - pow(m_centroids.at<double>(j, l), 2);
 			}
 		}
 		if (tempDistanceToCluster < distanceToCluster) {

@@ -46,8 +46,6 @@ protected:
 	cv::Mat m_clustersSums;
 	// Number of data points assigned to each cluster (N)
 	cv::Mat m_clustersCounts;
-	//
-	cv::Mat m_clusterDistances;
 	// Distance from each cluster center to the null transaction (Delta)
 	cv::Mat m_clusterDistancesToNullTransaction;
 
@@ -89,6 +87,10 @@ public:
 
 	const cv::Mat& getClustersCounts() const {
 		return m_clustersCounts;
+	}
+
+	const cv::Mat& getClusterDistancesToNullTransaction() const {
+		return m_clusterDistancesToNullTransaction;
 	}
 
 	const cv::Mat& getClustersSums() const {
