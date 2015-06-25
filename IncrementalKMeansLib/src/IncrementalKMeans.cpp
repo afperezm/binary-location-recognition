@@ -163,7 +163,7 @@ void IncrementalKMeans::initClustersCounters() {
 
 void IncrementalKMeans::insertOutlier(const int& transactionIndex, const double& distanceToCluster) {
 	std::pair<int, double> item(transactionIndex, distanceToCluster);
-	std::vector<std::pair<int, double>>::iterator position = std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second < rhs.second;});
+	std::vector<std::pair<int, double>>::iterator position = std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second > rhs.second;});
 	m_outliers.insert(position, item);
 }
 
