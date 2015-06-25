@@ -268,20 +268,26 @@ TEST(IncrementalKMeans, SparseSubtraction) {
 	}
 
 }
-//
-//TEST(IncrementalKMeans, InsertOutlier) {
-//
-//	std::vector<std::string> descriptorsFilenames;
-//	descriptorsFilenames.push_back("brief.bin");
-//	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeansParams params;
-//	params["num.clusters"] = 10;
-//	vlr::IncrementalKMeans vocabTrainer(data, params);
-//
-////	vocabTrainer.insertOutlier();
-//
-//}
-//
+
+TEST(IncrementalKMeans, InsertOutlier) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 10;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	for (int i = 0; i < 1000; ++i) {
+		vocabTrainer.insertOutlier(i, rand() % 1000);
+	}
+
+	for (size_t i = 0; i < vocabTrainer.getOutliers().size() - 1; ++i) {
+		EXPECT_TRUE(vocabTrainer.getOutliers().at(i).second >= vocabTrainer.getOutliers().at(i + 1).second);
+	}
+
+}
+
 //TEST(IncrementalKMeans, ComputeCentroids) {
 //
 //	std::vector<std::string> descriptorsFilenames;
