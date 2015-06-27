@@ -288,19 +288,48 @@ TEST(IncrementalKMeans, InsertOutlier) {
 
 }
 
-//TEST(IncrementalKMeans, ComputeCentroids) {
-//
-//	std::vector<std::string> descriptorsFilenames;
-//	descriptorsFilenames.push_back("brief.bin");
-//	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeansParams params;
-//	params["num.clusters"] = 10;
-//	vlr::IncrementalKMeans vocabTrainer(data, params);
-//
-////	vocabTrainer.computeCentroids();
-//
-//}
-//
+TEST(IncrementalKMeans, ComputeCentroids) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 3;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	vocabTrainer.initCentroids();
+	vocabTrainer.preComputeDistances();
+	vocabTrainer.initClustersCounters();
+
+	cv::Mat transaction;
+	for (int i = 0; i < vocabTrainer.getNumDatapoints(); ++i) {
+		transaction = data.row(i);
+		if (i >= 0 && i < vocabTrainer.getNumDatapoints() / 3) {
+			vocabTrainer.sparseSum(transaction, 0);
+			vocabTrainer.getClustersCounts().col(0) += 1;
+		} else if (i >= vocabTrainer.getNumDatapoints() / 3 && i < 2 * vocabTrainer.getNumDatapoints() / 3) {
+			vocabTrainer.sparseSum(transaction, 1);
+			vocabTrainer.getClustersCounts().col(1) += 1;
+		} else {
+			vocabTrainer.sparseSum(transaction, 2);
+			vocabTrainer.getClustersCounts().col(2) += 1;
+		}
+	}
+
+	vocabTrainer.computeCentroids(vocabTrainer.getNumDatapoints());
+
+	cv::Mat row1, row2 , result;
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		row1 = vocabTrainer.getCentroids().row(j);
+		vocabTrainer.getClustersSums().row(j).convertTo(row2, cv::DataType<double>::type);
+		row2 = row2 / ((double) vocabTrainer.getClustersCounts().at<int>(0, j));
+		cv::compare(row1, row2, result, cv::CMP_EQ);
+		EXPECT_TRUE(cv::sum(result).val[0] == result.cols * 255);
+		EXPECT_TRUE(vocabTrainer.getClustersWeights().at<double>(0, j) == (((double) vocabTrainer.getClustersCounts().at<int>(0, j)) / ((double) vocabTrainer.getNumDatapoints())));
+	}
+
+}
+
 //TEST(IncrementalKMeans, HandleEmptyClusters) {
 //
 //	std::vector<std::string> descriptorsFilenames;
