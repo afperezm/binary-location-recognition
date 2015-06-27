@@ -342,18 +342,5 @@ TEST(IncrementalKMeans, ComputeCentroids) {
 ////	vocabTrainer.handleEmptyClusters();
 //
 //}
-//
-//TEST(IncrementalKMeans, Build) {
-//
-//	std::vector<std::string> descriptorsFilenames;
-//	descriptorsFilenames.push_back("brief.bin");
-//	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeansParams params;
-//	params["num.clusters"] = 10;
-//	vlr::IncrementalKMeans vocabTrainer(data, params);
-//
-////	vocabTrainer.build();
-//
-//}
 
 } /* namespace vlr */
