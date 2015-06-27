@@ -132,13 +132,14 @@ void IncrementalKMeans::initCentroids() {
 void IncrementalKMeans::computeCentroids(const int& i) {
 	for (int j = 0; j < m_numClusters; ++j) {
 		// Cj <- Mj/Nj
-		m_centroids.row(j) = m_clustersSums.row(j) / m_clustersCounts.col(j);
+		m_clustersSums.row(j).convertTo(m_centroids.row(j), cv::DataType<double>::type);
+		m_centroids.row(j) = m_centroids.row(j) / ((double) m_clustersCounts.at<int>(0, j));
 		// Rj <- Cj - diag(Cj*Cj')
-		cv::Mat clusterVariance(m_dim * 8, m_dim * 8, CV_32F);
+		cv::Mat clusterVariance(m_dim * 8, m_dim * 8, cv::DataType<double>::type);
 		cv::mulTransposed(m_centroids.row(j), clusterVariance, true);
-		m_clustersVariances.row(j) = m_centroids.row(j) - clusterVariance.diag(0);
+		m_clustersVariances.row(j) = m_centroids.row(j) - clusterVariance.diag(0).t();
 		// Wj <- Nj/i
-		m_clustersWeights.col(j) = m_clustersCounts.col(j) / i;
+		m_clustersWeights.col(j) = ((double) m_clustersCounts.at<int>(0, j)) / ((double) i);
 	}
 }
 
