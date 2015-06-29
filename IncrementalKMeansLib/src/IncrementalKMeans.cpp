@@ -53,7 +53,7 @@ IncrementalKMeans::IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& 
 	m_clustersSums.create(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	m_clustersCounts.create(1, m_numClusters, cv::DataType<int>::type);
 	m_clusterDistancesToNullTransaction.create(1, m_numClusters, cv::DataType<double>::type);
-	m_outliers.reserve(m_numClusters);
+	m_outliers.resize(m_numClusters);
 
 }
 
