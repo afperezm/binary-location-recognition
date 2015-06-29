@@ -53,7 +53,7 @@ protected:
 	cv::Mat m_sigma;
 
 	// List of outliers
-	std::vector<std::pair<int, double>> m_outliers;
+	std::vector<std::vector<std::pair<int,double> > > m_outliers;
 
 public:
 
@@ -125,7 +125,8 @@ public:
 		return m_numDatapoints;
 	}
 
-	const std::vector<std::pair<int, double> >& getOutliers() const {
+	const std::vector<std::vector<std::pair<int,double> > >& getOutliers() const
+	{
 		return m_outliers;
 	}
 
@@ -168,12 +169,15 @@ public:
 	void initClustersCounters();
 
 	/**
-	 * Insert outliers in an ascending manner.
+	 * Inserts an outlier into a list in descending order according by distance to their
+	 * nearest centroid, and returns true if the transaction is an outlier.
 	 *
 	 * @param transactionIndex
+	 * @param clusterIndex
 	 * @param distanceToCluster
+	 * @return true if the transaction is an outlier; false otherwise
 	 */
-	void insertOutlier(const int& transactionIndex, const double& distanceToCluster);
+	bool insertOutlier(const int& transactionIndex, const int& clusterIndex, const double& distanceToCluster);
 
 	/**
 	 * Fills empty clusters by re-assigning in descending order the outlier transactions.

@@ -10,6 +10,8 @@
 
 namespace vlr {
 
+static const int MAX_OUTLIERS = 10;
+
 IncrementalKMeans::IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& params) :
 		m_dataset(data), m_dim(data.cols), m_numDatapoints(data.rows) {
 
@@ -51,6 +53,7 @@ IncrementalKMeans::IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& 
 	m_clustersSums.create(m_numClusters, m_dim * 8, cv::DataType<int>::type);
 	m_clustersCounts.create(1, m_numClusters, cv::DataType<int>::type);
 	m_clusterDistancesToNullTransaction.create(1, m_numClusters, cv::DataType<double>::type);
+	m_outliers.reserve(m_numClusters);
 
 }
 
@@ -81,12 +84,15 @@ void IncrementalKMeans::build() {
 		// Cluster assignment
 		// j = NN(ti)
 		findNearestNeighbor(transaction, clusterIndex, distanceToCluster);
-		// Mj <- Mj + ti
-		sparseSum(transaction, clusterIndex);
-		// Nj <- Nj + 1
-		m_clustersCounts.col(clusterIndex) += 1;
 		// Insert transaction in the list of outliers
-		insertOutlier(i, distanceToCluster);
+		bool isOutlier = insertOutlier(i, clusterIndex, distanceToCluster);
+		// If the inserted outlier is among the farthest then don't assign it to the jth cluster
+		if (!isOutlier) {
+			// Mj <- Mj + ti
+			sparseSum(transaction, clusterIndex);
+			// Nj <- Nj + 1
+			m_clustersCounts.col(clusterIndex) += 1;
+		}
 
 		// Update clusters centers every L times
 		if (i % ((int) (m_numDatapoints / L)) == 0) {
@@ -162,27 +168,56 @@ void IncrementalKMeans::initClustersCounters() {
 
 // --------------------------------------------------------------------------
 
-void IncrementalKMeans::insertOutlier(const int& transactionIndex, const double& distanceToCluster) {
+bool IncrementalKMeans::insertOutlier(const int& transactionIndex, const int& clusterIndex, const double& distanceToCluster) {
+	// Retrieve list of outliers for the given cluster index
+	std::vector<std::pair<int, double>> clusterOutliers = m_outliers.at(clusterIndex);
+	// Insert item into the list of outliers for the given cluster index
 	std::pair<int, double> item(transactionIndex, distanceToCluster);
-	std::vector<std::pair<int, double>>::iterator position = std::upper_bound(m_outliers.begin(), m_outliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second > rhs.second;});
-	m_outliers.insert(position, item);
+	// Limit size of outliers list
+	if(clusterOutliers.size() < MAX_OUTLIERS) {
+		std::vector<std::pair<int, double>>::iterator position = std::upper_bound(clusterOutliers.begin(), clusterOutliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second >= rhs.second;});
+		clusterOutliers.insert(position, item);
+		return true;
+	} else {
+		if (item.second >= clusterOutliers.front().second) {
+			clusterOutliers.insert(clusterOutliers.begin(), item);
+			clusterOutliers.pop_back();
+			return true;
+		} else {
+			return false;
+		}
+	}
 }
 
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::handleEmptyClusters() {
-	for (int j = 0; j < m_numClusters; ++j) {
-		if (m_outliers.empty()) {
+	for (unsigned int j = 0; j < m_numClusters; ++j) {
+		bool allEmpty = true;
+		for (unsigned int i = 0; i < m_outliers.size(); ++i) {
+			allEmpty = allEmpty && m_outliers.at(i).empty();
+		}
+		if (allEmpty) {
 			break;
 		}
-		// Cj <- t0
-		int outlierTransactionIndex = m_outliers.back().first;
-		m_outliers.pop_back();
+		// if Wj = 0 then Cj <- to
+		if (m_clustersWeights.at<double>(0, j) != 0) {
+			continue;
+		}
+		// Get an outlier transaction assigned to a cluster different than the jth cluster
+		int outlierTransactionIndex;
+		for (unsigned int i = 0; i < m_outliers.size(); ++i) {
+			if (i !=j && !m_outliers.at(i).empty()) {
+				outlierTransactionIndex = m_outliers.at(i).back().first;
+				m_outliers.at(i).pop_back();
+			}
+		}
 		cv::Mat outlierTransaction = m_dataset.row(outlierTransactionIndex);
-		// Mj <- Mj <- ti
-		sparseSubtraction(outlierTransaction, outlierTransactionIndex);
-		// Nj <- Nj - 1
-		m_clustersCounts.col(outlierTransactionIndex) -= 1;
+		// Assign outlier transaction to the jth cluster
+		// Mj <- Mj + ti
+		sparseSum(outlierTransaction, j);
+		// Nj <- Nj + 1
+		m_clustersCounts.col(j) += 1;
 	}
 }
 
