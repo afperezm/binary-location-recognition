@@ -279,11 +279,26 @@ TEST(IncrementalKMeans, InsertOutlier) {
 	vlr::IncrementalKMeans vocabTrainer(data, params);
 
 	for (int i = 0; i < 1000; ++i) {
-		vocabTrainer.insertOutlier(i, rand() % 1000);
+		int clusterIndex = i % vocabTrainer.getNumClusters();
+		double distance = rand() % 1000;
+		bool expectedResult = true;
+		if (vocabTrainer.getOutliers().at(clusterIndex).size() < 10) {
+			expectedResult = true;
+		} else {
+			expectedResult = distance >= vocabTrainer.getOutliers().at(clusterIndex).front().second;
+		}
+		bool actualResult = vocabTrainer.insertOutlier(i, clusterIndex, distance);
+		EXPECT_TRUE(actualResult == expectedResult);
 	}
 
-	for (size_t i = 0; i < vocabTrainer.getOutliers().size() - 1; ++i) {
-		EXPECT_TRUE(vocabTrainer.getOutliers().at(i).second >= vocabTrainer.getOutliers().at(i + 1).second);
+	EXPECT_TRUE(vocabTrainer.getNumClusters() >= 0 && vocabTrainer.getOutliers().size() == (size_t) vocabTrainer.getNumClusters());
+
+	size_t minSize = 10;
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		EXPECT_TRUE(vocabTrainer.getOutliers().at(j).size() >= minSize);
+		for (size_t k = 1; k < vocabTrainer.getOutliers().at(j).size(); ++k) {
+			EXPECT_TRUE(vocabTrainer.getOutliers().at(j).at(k-1).second >= vocabTrainer.getOutliers().at(j).at(k).second);
+		}
 	}
 
 }
