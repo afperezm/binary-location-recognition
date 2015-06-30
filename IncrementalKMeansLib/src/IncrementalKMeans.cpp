@@ -170,18 +170,17 @@ void IncrementalKMeans::initClustersCounters() {
 
 bool IncrementalKMeans::insertOutlier(const int& transactionIndex, const int& clusterIndex, const double& distanceToCluster) {
 	// Retrieve list of outliers for the given cluster index
-	std::vector<std::pair<int, double>> clusterOutliers = m_outliers.at(clusterIndex);
+//	std::vector<std::pair<int, double>> clusterOutliers = m_outliers.at(clusterIndex);
 	// Insert item into the list of outliers for the given cluster index
 	std::pair<int, double> item(transactionIndex, distanceToCluster);
 	// Limit size of outliers list
-	if(clusterOutliers.size() < MAX_OUTLIERS) {
-		std::vector<std::pair<int, double>>::iterator position = std::upper_bound(clusterOutliers.begin(), clusterOutliers.end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second >= rhs.second;});
-		clusterOutliers.insert(position, item);
+	if(m_outliers.at(clusterIndex).size() < MAX_OUTLIERS) {
+		std::vector<std::pair<int, double>>::iterator position = std::upper_bound(m_outliers.at(clusterIndex).begin(), m_outliers.at(clusterIndex).end(), item, [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {return lhs.second >= rhs.second;});
+		m_outliers.at(clusterIndex).insert(position, item);
 		return true;
 	} else {
-		if (item.second >= clusterOutliers.front().second) {
-			clusterOutliers.insert(clusterOutliers.begin(), item);
-			clusterOutliers.pop_back();
+		if (item.second >= m_outliers.at(clusterIndex).front().second) {
+			m_outliers.at(clusterIndex).insert(m_outliers.at(clusterIndex).begin(), item);
 			return true;
 		} else {
 			return false;
