@@ -142,23 +142,6 @@ public:
 	void initCentroids();
 
 	/**
-	 * Determine cluster membership for the given transaction by means of
-	 * sparse distance computation.
-	 *
-	 * @param transaction - A transaction
-	 * @param clusterIndex - Index to the closest cluster center
-	 * @param distanceToCluster - Distance to the closest cluster center
-	 */
-	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
-
-	/**
-	 * Compute clusters centers using sufficient statistics as proposed by Ordonez2003.
-	 *
-	 * @param i - Number of processed transactions
-	 */
-	void computeCentroids(const int& i);
-
-	/**
 	 * Pre-compute distances between the null transaction and all the centers.
 	 */
 	void preComputeDistances();
@@ -167,6 +150,16 @@ public:
 	 *
 	 */
 	void initClustersCounters();
+
+	/**
+	 * Determine cluster membership for the given transaction by means of
+	 * sparse distance computation.
+	 *
+	 * @param transaction - A transaction
+	 * @param clusterIndex - Index to the closest cluster center
+	 * @param distanceToCluster - Distance to the closest cluster center
+	 */
+	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
 
 	/**
 	 * Inserts an outlier into a list in descending order according by distance to their
@@ -178,11 +171,6 @@ public:
 	 * @return true if the transaction is an outlier; false otherwise
 	 */
 	bool insertOutlier(const int& transactionIndex, const int& clusterIndex, const double& distanceToCluster);
-
-	/**
-	 * Fills empty clusters by re-assigning in descending order the outlier transactions.
-	 */
-	void handleEmptyClusters();
 
 	/**
 	 * Sum the given transaction to the given row in the cluster sum matrix.
@@ -199,6 +187,18 @@ public:
 	 * @param rowIndex
 	 */
 	void sparseSubtraction(cv::Mat transaction, const int& rowIndex);
+
+	/**
+	 * Compute clusters centers using sufficient statistics as proposed by Ordonez2003.
+	 *
+	 * @param i - Number of processed transactions
+	 */
+	void computeCentroids(const int& i);
+
+	/**
+	 * Fills empty clusters by re-assigning in descending order the outlier transactions.
+	 */
+	void handleEmptyClusters();
 
 };
 

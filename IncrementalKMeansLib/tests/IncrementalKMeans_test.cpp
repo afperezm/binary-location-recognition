@@ -116,12 +116,6 @@ TEST(IncrementalKMeans, InitWithRealData) {
 
 }
 
-//	inline class IncrementalKMeansPublic: public vlr::IncrementalKMeans {
-//	public:
-//		IncrementalKMeansPublic(vlr::IncrementalKMeans vocabTrainer) {
-//		}
-//	};
-
 TEST(IncrementalKMeans, InitCentroids) {
 
 	std::vector<std::string> descriptorsFilenames;
@@ -209,6 +203,40 @@ TEST(IncrementalKMeans, FindNearestNeighbor) {
 
 }
 
+TEST(IncrementalKMeans, InsertOutlier) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 10;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	for (int i = 0; i < 1000; ++i) {
+		int clusterIndex = i % vocabTrainer.getNumClusters();
+		double distance = rand() % 1000;
+		bool expectedResult = true;
+		if (vocabTrainer.getOutliers().at(clusterIndex).size() < 10) {
+			expectedResult = true;
+		} else {
+			expectedResult = distance >= vocabTrainer.getOutliers().at(clusterIndex).front().second;
+		}
+		bool actualResult = vocabTrainer.insertOutlier(i, clusterIndex, distance);
+		EXPECT_TRUE(actualResult == expectedResult);
+	}
+
+	EXPECT_TRUE(vocabTrainer.getNumClusters() >= 0 && vocabTrainer.getOutliers().size() == (size_t) vocabTrainer.getNumClusters());
+
+	size_t minSize = 10;
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		EXPECT_TRUE(vocabTrainer.getOutliers().at(j).size() >= minSize);
+		for (size_t k = 1; k < vocabTrainer.getOutliers().at(j).size(); ++k) {
+			EXPECT_TRUE(vocabTrainer.getOutliers().at(j).at(k-1).second >= vocabTrainer.getOutliers().at(j).at(k).second);
+		}
+	}
+
+}
+
 TEST(IncrementalKMeans, SparseSum) {
 
 	std::vector<std::string> descriptorsFilenames;
@@ -265,40 +293,6 @@ TEST(IncrementalKMeans, SparseSubtraction) {
 			countNonZero += FunctionUtils::NumberOfSetBits(transaction.at<uchar>(0, l));
 		}
 		EXPECT_TRUE(countNonZero == cv::countNonZero(vocabTrainer.getClustersSums().row(0)));
-	}
-
-}
-
-TEST(IncrementalKMeans, InsertOutlier) {
-
-	std::vector<std::string> descriptorsFilenames;
-	descriptorsFilenames.push_back("brief.bin");
-	vlr::Mat data(descriptorsFilenames);
-	vlr::IncrementalKMeansParams params;
-	params["num.clusters"] = 10;
-	vlr::IncrementalKMeans vocabTrainer(data, params);
-
-	for (int i = 0; i < 1000; ++i) {
-		int clusterIndex = i % vocabTrainer.getNumClusters();
-		double distance = rand() % 1000;
-		bool expectedResult = true;
-		if (vocabTrainer.getOutliers().at(clusterIndex).size() < 10) {
-			expectedResult = true;
-		} else {
-			expectedResult = distance >= vocabTrainer.getOutliers().at(clusterIndex).front().second;
-		}
-		bool actualResult = vocabTrainer.insertOutlier(i, clusterIndex, distance);
-		EXPECT_TRUE(actualResult == expectedResult);
-	}
-
-	EXPECT_TRUE(vocabTrainer.getNumClusters() >= 0 && vocabTrainer.getOutliers().size() == (size_t) vocabTrainer.getNumClusters());
-
-	size_t minSize = 10;
-	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
-		EXPECT_TRUE(vocabTrainer.getOutliers().at(j).size() >= minSize);
-		for (size_t k = 1; k < vocabTrainer.getOutliers().at(j).size(); ++k) {
-			EXPECT_TRUE(vocabTrainer.getOutliers().at(j).at(k-1).second >= vocabTrainer.getOutliers().at(j).at(k).second);
-		}
 	}
 
 }
