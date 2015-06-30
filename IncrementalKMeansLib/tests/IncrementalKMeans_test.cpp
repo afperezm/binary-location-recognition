@@ -345,17 +345,49 @@ TEST(IncrementalKMeans, ComputeCentroids) {
 
 }
 
-//TEST(IncrementalKMeans, HandleEmptyClusters) {
-//
-//	std::vector<std::string> descriptorsFilenames;
-//	descriptorsFilenames.push_back("brief.bin");
-//	vlr::Mat data(descriptorsFilenames);
-//	vlr::IncrementalKMeansParams params;
-//	params["num.clusters"] = 10;
-//	vlr::IncrementalKMeans vocabTrainer(data, params);
-//
-////	vocabTrainer.handleEmptyClusters();
-//
-//}
+TEST(IncrementalKMeans, HandleEmptyClusters) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 10;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	vocabTrainer.initClustersCounters();
+
+	for (int i = 5; i < vocabTrainer.getNumDatapoints(); ++i) {
+		cv::Mat transaction = data.row(i);
+		int clusterIndex = (i % (vocabTrainer.getNumClusters() - 1));
+		vocabTrainer.sparseSum(transaction, clusterIndex);
+		vocabTrainer.getClustersCounts().col(clusterIndex) += 1;
+	}
+
+	for (int j = 0; j < vocabTrainer.getNumClusters(); ++j) {
+		vocabTrainer.getClustersWeights().col(j) = ((double) vocabTrainer.getClustersCounts().at<int>(0, j)) / ((double) vocabTrainer.getNumDatapoints());
+	}
+
+	vocabTrainer.insertOutlier(0, 0, 0.0);
+	vocabTrainer.insertOutlier(1, 0, 1.0);
+	vocabTrainer.insertOutlier(2, 0, 10.0);
+	vocabTrainer.insertOutlier(3, 0, 3.0);
+	vocabTrainer.insertOutlier(4, 0, 4.0);
+
+	EXPECT_TRUE(vocabTrainer.getOutliers().at(0).size() == (size_t) 5);
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().at<int>(0, vocabTrainer.getNumClusters() - 1) == 0);
+	cv::Mat expected = vocabTrainer.getClustersSums().row(vocabTrainer.getNumClusters() - 1);
+
+	vocabTrainer.handleEmptyClusters();
+
+	EXPECT_TRUE(vocabTrainer.getOutliers().at(0).size() == (size_t) 4);
+	EXPECT_TRUE(vocabTrainer.getClustersCounts().at<int>(0, vocabTrainer.getNumClusters() - 1) == 1);
+	cv::Mat transaction = data.row(2);
+	vocabTrainer.sparseSubtraction(transaction, vocabTrainer.getNumClusters() - 1);
+	cv::Mat actual = vocabTrainer.getClustersSums().row(vocabTrainer.getNumClusters() - 1);
+	cv::Mat result;
+	cv::compare(expected, actual, result, cv::CMP_EQ);
+	EXPECT_TRUE(cv::sum(result).val[0] == result.cols * 255);
+
+}
 
 } /* namespace vlr */
