@@ -73,7 +73,7 @@ TEST(IncrementalKMeans, InitWithFakeData) {
 	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 6) == sqrt((double) 6/27));
 	EXPECT_TRUE(vocabTrainer.getSigma().at<double>(0, 7) == sqrt((double) 6/27));
 
-	EXPECT_TRUE(vocabTrainer.getOutliers().empty());
+	EXPECT_TRUE(vocabTrainer.getNumClusters() >= 0 && vocabTrainer.getOutliers().size() == (size_t) vocabTrainer.getNumClusters());
 
 }
 
@@ -112,7 +112,7 @@ TEST(IncrementalKMeans, InitWithRealData) {
 	EXPECT_TRUE(vocabTrainer.getSigma().rows == 1);
 	EXPECT_TRUE(vocabTrainer.getSigma().cols == data.cols * 8);
 
-	EXPECT_TRUE(vocabTrainer.getOutliers().empty());
+	EXPECT_TRUE(vocabTrainer.getNumClusters() >= 0 && vocabTrainer.getOutliers().size() == (size_t) vocabTrainer.getNumClusters());
 
 }
 
