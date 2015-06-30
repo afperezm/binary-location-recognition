@@ -86,8 +86,19 @@ void IncrementalKMeans::build() {
 		findNearestNeighbor(transaction, clusterIndex, distanceToCluster);
 		// Insert transaction in the list of outliers
 		bool isOutlier = insertOutlier(i, clusterIndex, distanceToCluster);
-		// If the inserted outlier is among the farthest then don't assign it to the jth cluster
-		if (!isOutlier) {
+		// If the transaction is not an outlier then assign it to the jth cluster
+		if (isOutlier) {
+			// If the transaction is an outlier and is the farthest one on the jth cluster
+			// then pop and assign the nearest outlier on the jth cluster
+			if (m_outliers.at(clusterIndex).size() > MAX_OUTLIERS) {
+				transaction = m_dataset.row(m_outliers.at(clusterIndex).back().first);
+				m_outliers.at(clusterIndex).pop_back();
+				// Mj <- Mj + ti
+				sparseSum(transaction, clusterIndex);
+				// Nj <- Nj + 1
+				m_clustersCounts.col(clusterIndex) += 1;
+			}
+		} else {
 			// Mj <- Mj + ti
 			sparseSum(transaction, clusterIndex);
 			// Nj <- Nj + 1
