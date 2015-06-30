@@ -218,8 +218,9 @@ void IncrementalKMeans::handleEmptyClusters() {
 		int outlierTransactionIndex;
 		for (unsigned int i = 0; i < m_outliers.size(); ++i) {
 			if (i !=j && !m_outliers.at(i).empty()) {
-				outlierTransactionIndex = m_outliers.at(i).back().first;
+				outlierTransactionIndex = m_outliers.at(i).front().first;
 				m_outliers.at(i).pop_back();
+				break;
 			}
 		}
 		cv::Mat outlierTransaction = m_dataset.row(outlierTransactionIndex);
