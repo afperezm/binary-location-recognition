@@ -121,7 +121,25 @@ void IncrementalKMeans::build() {
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::save(const std::string& filename) const {
-	// TODO Implement this method
+
+	if (m_centroids.empty()) {
+		throw std::runtime_error("[IncrementalKMeans::save] Vocabulary is empty");
+	}
+
+	cv::FileStorage fs(filename.c_str(), cv::FileStorage::WRITE);
+
+	if (fs.isOpened() == false) {
+		throw std::runtime_error("[IncrementalKMeans::save] "
+				"Unable to open file [" + filename + "] for writing");
+	}
+
+	fs << "type" << "IKM";
+	fs << "C" << m_centroids;
+	fs << "R" << m_clustersVariances;
+	fs << "W" << m_clustersWeights;
+
+	fs.release();
+
 }
 
 // --------------------------------------------------------------------------
