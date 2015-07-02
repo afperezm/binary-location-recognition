@@ -159,7 +159,7 @@ public:
 	 * @param clusterIndex - Index to the closest cluster center
 	 * @param distanceToCluster - Distance to the closest cluster center
 	 */
-	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster);
+	void findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) const;
 
 	/**
 	 * Inserts an outlier into a list in descending order according by distance to their
