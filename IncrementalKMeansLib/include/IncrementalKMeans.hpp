@@ -60,7 +60,7 @@ public:
 	/**
 	 * Class constructor.
 	 */
-	IncrementalKMeans(vlr::Mat data, const cvflann::IndexParams& params = IncrementalKMeansParams());
+	IncrementalKMeans(vlr::Mat data  = vlr::DEFAULT_INPUTDATA, const cvflann::IndexParams& params = IncrementalKMeansParams());
 
 	/**
 	 * Class destroyer.
