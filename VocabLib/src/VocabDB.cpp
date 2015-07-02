@@ -542,4 +542,45 @@ void AKMajDB::loadNNIndex(const std::string& filename) {
 	fclose(f_nnIndex);
 }
 
+// --------------------------------------------------------------------------
+
+int IncrementaKMeansDB::getFeaturesLength() const {
+	return m_bofModel->getCentroids().cols;
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementaKMeansDB::quantize(const cv::Mat& feature, int& wordId, double& wordWeight) const {
+
+	double mytime = cv::getTickCount();
+
+	wordId = -1;
+
+	cv::Mat transaction;
+	int clusterIndex;
+	double distanceToCluster;
+	m_bofModel->findNearestNeighbor(transaction, clusterIndex, distanceToCluster);
+
+	CV_Assert(wordId != -1);
+
+	wordWeight = m_invertedIndex->at(wordId).m_weight;
+
+	mytime = ((double) cv::getTickCount() - mytime) / cv::getTickFrequency() * 1000;
+
+	printf("   Descriptor quantized in [%lf] ms\n", mytime);
+
+}
+
+// --------------------------------------------------------------------------
+
+void IncrementaKMeansDB::loadBoFModel(const std::string& filename) {
+	m_bofModel->load(filename);
+}
+
+// --------------------------------------------------------------------------
+
+size_t IncrementaKMeansDB::getNumOfWords() const {
+	return m_bofModel->size();
+}
+
 } /* namespace vlr */

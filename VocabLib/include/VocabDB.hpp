@@ -11,6 +11,7 @@
 #include <KMajority.h>
 #include <InvertedIndex.hpp>
 #include <VocabTree.h>
+#include <IncrementalKMeans.hpp>
 
 namespace vlr {
 
@@ -250,6 +251,33 @@ public:
 	void saveNNIndex(const std::string& filename) const;
 
 	void loadNNIndex(const std::string& filename);
+
+};
+
+// --------------------------------------------------------------------------
+
+class IncrementaKMeansDB: public VocabDB {
+
+protected:
+
+	cv::Ptr<IncrementalKMeans> m_bofModel;
+
+public:
+
+	IncrementaKMeansDB() : m_bofModel(NULL) {
+		m_bofModel = new IncrementalKMeans();
+	}
+
+	~IncrementaKMeansDB() {
+	}
+
+	int getFeaturesLength() const;
+
+	void quantize(const cv::Mat& feature, int& wordId, double& wordWeight) const;
+
+	void loadBoFModel(const std::string& filename);
+
+	size_t getNumOfWords() const;
 
 };
 

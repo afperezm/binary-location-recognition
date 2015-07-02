@@ -11,6 +11,10 @@ LDFLAGS += -lcommon
 CXXFLAGS += -I../KMajorityLib/include
 LDFLAGS += -lkmajority
 
+# Incremental K-Means
+CXXFLAGS += -I../IncrementalKMeansLib/include
+LDFLAGS += -lincrementalkmeans
+
 # VocabLib
 CXXFLAGS += -I../VocabLib/include
 LDFLAGS += -lvocab

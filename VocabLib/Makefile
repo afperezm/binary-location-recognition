@@ -23,6 +23,10 @@ LDFLAGS += -L../../agast_lib/lib -lagast
 CXXFLAGS += -I../KMajorityLib/include
 LDFLAGS += -lkmajority
 
+# Incremental K-Means
+CXXFLAGS += -I../IncrementalKMeansLib/include
+LDFLAGS += -lincrementalkmeans
+
 # OpenCV (this goes last: beware of the linking order)
 CXXFLAGS += `pkg-config opencv --cflags`
 LDFLAGS += `pkg-config opencv --libs`
