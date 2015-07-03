@@ -285,7 +285,7 @@ void IncrementalKMeans::initClustersCounters() {
 
 // --------------------------------------------------------------------------
 
-void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) {
+void IncrementalKMeans::findNearestNeighbor(cv::Mat transaction, int& clusterIndex, double& distanceToCluster) const {
 
 	clusterIndex = 0;
 	distanceToCluster = std::numeric_limits<double>::max();
