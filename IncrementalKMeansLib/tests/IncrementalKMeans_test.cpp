@@ -384,4 +384,23 @@ TEST(IncrementalKMeans, HandleEmptyClusters) {
 
 }
 
+TEST(IncrementalKMeans, SaveLoad) {
+
+	std::vector<std::string> descriptorsFilenames;
+	descriptorsFilenames.push_back("brief.bin");
+	vlr::Mat data(descriptorsFilenames);
+	vlr::IncrementalKMeansParams params;
+	params["num.clusters"] = 10;
+	vlr::IncrementalKMeans vocabTrainer(data, params);
+
+	vocabTrainer.build();
+	vocabTrainer.save("test_vocab.yaml.gz");
+
+	vlr::IncrementalKMeans vocabTrainerLoaded;
+	vocabTrainerLoaded.load("test_vocab.yaml.gz");
+
+	EXPECT_TRUE(std::equal(vocabTrainer.getCentroids().begin<uchar>(), vocabTrainer.getCentroids().end<uchar>(), vocabTrainerLoaded.getCentroids().begin<uchar>()));
+
+}
+
 } /* namespace vlr */
