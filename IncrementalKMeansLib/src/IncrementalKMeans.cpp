@@ -145,7 +145,111 @@ void IncrementalKMeans::save(const std::string& filename) const {
 // --------------------------------------------------------------------------
 
 void IncrementalKMeans::load(const std::string& filename) {
-	// TODO Implement this method
+
+	enum nodeFields { header, vocab_type, centroids, squared_distances, weights, rows, cols, data_type, data };
+
+	std::string nodeFieldsNames[] = { "YAML", "type", "C:", "R:", "W:", "rows:", "cols:", "dt:", "data:" };
+
+	std::ifstream inputZippedFileStream;
+	boost::iostreams::filtering_istream inputFileStream;
+
+	std::string line, field;
+	std::stringstream ss;
+
+	// Open file
+	inputZippedFileStream.open(filename.c_str(), std::fstream::in | std::fstream::binary);
+
+	// Check file
+	if (inputZippedFileStream.good() == false) {
+		throw std::runtime_error("[IncrementalKMeans::load] Unable to open file [" + filename + "] for reading");
+	}
+
+	int _rows = -1;
+	int _cols = -1;
+	std::string _type;
+	int elemIdx = -1;
+	double elem;
+	std::string attribute;
+
+	try {
+		inputFileStream.push(boost::iostreams::gzip_decompressor());
+		inputFileStream.push(inputZippedFileStream);
+
+		while (getline(inputFileStream, line)) {
+			ss.clear();
+			ss.str(line);
+			ss >> field;
+
+			if (field.compare(nodeFieldsNames[header]) == 0) {
+				continue;
+			} else if (field.compare(nodeFieldsNames[vocab_type]) == 0) {
+				continue;
+			} else if (field.compare(nodeFieldsNames[centroids]) == 0) {
+				attribute = "C";
+				continue;
+			} else if (field.compare(nodeFieldsNames[squared_distances]) == 0) {
+				attribute = "R";
+				continue;
+			} else if (field.compare(nodeFieldsNames[weights]) == 0) {
+				attribute = "W";
+				continue;
+			} else if (field.compare(nodeFieldsNames[rows]) == 0) {
+				ss >> _rows;
+			} else if (field.compare(nodeFieldsNames[cols]) == 0) {
+				ss >> _cols;
+			} else if (field.compare(nodeFieldsNames[data_type]) == 0) {
+				ss >> _type;
+				if (_type.compare("d") != 0) {
+					throw std::runtime_error("Incorrect matrix type");
+				}
+			} else {
+
+				if (field.compare(nodeFieldsNames[data]) == 0) {
+					if (attribute.compare("C") == 0) {
+						m_centroids.create(_rows, _cols, cv::DataType<double>::type);
+					} else if (attribute.compare("R") == 0) {
+						m_clustersVariances.create(_rows, _cols, cv::DataType<double>::type);
+					} else if (attribute.compare("W") == 0) {
+						m_clustersWeights.create(_rows, _cols, cv::DataType<double>::type);
+					} else {
+						throw std::runtime_error("Unknown attribute");
+					}
+					line.replace(line.find(nodeFieldsNames[data]), 5, " ");
+				}
+
+				std::replace(line.begin(), line.end(), '[', ' ');
+				std::replace(line.begin(), line.end(), ',', ' ');
+				std::replace(line.begin(), line.end(), ']', ' ');
+
+				ss.clear();
+				ss.str(line);
+
+				while ((ss >> elem).fail() == false) {
+					++elemIdx;
+					int row = floor(elemIdx / _cols);
+					int col = elemIdx % _cols;
+					if (attribute.compare("C") == 0) {
+						m_centroids.at<double>(row, col) = elem;
+					} else if (attribute.compare("R") == 0) {
+						m_clustersVariances.at<double>(row, col) = elem;
+					} else if (attribute.compare("W") == 0) {
+						m_clustersWeights.at<double>(row, col) = elem;
+					} else {
+						throw std::runtime_error("Unknown attribute");
+					}
+				}
+
+			}
+
+		}
+
+	} catch (const boost::iostreams::gzip_error& e) {
+		throw std::runtime_error("[IncrementalKMeans::load] Got error while parsing file [" + std::string(e.what()) + "]");
+	}
+
+	// Close file
+	inputZippedFileStream.close();
+
 }
 
 // --------------------------------------------------------------------------
